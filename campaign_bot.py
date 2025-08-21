@@ -282,6 +282,20 @@ def _move_cursor_safe():
     pg.moveTo(W // 2, H // 2)
     pg.FAILSAFE = failsafe_state
 
+
+def _press_key_safe(key, pause):
+    try:
+        pg.press(key)
+        time.sleep(pause)
+    except pg.FailSafeException:
+        logging.warning(
+            "Fail-safe triggered while pressing '%s'. Moving cursor to center.",
+            key,
+        )
+        _move_cursor_safe()
+        pg.press(key)
+        time.sleep(pause)
+
 def select_idle_villager():
     try:
         pg.press(CFG["keys"]["idle_vill"])
@@ -296,82 +310,28 @@ def select_idle_villager():
 
 def build_house():
     # Abra menu de construção e selecione a tecla configurada para "Casa"
-    try:
-        pg.press(CFG["keys"]["build_menu"])
-        time.sleep(0.05)
-    except pg.FailSafeException:
-        logging.warning(
-            "Fail-safe triggered while opening build menu. Moving cursor to center."
-        )
-        _move_cursor_safe()
-        pg.press(CFG["keys"]["build_menu"])
-        time.sleep(0.05)
+    _press_key_safe(CFG["keys"]["build_menu"], 0.05)
     house_key = CFG["keys"]["house"]
     if house_key:
-        try:
-            pg.press(house_key)
-            time.sleep(0.15)
-        except pg.FailSafeException:
-            logging.warning(
-                "Fail-safe triggered while selecting house. Moving cursor to center."
-            )
-            _move_cursor_safe()
-            pg.press(house_key)
-            time.sleep(0.15)
+        _press_key_safe(house_key, 0.15)
         hx, hy = CFG["areas"]["house_spot"]
         _click_norm(hx, hy)
 
 def build_granary():
     # Abre menu de construção e posiciona o "Granary" no local definido
-    try:
-        pg.press(CFG["keys"]["build_menu"])
-        time.sleep(0.05)
-    except pg.FailSafeException:
-        logging.warning(
-            "Fail-safe triggered while opening build menu. Moving cursor to center."
-        )
-        _move_cursor_safe()
-        pg.press(CFG["keys"]["build_menu"])
-        time.sleep(0.05)
+    _press_key_safe(CFG["keys"]["build_menu"], 0.05)
     g_key = CFG["keys"].get("granary")
     if g_key:
-        try:
-            pg.press(g_key)
-            time.sleep(0.15)
-        except pg.FailSafeException:
-            logging.warning(
-                "Fail-safe triggered while selecting granary. Moving cursor to center."
-            )
-            _move_cursor_safe()
-            pg.press(g_key)
-            time.sleep(0.15)
+        _press_key_safe(g_key, 0.15)
         gx, gy = CFG["areas"]["granary_spot"]
         _click_norm(gx, gy)
 
 def build_storage_pit():
     # Abre menu de construção e posiciona o "Storage Pit" no local definido
-    try:
-        pg.press(CFG["keys"]["build_menu"])
-        time.sleep(0.05)
-    except pg.FailSafeException:
-        logging.warning(
-            "Fail-safe triggered while opening build menu. Moving cursor to center."
-        )
-        _move_cursor_safe()
-        pg.press(CFG["keys"]["build_menu"])
-        time.sleep(0.05)
+    _press_key_safe(CFG["keys"]["build_menu"], 0.05)
     s_key = CFG["keys"].get("storage_pit")
     if s_key:
-        try:
-            pg.press(s_key)
-            time.sleep(0.15)
-        except pg.FailSafeException:
-            logging.warning(
-                "Fail-safe triggered while selecting storage pit. Moving cursor to center."
-            )
-            _move_cursor_safe()
-            pg.press(s_key)
-            time.sleep(0.15)
+        _press_key_safe(s_key, 0.15)
         sx, sy = CFG["areas"]["storage_spot"]
         _click_norm(sx, sy)
 
