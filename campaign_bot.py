@@ -143,6 +143,42 @@ def read_population_from_hud(retries=3, conf_threshold=None):
     if conf_threshold is None:
         conf_threshold = CFG.get("ocr_conf_threshold", 60)
     x, y, w, h = CFG["areas"]["pop_box"]
+    screen_width, screen_height = _screen_size()
+
+    if HUD_ANCHOR:
+        ax, ay, aw, ah = (
+            HUD_ANCHOR["left"],
+            HUD_ANCHOR["top"],
+            HUD_ANCHOR["width"],
+            HUD_ANCHOR["height"],
+        )
+        abs_left = int(ax + x * aw)
+        abs_top = int(ay + y * ah)
+        pw = int(w * aw)
+        ph = int(h * ah)
+    else:
+        abs_left = int(x * screen_width)
+        abs_top = int(y * screen_height)
+        pw = int(w * screen_width)
+        ph = int(h * screen_height)
+
+    abs_right = abs_left + pw
+    abs_bottom = abs_top + ph
+
+    if (
+        abs_left < 0
+        or abs_top < 0
+        or abs_right > screen_width
+        or abs_bottom > screen_height
+    ):
+        raise PopulationReadError(
+            "Population ROI out of screen bounds: "
+            f"left={abs_left}, top={abs_top}, width={pw}, height={ph}, "
+            f"screen={screen_width}x{screen_height}, HUD_ANCHOR={HUD_ANCHOR}. "
+            "Recalibrate areas.pop_box in config.json."
+        )
+
+    x1, y1, x2, y2 = abs_left, abs_top, abs_right, abs_bottom
 
     last_roi = None
     last_thresh = None
@@ -151,37 +187,9 @@ def read_population_from_hud(retries=3, conf_threshold=None):
     for attempt in range(retries):
         frame = _grab_frame()
 
-        if HUD_ANCHOR:
-            ax, ay, aw, ah = (
-                HUD_ANCHOR["left"],
-                HUD_ANCHOR["top"],
-                HUD_ANCHOR["width"],
-                HUD_ANCHOR["height"],
-            )
-            abs_left = int(ax + x * aw)
-            abs_top = int(ay + y * ah)
-            pw = int(w * aw)
-            ph = int(h * ah)
-        else:
-            W_screen, H_screen = _screen_size()
-            abs_left = int(x * W_screen)
-            abs_top = int(y * H_screen)
-            pw = int(w * W_screen)
-            ph = int(h * H_screen)
-
-        h_frame, w_frame = frame.shape[:2]
-        x1 = max(0, abs_left)
-        y1 = max(0, abs_top)
-        x2 = min(abs_left + pw, w_frame)
-        y2 = min(abs_top + ph, h_frame)
-
-        if x2 <= x1 or y2 <= y1:
-            logging.warning("Population ROI outside screen bounds")
-            continue
-
         roi = frame[y1:y2, x1:x2]
         if roi.size == 0:
-            logging.warning("Population ROI has zero size after clamping")
+            logging.warning("Population ROI has zero size")
             continue
         gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
         gray = cv2.resize(gray, None, fx=2, fy=2, interpolation=cv2.INTER_LINEAR)

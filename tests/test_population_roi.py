@@ -43,8 +43,13 @@ class TestPopulationROI(TestCase):
                 "campaign_bot.pytesseract.image_to_data",
                 return_value={"text": [""], "conf": ["-1"]},
             ):
-            with self.assertRaises(cb.PopulationReadError):
+            with self.assertRaises(cb.PopulationReadError) as ctx:
                 cb.read_population_from_hud(retries=1, conf_threshold=cb.CFG["ocr_conf_threshold"])
+            msg = str(ctx.exception).lower()
+            self.assertIn("recalibrate areas.pop_box", msg)
+            self.assertIn("left=", msg)
+            self.assertIn("top=", msg)
+            self.assertIn("hud_anchor", msg)
 
     def test_read_population_raises_when_no_digits(self):
         frame = np.zeros((200, 200, 3), dtype=np.uint8)
