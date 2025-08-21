@@ -11,3 +11,11 @@ Beware of Crocodiles—they tend to eat unwary villagers who wander near the sho
 
 Strategy
 This campaign is pretty straightforward, since no enemies are present. The only thing the player should look out for are Alligators lurking around near the coastal areas of the map. Contrary to the scenario instructions, the player only needs to create six Villagers, as one is already available. A total of 300 food is required, and a house needs to be built. Bring the Villager to the west and walk through the large herd of Gazelles. Try to judge how far the player wants the prey to be from the Town Center before hitting with a spear twice. Have the hunter collect the meat and create Villagers as the food comes in. As soon as the player has finished, build a House with one Villager while continuing to hunt. Create the required Villagers and the task will be complete.
+
+Tutorial
+HUNTING
+To assign a villager to hunt, click the villager, and then right-click the animal to hunt. For example, to hunt a gazelle, right-click it. The villager hunts the animal, gathers food, and deposits it at the Town Center where it is added to your stockpile (as shown in the upper-left corner of the game screen).
+CREATING VILLAGERS
+Villagers cost 50 food. To create a villager, select a Town Center, and then click on the Create Villager button in the lower left corner of the game screen. After a brief training period, the villager appears beside the Town Center.
+BUILDING HOUSES
+Houses cost 30 wood and each House supports four villagers. The Town Center also supports four villagers. To build a House, select a villager, click the Build House button in the building panel in the lower-left corner of the game screen, and then click a location on the map. The House is shown in red if you cannot build in a particular location.
