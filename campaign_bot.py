@@ -1,3 +1,4 @@
+import logging
 import json
 import time
 from pathlib import Path
@@ -19,6 +20,12 @@ ASSETS = ROOT / "assets"
 
 with open(ROOT / "config.json", encoding="utf-8") as cfg_file:
     CFG = json.load(cfg_file)
+
+# Configuração de logging
+logging.basicConfig(
+    level=logging.DEBUG if CFG.get("verbose_logging") else logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+)
 
 # Contador interno simples da população atual
 CURRENT_POP = 3
@@ -68,6 +75,7 @@ def _find_template(frame_bgr, tmpl_gray, threshold=0.82, scales=None):
     return None, score, heat
 
 def wait_hud(timeout=60):
+    logging.info("Aguardando HUD por até %ss...", timeout)
     t0 = time.time()
     last_best = (-1, None)  # (score, name)
     while time.time() - t0 < timeout:
@@ -83,8 +91,14 @@ def wait_hud(timeout=60):
                 if CFG["debug"]:
                     cv2.imwrite(f"debug_hud_{name}.png", frame)
                 x, y, w, h = box
+                logging.info("HUD detectada com template '%s'", name)
                 return (x, y, w, h)
         time.sleep(0.25)
+    logging.error(
+        "HUD não encontrada. Melhor score=%.3f no template '%s'. Re-capture o asset e verifique ESCALA 100%%.",
+        last_best[0],
+        last_best[1],
+    )
     raise RuntimeError(
         f"HUD não encontrada. Melhor score={last_best[0]:.3f} no template '{last_best[1]}'. "
         "Re-capture o asset (recorte mais justo) e verifique ESCALA 100%."
@@ -185,14 +199,17 @@ def train_villagers(target_pop: int):
 
 def econ_loop(minutes=5):
     """Baseline para 'Hunting': prioriza comida (caça/frutos) + madeira p/ casas."""
+    logging.info("Iniciando rotina econômica por %s minutos", minutes)
     train_villagers(12)
 
     # Construções iniciais: Granary e Storage Pit
     select_idle_villager()
     build_granary()
+    logging.info("Granary posicionado")
     time.sleep(0.5)
     select_idle_villager()
     build_storage_pit()
+    logging.info("Storage Pit posicionado")
     time.sleep(0.5)
 
     hunt_x, hunt_y = CFG["areas"]["hunt_food"]
@@ -219,27 +236,31 @@ def econ_loop(minutes=5):
         if current >= next_house:
             select_idle_villager()
             build_house()
+            logging.info("Casa construída para expandir população")
             time.sleep(0.5)
             _, limit = read_population_from_hud()
             next_house = limit - 2
 
         time.sleep(CFG["timers"]["loop_sleep"])
+    logging.info("Rotina econômica finalizada")
 
 # =========================
 # MAIN
 # =========================
 def main():
-    print("Entre na missão da campanha (Hunting). O script inicia quando detectar a HUD…")
+    logging.info(
+        "Entre na missão da campanha (Hunting). O script inicia quando detectar a HUD…"
+    )
     try:
         hud = wait_hud(timeout=90)
-        print(f"HUD detectada em {hud}. Rodando rotina econômica…")
+        logging.info("HUD detectada em %s. Rodando rotina econômica…", hud)
     except RuntimeError as e:
-        print(str(e))
-        print("Dando mais 25s para você ajustar a câmera/HUD (fallback)…")
+        logging.error(str(e))
+        logging.info("Dando mais 25s para você ajustar a câmera/HUD (fallback)…")
         time.sleep(25)
 
     econ_loop(minutes=CFG["loop_minutes"])
-    print("Rotina concluída.")
+    logging.info("Rotina concluída.")
 
 if __name__ == "__main__":
     main()

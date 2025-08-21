@@ -5,6 +5,7 @@
   "scales": [0.88, 0.92, 0.96, 1.0, 1.04, 1.08, 1.12],
   "loop_minutes": 6,
   "debug": false,
+  "verbose_logging": false,
   "keys": {
     "idle_vill": ".",
     "build_menu": "b",
