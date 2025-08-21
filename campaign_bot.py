@@ -71,6 +71,16 @@ def _find_template(frame_bgr, tmpl_gray, threshold=0.82, scales=None):
         th, tw = int(h0 * s), int(w0 * s)
         if th < 10 or tw < 10:
             continue
+        if th > frame_gray.shape[0] or tw > frame_gray.shape[1]:
+            logging.debug(
+                "Template %sx%s exceeds frame %sx%s at scale %.2f, skipping",
+                tw,
+                th,
+                frame_gray.shape[1],
+                frame_gray.shape[0],
+                s,
+            )
+            continue
         tmpl = cv2.resize(tmpl_gray, (tw, th), interpolation=cv2.INTER_AREA)
         res = cv2.matchTemplate(frame_gray, tmpl, cv2.TM_CCOEFF_NORMED)
         min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
