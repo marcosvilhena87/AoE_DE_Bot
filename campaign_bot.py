@@ -66,6 +66,10 @@ def _load_gray(path):
         raise FileNotFoundError(f"Asset não encontrado: {path}")
     return im
 
+# Preload grayscale templates referenced in the configuration to avoid
+# repeatedly reading them from disk during HUD detection.
+HUD_TEMPLATES = {name: _load_gray(ROOT / name) for name in CFG.get("look_for", [])}
+
 def _find_template(frame_bgr, tmpl_gray, threshold=0.82, scales=None):
     frame_gray = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2GRAY)
     h0, w0 = tmpl_gray.shape[:2]
@@ -103,8 +107,7 @@ def wait_hud(timeout=60):
     last_best = (-1, None)  # (score, name)
     while time.time() - t0 < timeout:
         frame = _grab_frame()
-        for name in CFG["look_for"]:
-            tmpl = _load_gray(ROOT / name)
+        for name, tmpl in HUD_TEMPLATES.items():
             box, score, heat = _find_template(
                 frame, tmpl, threshold=CFG["threshold"], scales=CFG["scales"]
             )
