@@ -133,13 +133,15 @@ def wait_hud(timeout=60):
 # =========================
 # LEITURA DE POPULAÇÃO NA HUD
 # =========================
-def read_population_from_hud(retries=3, conf_threshold=60):
+def read_population_from_hud(retries=3, conf_threshold=None):
     """Captura a população atual e o limite máximo a partir da HUD.
 
     Tenta realizar OCR algumas vezes para aumentar a robustez. Retorna
     ``(pop_atual, pop_limite)``. Se todas as tentativas falharem, lança
     :class:`PopulationReadError` com detalhes para auxiliar na calibração.
     """
+    if conf_threshold is None:
+        conf_threshold = CFG.get("ocr_conf_threshold", 60)
     x, y, w, h = CFG["areas"]["pop_box"]
 
     last_roi = None
@@ -368,7 +370,7 @@ def train_villagers(target_pop: int):
         pg.press(CFG["keys"]["select_tc"])
         time.sleep(0.10)
     try:
-        CURRENT_POP, _ = read_population_from_hud()
+        CURRENT_POP, _ = read_population_from_hud(conf_threshold=CFG.get("ocr_conf_threshold", 60))
     except PopulationReadError as e:
         logging.error(
             "Não foi possível ler população inicial: %s. Abortando treino de aldeões.",
@@ -387,7 +389,7 @@ def train_villagers(target_pop: int):
             pg.press(CFG["keys"]["train_vill"])
         time.sleep(0.10)
         try:
-            CURRENT_POP, _ = read_population_from_hud()
+            CURRENT_POP, _ = read_population_from_hud(conf_threshold=CFG.get("ocr_conf_threshold", 60))
         except PopulationReadError as e:
             logging.error(
                 "Falha ao atualizar população durante treinamento: %s. Encerrando treino.",
@@ -414,7 +416,7 @@ def econ_loop(minutes=5):
     hunt_x, hunt_y = CFG["areas"]["hunt_food"]
     wood_x, wood_y = CFG["areas"]["wood"]
     try:
-        _, limit = read_population_from_hud()
+        _, limit = read_population_from_hud(conf_threshold=CFG.get("ocr_conf_threshold", 60))
     except PopulationReadError as e:
         logging.error(
             "Falha ao ler população inicial: %s. Abortando rotina econômica.",
@@ -437,7 +439,7 @@ def econ_loop(minutes=5):
 
         # 3) Construir casa quando próximo do limite de população
         try:
-            current, limit = read_population_from_hud()
+            current, limit = read_population_from_hud(conf_threshold=CFG.get("ocr_conf_threshold", 60))
         except PopulationReadError as e:
             logging.error(
                 "Falha ao ler população durante loop econômico: %s. Encerrando rotina.",
@@ -452,7 +454,7 @@ def econ_loop(minutes=5):
             logging.info("Casa construída para expandir população")
             time.sleep(0.5)
             try:
-                _, limit = read_population_from_hud()
+                _, limit = read_population_from_hud(conf_threshold=CFG.get("ocr_conf_threshold", 60))
             except PopulationReadError as e:
                 logging.error(
                     "Falha ao atualizar limite de população após construir casa: %s. Encerrando rotina.",
