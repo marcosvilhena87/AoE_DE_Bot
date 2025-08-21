@@ -233,6 +233,65 @@ def read_population_from_hud(retries=3, conf_threshold=None):
         f"Falha ao ler população da HUD após {retries} tentativas"
     )
 
+
+# =========================
+# RECURSOS NA HUD
+# =========================
+def locate_resource_panel(frame):
+    """Localiza o painel de recursos e retorna sub-regiões absolutas.
+
+    O dicionário resultante possui chaves para cada contador com valores
+    ``(x, y, w, h)`` absolutos.
+    """
+    tmpl = HUD_TEMPLATES.get("assets/resources_population.png")
+    if tmpl is None:
+        return {}
+    box, score, _ = _find_template(
+        frame, tmpl, threshold=CFG["threshold"], scales=CFG["scales"]
+    )
+    if not box:
+        return {}
+    x, y, w, h = box
+    offsets = {
+        "food": (0.05, 0.2, 0.1, 0.6),
+        "wood": (0.21, 0.2, 0.1, 0.6),
+        "gold": (0.37, 0.2, 0.1, 0.6),
+        "stone": (0.53, 0.2, 0.1, 0.6),
+        "population": (0.69, 0.2, 0.1, 0.6),
+        "idle_villager": (0.85, 0.2, 0.1, 0.6),
+    }
+    regions = {}
+    for name, (ox, oy, fw, fh) in offsets.items():
+        regions[name] = (
+            x + int(ox * w),
+            y + int(oy * h),
+            int(fw * w),
+            int(fh * h),
+        )
+    return regions
+
+
+def read_resources_from_hud():
+    """Lê os valores de recursos diretamente da HUD."""
+    frame = _grab_frame()
+    regions = locate_resource_panel(frame)
+    results = {}
+    for name, (x, y, w, h) in regions.items():
+        roi = _grab_frame({"left": x, "top": y, "width": w, "height": h})
+        gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+        _, thresh = cv2.threshold(
+            gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU
+        )
+        data = pytesseract.image_to_data(
+            thresh,
+            config="--psm 7 -c tessedit_char_whitelist=0123456789",
+            output_type=pytesseract.Output.DICT,
+        )
+        text = "".join(data.get("text", [])).strip()
+        digits = "".join(filter(str.isdigit, text))
+        results[name] = int(digits) if digits else 0
+    return results
+
 # =========================
 # AÇÕES DE JOGO
 # =========================
@@ -347,12 +406,20 @@ def train_villagers(target_pop: int):
         )
         return
 
+
     while CURRENT_POP < target_pop:
+        resources = read_resources_from_hud()
+        if resources.get("food", 0) < 50:
+            logging.info(
+                "Comida insuficiente (%s) para treinar aldeões.",
+                resources.get("food", 0),
+            )
+            break
         try:
             pg.press(CFG["keys"]["train_vill"])
         except pg.FailSafeException:
             logging.warning(
-                "Fail-safe triggered while training villager. Moving cursor to center."
+                "Fail-safe triggered while training villager. Moving cursor to center.",
             )
             _move_cursor_safe()
             pg.press(CFG["keys"]["train_vill"])
