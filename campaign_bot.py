@@ -27,6 +27,8 @@ CFG = {
         "idle_vill": ".",            # selecionar aldeão ocioso
         "build_menu": "b",           # abrir menu de construção
         "house": "e",                # tecla da "Casa" no AoE1 DE (ajuste se usa grid diferente!)
+        "select_tc": "h",            # selecionar Town Center
+        "train_vill": "q",           # treinar aldeão na TC
         # opcional (se quiser construir depois):
         "granary": None,             # ex.: "g"
         "storage_pit": None          # ex.: "p"
@@ -45,6 +47,17 @@ CFG = {
         "loop_sleep": 0.7            # descanso curto por iteração
     }
 }
+
+# Contador interno simples da população atual
+CURRENT_POP = 3
+
+
+def get_current_pop() -> int:
+    """Retorna população corrente.
+
+    Implementa um contador interno que é atualizado ao treinar novos aldeões.
+    """
+    return CURRENT_POP
 
 # =========================
 # CAPTURA & TEMPLATE MATCH
@@ -135,8 +148,23 @@ def build_house():
         hx, hy = CFG["areas"]["house_spot"]
         _click_norm(hx, hy)
 
+def train_villagers(target_pop: int):
+    """Fila aldeões na Town Center até atingir `target_pop`.
+
+    Usa um contador interno simples para estimar a população atual.
+    """
+    global CURRENT_POP
+    pg.press(CFG["keys"]["select_tc"])  # seleciona a TC
+    time.sleep(0.10)
+    while get_current_pop() < target_pop:
+        pg.press(CFG["keys"]["train_vill"])
+        CURRENT_POP += 1
+        time.sleep(0.10)
+
+
 def econ_loop(minutes=5):
     """Baseline para 'Hunting': prioriza comida (caça/frutos) + madeira p/ casas."""
+    train_villagers(12)
     hunt_x, hunt_y = CFG["areas"]["hunt_food"]
     wood_x, wood_y = CFG["areas"]["wood"]
     next_house = time.time() + CFG["timers"]["house_interval"]
