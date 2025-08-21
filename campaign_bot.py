@@ -1,3 +1,4 @@
+import json
 import time
 from pathlib import Path
 
@@ -13,44 +14,11 @@ import pytesseract
 pg.PAUSE = 0.05
 pg.FAILSAFE = True  # mouse no canto sup-esq aborta instantaneamente
 
-ASSETS = Path("assets")
+ROOT = Path(__file__).resolve().parent
+ASSETS = ROOT / "assets"
 
-CFG = {
-    "profile": "aoe1de",
-    # âncoras fixas da HUD (use 1 ou mais; recortes bem justos)
-    "look_for": ["ui_minimap.png"],  # adicione "ui_resources.png" se quiser
-    "threshold": 0.82,               # ajuste 0.75–0.90 conforme a qualidade do asset
-    "scales": [0.88, 0.92, 0.96, 1.0, 1.04, 1.08, 1.12],
-    "loop_minutes": 6,
-    "debug": False,                  # True: salva imagem de debug
-    # Hotkeys (ajuste aos seus bindings)
-    "keys": {
-        "idle_vill": ".",            # selecionar aldeão ocioso
-        "build_menu": "b",           # abrir menu de construção
-        "house": "e",                # tecla da "Casa" no AoE1 DE (ajuste se usa grid diferente!)
-        "select_tc": "h",            # selecionar Town Center
-        "train_vill": "q",           # treinar aldeão na TC
-        # opcional (se quiser construir depois):
-        "granary": None,             # ex.: "g"
-        "storage_pit": None          # ex.: "p"
-    },
-    # Áreas normalizadas (0..1) — ajuste após a 1ª rodada olhando o mouse
-    # Na Hunting, priorize COMIDA (caça/frutos) e um pouco de madeira para casas.
-    "areas": {
-        "hunt_food": (0.46, 0.70),   # região onde geralmente ficam gazelas/arbustos
-        "wood":      (0.62, 0.55),   # bloco de árvores frequente
-        "house_spot":(0.47, 0.72),   # onde posicionar Casa (solo livre, próximo TC)
-        "granary_spot": (0.44, 0.66),    # local para Granary próximo a frutos
-        "storage_spot": (0.58, 0.52),    # local para Storage Pit próximo a madeira
-        "pop_box":   (0.93, 0.02, 0.05, 0.04),  # x,y,w,h normalizados da população na HUD
-    },
-    # Heurísticas simples
-    "timers": {
-        "house_interval": 45.0,      # construir casa a cada ~45s (heurístico)
-        "idle_gap": 0.35,            # intervalo entre comandos de aldeões
-        "loop_sleep": 0.7            # descanso curto por iteração
-    }
-}
+with open(ROOT / "config.json", encoding="utf-8") as cfg_file:
+    CFG = json.load(cfg_file)
 
 # Contador interno simples da população atual
 CURRENT_POP = 3
