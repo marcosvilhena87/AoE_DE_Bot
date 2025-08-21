@@ -90,7 +90,7 @@ def wait_hud(timeout=60):
     while time.time() - t0 < timeout:
         frame = _grab_frame()
         for name in CFG["look_for"]:
-            tmpl = _load_gray(ASSETS / name)
+            tmpl = _load_gray(ROOT / name)
             box, score, heat = _find_template(
                 frame, tmpl, threshold=CFG["threshold"], scales=CFG["scales"]
             )
