@@ -152,23 +152,10 @@ def read_population_from_hud(retries=3, conf_threshold=None):
             f"w={w}, h={h}. Recalibrate areas.pop_box in config.json."
         )
     screen_width, screen_height = _screen_size()
-
-    if HUD_ANCHOR:
-        ax, ay, aw, ah = (
-            HUD_ANCHOR["left"],
-            HUD_ANCHOR["top"],
-            HUD_ANCHOR["width"],
-            HUD_ANCHOR["height"],
-        )
-        abs_left = int(ax + x * aw)
-        abs_top = int(ay + y * ah)
-        pw = int(w * aw)
-        ph = int(h * ah)
-    else:
-        abs_left = int(x * screen_width)
-        abs_top = int(y * screen_height)
-        pw = int(w * screen_width)
-        ph = int(h * screen_height)
+    abs_left = int(x * screen_width)
+    abs_top = int(y * screen_height)
+    pw = int(w * screen_width)
+    ph = int(h * screen_height)
 
     if pw <= 0 or ph <= 0:
         raise PopulationReadError(
@@ -188,7 +175,7 @@ def read_population_from_hud(retries=3, conf_threshold=None):
         raise PopulationReadError(
             "Population ROI out of screen bounds: "
             f"left={abs_left}, top={abs_top}, width={pw}, height={ph}, "
-            f"screen={screen_width}x{screen_height}, HUD_ANCHOR={HUD_ANCHOR}. "
+            f"screen={screen_width}x{screen_height}. "
             "Recalibrate areas.pop_box in config.json."
         )
 
