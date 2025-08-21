@@ -32,16 +32,8 @@ logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s",
 )
 
-# Contador interno simples da população atual
+# Contador interno da população atual
 CURRENT_POP = 3
-
-
-def get_current_pop() -> int:
-    """Retorna população corrente.
-
-    Implementa um contador interno que é atualizado ao treinar novos aldeões.
-    """
-    return CURRENT_POP
 
 # =========================
 # CAPTURA & TEMPLATE MATCH
@@ -263,7 +255,7 @@ def build_storage_pit():
 def train_villagers(target_pop: int):
     """Fila aldeões na Town Center até atingir `target_pop`.
 
-    Usa um contador interno simples para estimar a população atual.
+    Lê a população atual diretamente da HUD após cada aldeão ser enfileirado.
     """
     global CURRENT_POP
     try:
@@ -276,19 +268,18 @@ def train_villagers(target_pop: int):
         _move_cursor_safe()
         pg.press(CFG["keys"]["select_tc"])
         time.sleep(0.10)
-    while get_current_pop() < target_pop:
+    CURRENT_POP, _ = read_population_from_hud()
+    while CURRENT_POP < target_pop:
         try:
             pg.press(CFG["keys"]["train_vill"])
-            CURRENT_POP += 1
-            time.sleep(0.10)
         except pg.FailSafeException:
             logging.warning(
                 "Fail-safe triggered while training villager. Moving cursor to center."
             )
             _move_cursor_safe()
             pg.press(CFG["keys"]["train_vill"])
-            CURRENT_POP += 1
-            time.sleep(0.10)
+        time.sleep(0.10)
+        CURRENT_POP, _ = read_population_from_hud()
 
 
 def econ_loop(minutes=5):
