@@ -146,42 +146,114 @@ def _to_px(nx, ny):
 
 def _click_norm(nx, ny):
     x, y = _to_px(nx, ny)
-    pg.click(x, y)
+    try:
+        pg.click(x, y)
+    except pg.FailSafeException:
+        logging.warning(
+            "Fail-safe triggered during click at (%s, %s). Moving cursor to center.",
+            x,
+            y,
+        )
+        _move_cursor_safe()
+        pg.click(x, y)
+
+def _move_cursor_safe():
+    W, H = _screen_size()
+    failsafe_state = pg.FAILSAFE
+    pg.FAILSAFE = False
+    pg.moveTo(W // 2, H // 2)
+    pg.FAILSAFE = failsafe_state
 
 def select_idle_villager():
-    pg.press(CFG["keys"]["idle_vill"])
-    time.sleep(0.10)
+    try:
+        pg.press(CFG["keys"]["idle_vill"])
+        time.sleep(0.10)
+    except pg.FailSafeException:
+        logging.warning(
+            "Fail-safe triggered while selecting idle villager. Moving cursor to center."
+        )
+        _move_cursor_safe()
+        pg.press(CFG["keys"]["idle_vill"])
+        time.sleep(0.10)
 
 def build_house():
     # Abra menu de construção e selecione a tecla configurada para "Casa"
-    pg.press(CFG["keys"]["build_menu"])
-    time.sleep(0.05)
+    try:
+        pg.press(CFG["keys"]["build_menu"])
+        time.sleep(0.05)
+    except pg.FailSafeException:
+        logging.warning(
+            "Fail-safe triggered while opening build menu. Moving cursor to center."
+        )
+        _move_cursor_safe()
+        pg.press(CFG["keys"]["build_menu"])
+        time.sleep(0.05)
     house_key = CFG["keys"]["house"]
     if house_key:
-        pg.press(house_key)
-        time.sleep(0.15)
+        try:
+            pg.press(house_key)
+            time.sleep(0.15)
+        except pg.FailSafeException:
+            logging.warning(
+                "Fail-safe triggered while selecting house. Moving cursor to center."
+            )
+            _move_cursor_safe()
+            pg.press(house_key)
+            time.sleep(0.15)
         hx, hy = CFG["areas"]["house_spot"]
         _click_norm(hx, hy)
 
 def build_granary():
     # Abre menu de construção e posiciona o "Granary" no local definido
-    pg.press(CFG["keys"]["build_menu"])
-    time.sleep(0.05)
+    try:
+        pg.press(CFG["keys"]["build_menu"])
+        time.sleep(0.05)
+    except pg.FailSafeException:
+        logging.warning(
+            "Fail-safe triggered while opening build menu. Moving cursor to center."
+        )
+        _move_cursor_safe()
+        pg.press(CFG["keys"]["build_menu"])
+        time.sleep(0.05)
     g_key = CFG["keys"].get("granary")
     if g_key:
-        pg.press(g_key)
-        time.sleep(0.15)
+        try:
+            pg.press(g_key)
+            time.sleep(0.15)
+        except pg.FailSafeException:
+            logging.warning(
+                "Fail-safe triggered while selecting granary. Moving cursor to center."
+            )
+            _move_cursor_safe()
+            pg.press(g_key)
+            time.sleep(0.15)
         gx, gy = CFG["areas"]["granary_spot"]
         _click_norm(gx, gy)
 
 def build_storage_pit():
     # Abre menu de construção e posiciona o "Storage Pit" no local definido
-    pg.press(CFG["keys"]["build_menu"])
-    time.sleep(0.05)
+    try:
+        pg.press(CFG["keys"]["build_menu"])
+        time.sleep(0.05)
+    except pg.FailSafeException:
+        logging.warning(
+            "Fail-safe triggered while opening build menu. Moving cursor to center."
+        )
+        _move_cursor_safe()
+        pg.press(CFG["keys"]["build_menu"])
+        time.sleep(0.05)
     s_key = CFG["keys"].get("storage_pit")
     if s_key:
-        pg.press(s_key)
-        time.sleep(0.15)
+        try:
+            pg.press(s_key)
+            time.sleep(0.15)
+        except pg.FailSafeException:
+            logging.warning(
+                "Fail-safe triggered while selecting storage pit. Moving cursor to center."
+            )
+            _move_cursor_safe()
+            pg.press(s_key)
+            time.sleep(0.15)
         sx, sy = CFG["areas"]["storage_spot"]
         _click_norm(sx, sy)
 
@@ -191,12 +263,29 @@ def train_villagers(target_pop: int):
     Usa um contador interno simples para estimar a população atual.
     """
     global CURRENT_POP
-    pg.press(CFG["keys"]["select_tc"])  # seleciona a TC
-    time.sleep(0.10)
-    while get_current_pop() < target_pop:
-        pg.press(CFG["keys"]["train_vill"])
-        CURRENT_POP += 1
+    try:
+        pg.press(CFG["keys"]["select_tc"])  # seleciona a TC
         time.sleep(0.10)
+    except pg.FailSafeException:
+        logging.warning(
+            "Fail-safe triggered while selecting Town Center. Moving cursor to center."
+        )
+        _move_cursor_safe()
+        pg.press(CFG["keys"]["select_tc"])
+        time.sleep(0.10)
+    while get_current_pop() < target_pop:
+        try:
+            pg.press(CFG["keys"]["train_vill"])
+            CURRENT_POP += 1
+            time.sleep(0.10)
+        except pg.FailSafeException:
+            logging.warning(
+                "Fail-safe triggered while training villager. Moving cursor to center."
+            )
+            _move_cursor_safe()
+            pg.press(CFG["keys"]["train_vill"])
+            CURRENT_POP += 1
+            time.sleep(0.10)
 
 
 def econ_loop(minutes=5):
