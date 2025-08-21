@@ -44,7 +44,7 @@ class TestPopulationROI(TestCase):
                 return_value={"text": [""], "conf": ["-1"]},
             ):
             with self.assertRaises(cb.PopulationReadError):
-                cb.read_population_from_hud(retries=1)
+                cb.read_population_from_hud(retries=1, conf_threshold=cb.CFG["ocr_conf_threshold"])
 
     def test_read_population_raises_when_no_digits(self):
         frame = np.zeros((200, 200, 3), dtype=np.uint8)
@@ -60,7 +60,7 @@ class TestPopulationROI(TestCase):
                 return_value={"text": ["xx"], "conf": ["70"]},
             ):
             with self.assertRaises(cb.PopulationReadError):
-                cb.read_population_from_hud(retries=1)
+                cb.read_population_from_hud(retries=1, conf_threshold=cb.CFG["ocr_conf_threshold"])
 
     def test_population_roi_respects_anchor_offsets(self):
         frame = np.arange(200 * 200 * 3, dtype=np.uint8).reshape(200, 200, 3)
@@ -88,7 +88,7 @@ class TestPopulationROI(TestCase):
                     "campaign_bot.pytesseract.image_to_data",
                     return_value={"text": ["12/34"], "conf": ["70"]},
                 ):
-                cb.read_population_from_hud(retries=1)
+                cb.read_population_from_hud(retries=1, conf_threshold=cb.CFG["ocr_conf_threshold"])
 
             roi = recorded["roi"]
             expected_left = anchor["left"] + int(pop_box[0] * anchor["width"])
