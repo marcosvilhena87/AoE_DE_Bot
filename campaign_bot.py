@@ -41,6 +41,10 @@ MONITOR = SCT.monitors[1]  # tela principal
 # Posição do minimapa utilizada apenas como referência
 HUD_ANCHOR = None
 
+
+class PopulationReadError(RuntimeError):
+    """Raised when population values cannot be extracted from the HUD."""
+
 # =========================
 # CAPTURA & TEMPLATE MATCH
 # =========================
@@ -133,8 +137,8 @@ def read_population_from_hud(retries=3, conf_threshold=60):
     """Captura a população atual e o limite máximo a partir da HUD.
 
     Tenta realizar OCR algumas vezes para aumentar a robustez. Retorna
-    ``(pop_atual, pop_limite)``. Em caso de falha, devolve ``(0, 0)`` e loga
-    a causa para auxiliar na calibração.
+    ``(pop_atual, pop_limite)``. Se todas as tentativas falharem, lança
+    :class:`PopulationReadError` com detalhes para auxiliar na calibração.
     """
     x, y, w, h = CFG["areas"]["pop_box"]
 
@@ -214,7 +218,9 @@ def read_population_from_hud(retries=3, conf_threshold=60):
         cv2.imwrite(str(thresh_path), last_thresh)
         logging.info("ROI salva em %s; texto extraído: '%s'", roi_path, last_text)
         logging.debug("ROI binarizada salva em %s", thresh_path)
-    return 0, 0
+    raise PopulationReadError(
+        f"Falha ao ler população da HUD após {retries} tentativas"
+    )
 
 # =========================
 # AÇÕES DE JOGO
@@ -361,7 +367,15 @@ def train_villagers(target_pop: int):
         _move_cursor_safe()
         pg.press(CFG["keys"]["select_tc"])
         time.sleep(0.10)
-    CURRENT_POP, _ = read_population_from_hud()
+    try:
+        CURRENT_POP, _ = read_population_from_hud()
+    except PopulationReadError as e:
+        logging.error(
+            "Não foi possível ler população inicial: %s. Abortando treino de aldeões.",
+            e,
+        )
+        return
+
     while CURRENT_POP < target_pop:
         try:
             pg.press(CFG["keys"]["train_vill"])
@@ -372,7 +386,14 @@ def train_villagers(target_pop: int):
             _move_cursor_safe()
             pg.press(CFG["keys"]["train_vill"])
         time.sleep(0.10)
-        CURRENT_POP, _ = read_population_from_hud()
+        try:
+            CURRENT_POP, _ = read_population_from_hud()
+        except PopulationReadError as e:
+            logging.error(
+                "Falha ao atualizar população durante treinamento: %s. Encerrando treino.",
+                e,
+            )
+            break
 
 
 def econ_loop(minutes=5):
@@ -392,7 +413,14 @@ def econ_loop(minutes=5):
 
     hunt_x, hunt_y = CFG["areas"]["hunt_food"]
     wood_x, wood_y = CFG["areas"]["wood"]
-    _, limit = read_population_from_hud()
+    try:
+        _, limit = read_population_from_hud()
+    except PopulationReadError as e:
+        logging.error(
+            "Falha ao ler população inicial: %s. Abortando rotina econômica.",
+            e,
+        )
+        return
     next_house = limit - 2
 
     t0 = time.time()
@@ -408,7 +436,14 @@ def econ_loop(minutes=5):
         time.sleep(CFG["timers"]["idle_gap"])
 
         # 3) Construir casa quando próximo do limite de população
-        current, limit = read_population_from_hud()
+        try:
+            current, limit = read_population_from_hud()
+        except PopulationReadError as e:
+            logging.error(
+                "Falha ao ler população durante loop econômico: %s. Encerrando rotina.",
+                e,
+            )
+            break
         global CURRENT_POP
         CURRENT_POP = current
         if current >= next_house:
@@ -416,7 +451,14 @@ def econ_loop(minutes=5):
             build_house()
             logging.info("Casa construída para expandir população")
             time.sleep(0.5)
-            _, limit = read_population_from_hud()
+            try:
+                _, limit = read_population_from_hud()
+            except PopulationReadError as e:
+                logging.error(
+                    "Falha ao atualizar limite de população após construir casa: %s. Encerrando rotina.",
+                    e,
+                )
+                break
             next_house = limit - 2
 
         time.sleep(CFG["timers"]["loop_sleep"])

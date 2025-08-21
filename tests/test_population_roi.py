@@ -33,7 +33,7 @@ import campaign_bot as cb
 
 
 class TestPopulationROI(TestCase):
-    def test_population_roi_outside_screen_does_not_raise(self):
+    def test_population_roi_outside_screen_raises_error(self):
         big_frame = np.zeros((200, 200, 3), dtype=np.uint8)
 
         with patch("campaign_bot._grab_frame", return_value=big_frame), \
@@ -43,10 +43,24 @@ class TestPopulationROI(TestCase):
                 "campaign_bot.pytesseract.image_to_data",
                 return_value={"text": [""], "conf": ["-1"]},
             ):
-            try:
+            with self.assertRaises(cb.PopulationReadError):
                 cb.read_population_from_hud(retries=1)
-            except Exception as exc:  # pragma: no cover
-                self.fail(f"read_population_from_hud raised {exc}")
+
+    def test_read_population_raises_when_no_digits(self):
+        frame = np.zeros((200, 200, 3), dtype=np.uint8)
+
+        with patch("campaign_bot._grab_frame", return_value=frame), \
+            patch("campaign_bot._screen_size", return_value=(200, 200)), \
+            patch.dict(cb.CFG["areas"], {"pop_box": [0.1, 0.1, 0.5, 0.5]}), \
+            patch("campaign_bot.cv2.cvtColor", side_effect=lambda img, code: img), \
+            patch("campaign_bot.cv2.resize", side_effect=lambda img, *a, **k: img), \
+            patch("campaign_bot.cv2.threshold", side_effect=lambda img, *a, **k: (None, img)), \
+            patch(
+                "campaign_bot.pytesseract.image_to_data",
+                return_value={"text": ["xx"], "conf": ["70"]},
+            ):
+            with self.assertRaises(cb.PopulationReadError):
+                cb.read_population_from_hud(retries=1)
 
     def test_population_roi_respects_anchor_offsets(self):
         frame = np.arange(200 * 200 * 3, dtype=np.uint8).reshape(200, 200, 3)
