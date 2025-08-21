@@ -3,6 +3,8 @@ import json
 import time
 from pathlib import Path
 import os
+import re
+from dataclasses import dataclass
 
 import numpy as np
 import cv2
@@ -32,8 +34,10 @@ logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s",
 )
 
-# Contador interno da população atual
-CURRENT_POP = 3
+# Contadores internos de população
+CURRENT_POP = 0
+POP_CAP = 0
+TARGET_POP = 0
 
 # Instância única do mss para reutilização
 SCT = mss()
@@ -44,6 +48,51 @@ HUD_ANCHOR = None
 
 class PopulationReadError(RuntimeError):
     """Raised when population values cannot be extracted from the HUD."""
+
+
+@dataclass
+class ScenarioInfo:
+    starting_villagers: int = 0
+    population_limit: int = 0
+    objective_villagers: int = 0
+
+
+def parse_scenario_info(path: str) -> ScenarioInfo:
+    """Parse basic scenario information from a text file.
+
+    Extracts starting villagers, global population limit and the
+    number of villagers required by the objectives.
+    """
+    info = ScenarioInfo()
+    in_objectives = False
+    try:
+        with open(path, encoding="utf-8") as fh:
+            for line in fh:
+                line = line.strip()
+                if not line:
+                    # blank line ends objectives block
+                    in_objectives = False
+                    continue
+                lower = line.lower()
+                if lower.startswith("population limit"):
+                    m = re.search(r"(\d+)", line)
+                    if m:
+                        info.population_limit = int(m.group(1))
+                elif lower.startswith("starting units"):
+                    m = re.search(r"(\d+)\s+villagers", line, re.IGNORECASE)
+                    if m:
+                        info.starting_villagers = int(m.group(1))
+                elif lower.startswith("objectives"):
+                    in_objectives = True
+                    continue
+                elif in_objectives:
+                    m = re.search(r"(\d+)\s+villagers", line, re.IGNORECASE)
+                    if m:
+                        info.objective_villagers = int(m.group(1))
+                        in_objectives = False
+    except FileNotFoundError:
+        logging.error("Scenario file not found: %s", path)
+    return info
 
 # =========================
 # CAPTURA & TEMPLATE MATCH
@@ -377,9 +426,10 @@ def build_storage_pit():
 def train_villagers(target_pop: int):
     """Fila aldeões na Town Center até atingir `target_pop`.
 
-    Lê a população atual diretamente da HUD após cada aldeão ser enfileirado.
+    Usa contadores internos para população e constrói casas
+    automaticamente ao atingir o limite atual.
     """
-    global CURRENT_POP
+    global CURRENT_POP, POP_CAP
     try:
         pg.press(CFG["keys"]["select_tc"])  # seleciona a TC
         time.sleep(0.10)
@@ -390,16 +440,6 @@ def train_villagers(target_pop: int):
         _move_cursor_safe()
         pg.press(CFG["keys"]["select_tc"])
         time.sleep(0.10)
-    try:
-        CURRENT_POP, _ = read_population_from_hud(conf_threshold=CFG.get("ocr_conf_threshold", 60))
-    except PopulationReadError as e:
-        logging.error(
-            "Não foi possível ler população inicial: %s. Abortando treino de aldeões.",
-            e,
-        )
-        return
-
-
     while CURRENT_POP < target_pop:
         resources = read_resources_from_hud()
         if resources.get("food", 0) < 50:
@@ -416,21 +456,18 @@ def train_villagers(target_pop: int):
             )
             _move_cursor_safe()
             pg.press(CFG["keys"]["train_vill"])
+        CURRENT_POP += 1
+        if CURRENT_POP == POP_CAP:
+            build_house()
+            POP_CAP += 4
         time.sleep(0.10)
-        try:
-            CURRENT_POP, _ = read_population_from_hud(conf_threshold=CFG.get("ocr_conf_threshold", 60))
-        except PopulationReadError as e:
-            logging.error(
-                "Falha ao atualizar população durante treinamento: %s. Encerrando treino.",
-                e,
-            )
-            break
 
 
 def econ_loop(minutes=5):
     """Baseline para 'Hunting': prioriza comida (caça/frutos) + madeira p/ casas."""
+    global POP_CAP, TARGET_POP, CURRENT_POP
     logging.info("Iniciando rotina econômica por %s minutos", minutes)
-    train_villagers(12)
+    train_villagers(TARGET_POP)
 
     # Construções iniciais: Granary e Storage Pit
     select_idle_villager()
@@ -444,15 +481,6 @@ def econ_loop(minutes=5):
 
     hunt_x, hunt_y = CFG["areas"]["hunt_food"]
     wood_x, wood_y = CFG["areas"]["wood"]
-    try:
-        _, limit = read_population_from_hud(conf_threshold=CFG.get("ocr_conf_threshold", 60))
-    except PopulationReadError as e:
-        logging.error(
-            "Falha ao ler população inicial: %s. Abortando rotina econômica.",
-            e,
-        )
-        return
-    next_house = limit - 2
 
     t0 = time.time()
     while time.time() - t0 < minutes * 60:
@@ -467,30 +495,12 @@ def econ_loop(minutes=5):
         time.sleep(CFG["timers"]["idle_gap"])
 
         # 3) Construir casa quando próximo do limite de população
-        try:
-            current, limit = read_population_from_hud(conf_threshold=CFG.get("ocr_conf_threshold", 60))
-        except PopulationReadError as e:
-            logging.error(
-                "Falha ao ler população durante loop econômico: %s. Encerrando rotina.",
-                e,
-            )
-            break
-        global CURRENT_POP
-        CURRENT_POP = current
-        if current >= next_house:
+        if CURRENT_POP >= POP_CAP - 2:
             select_idle_villager()
             build_house()
             logging.info("Casa construída para expandir população")
             time.sleep(0.5)
-            try:
-                _, limit = read_population_from_hud(conf_threshold=CFG.get("ocr_conf_threshold", 60))
-            except PopulationReadError as e:
-                logging.error(
-                    "Falha ao atualizar limite de população após construir casa: %s. Encerrando rotina.",
-                    e,
-                )
-                break
-            next_house = limit - 2
+            POP_CAP += 4
 
         time.sleep(CFG["timers"]["loop_sleep"])
     logging.info("Rotina econômica finalizada")
@@ -509,6 +519,12 @@ def main():
         logging.error(str(e))
         logging.info("Dando mais 25s para você ajustar a câmera/HUD (fallback)…")
         time.sleep(25)
+
+    info = parse_scenario_info("campaigns/Ascent_of_Egypt/1.Hunting.txt")
+    global CURRENT_POP, POP_CAP, TARGET_POP
+    CURRENT_POP = info.starting_villagers
+    POP_CAP = 4  # 1 Town Center
+    TARGET_POP = info.objective_villagers
 
     econ_loop(minutes=CFG["loop_minutes"])
     logging.info("Rotina concluída.")
