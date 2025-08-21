@@ -144,7 +144,37 @@ def read_population_from_hud(retries=3, conf_threshold=60):
             pw = int(w * W)
             ph = int(h * H)
 
-        roi = frame[py : py + ph, px : px + pw]
+        h_frame, w_frame = frame.shape[:2]
+        x1 = max(0, px)
+        y1 = max(0, py)
+        x2 = min(px + pw, w_frame)
+        y2 = min(py + ph, h_frame)
+
+        if x2 <= x1 or y2 <= y1:
+            logging.warning(
+                "Population ROI outside HUD region; capturing full screen"
+            )
+            frame = _grab_frame(bbox=MONITOR)
+            h_frame, w_frame = frame.shape[:2]
+            px = int(x * w_frame)
+            py = int(y * h_frame)
+            pw = int(w * w_frame)
+            ph = int(h * h_frame)
+            x1 = max(0, px)
+            y1 = max(0, py)
+            x2 = min(px + pw, w_frame)
+            y2 = min(py + ph, h_frame)
+
+            if x2 <= x1 or y2 <= y1:
+                logging.warning(
+                    "Population ROI invalid even on full screen capture"
+                )
+                continue
+
+        roi = frame[y1:y2, x1:x2]
+        if roi.size == 0:
+            logging.warning("Population ROI has zero size after clamping")
+            continue
         gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
         gray = cv2.resize(gray, None, fx=2, fy=2, interpolation=cv2.INTER_LINEAR)
         _, thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
