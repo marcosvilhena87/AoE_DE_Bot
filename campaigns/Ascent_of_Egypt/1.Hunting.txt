@@ -1,3 +1,9 @@
+Starting Age:  Stone Age
+Starting resources: 140 food, 80 wood
+Population limit: 50
+Starting units: 3 Villagers
+Starting buildings: 1 Town Center
+
 Objectives
 Grow your tribe to 7 villagers.
 
