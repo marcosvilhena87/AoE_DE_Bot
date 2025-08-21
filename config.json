@@ -23,7 +23,7 @@
     "house_spot": [0.47, 0.72],
     "granary_spot": [0.44, 0.66],
     "storage_spot": [0.58, 0.52],
-    "pop_box": [0.0, 0.0, 0.1, 0.1],
+    "pop_box": [0.0, 0.03, 0.29, 0.05],
     "//pop_box": "[x, y, w, h] como frações da tela; calibrar depois."
   },
   "timers": {
