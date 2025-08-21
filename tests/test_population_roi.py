@@ -46,6 +46,7 @@ class TestPopulationROI(TestCase):
             self.assertIn("recalibrate areas.pop_box", msg)
             self.assertIn("left=", msg)
             self.assertIn("top=", msg)
+            self.assertNotIn("hud_anchor", msg)
             grab_mock.assert_not_called()
             ocr_mock.assert_not_called()
 
@@ -67,7 +68,7 @@ class TestPopulationROI(TestCase):
             with self.assertRaises(cb.PopulationReadError):
                 cb.read_population_from_hud(retries=1, conf_threshold=cb.CFG["ocr_conf_threshold"])
 
-    def test_population_roi_uses_screen_fractional_coordinates(self):
+    def test_population_roi_ignores_hud_anchor(self):
         frame = np.arange(200 * 200 * 3, dtype=np.uint8).reshape(200, 200, 3)
         pop_box = [0.1, 0.2, 0.5, 0.4]
 
@@ -90,6 +91,7 @@ class TestPopulationROI(TestCase):
         with patch("campaign_bot._grab_frame", side_effect=fake_grab), \
             patch("campaign_bot._screen_size", return_value=(200, 200)), \
             patch.dict(cb.CFG["areas"], {"pop_box": pop_box}), \
+            patch("campaign_bot.HUD_ANCHOR", {"left": 50, "top": 60, "width": 10, "height": 10}), \
             patch("campaign_bot.cv2.cvtColor", side_effect=fake_cvtColor), \
             patch("campaign_bot.cv2.resize", side_effect=lambda img, *a, **k: img), \
             patch("campaign_bot.cv2.threshold", side_effect=lambda img, *a, **k: (None, img)), \
