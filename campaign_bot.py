@@ -182,8 +182,13 @@ def read_population_from_hud(retries=3, conf_threshold=60):
 # AÇÕES DE JOGO
 # =========================
 def _screen_size():
-    W, H = pg.size()
-    return W, H
+    """Retorna as dimensões da tela principal.
+
+    Usa as informações do monitor capturadas pelo ``mss`` em vez de
+    ``pyautogui.size`` para garantir consistência entre as leituras de
+    pixels e as capturas de tela.
+    """
+    return MONITOR["width"], MONITOR["height"]
 
 def _to_px(nx, ny):
     W, H = _screen_size()
