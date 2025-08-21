@@ -1,6 +1,6 @@
 {
   "profile": "aoe1de",
-  "look_for": ["../campaigns/Ascent_of_Egypt/Hunting_startscreen.png"],
+  "look_for": ["campaigns/Ascent_of_Egypt/Hunting_startscreen.png"],
   "threshold": 0.82,
   "scales": [0.88, 0.92, 0.96, 1.0, 1.04, 1.08, 1.12],
   "loop_minutes": 6,
