@@ -1,0 +1,34 @@
+{
+  "profile": "aoe1de",
+  "look_for": ["assets/ui_minimap.png", "assets/resources_population.png"],
+  "threshold": 0.82,
+  "scales": [0.88, 0.92, 0.96, 1.0, 1.04, 1.08, 1.12],
+  "loop_minutes": 6,
+  "debug": false,
+  "verbose_logging": false,
+  "ocr_conf_threshold": 60,
+  "tesseract_path": "C:\\Program Files\\Tesseract-OCR\\tesseract.exe",
+  "keys": {
+    "idle_vill": ".",
+    "build_menu": "b",
+    "house": "e",
+    "select_tc": "h",
+    "train_vill": "q",
+    "granary": null,
+    "storage_pit": null
+  },
+  "areas": {
+    "hunt_food": [0.46, 0.7],
+    "wood": [0.62, 0.55],
+    "house_spot": [0.47, 0.72],
+    "granary_spot": [0.44, 0.66],
+    "storage_spot": [0.58, 0.52],
+    "pop_box": [0.0, 0.03, 0.29, 0.05],
+    "//pop_box": "[x, y, w, h] como frações da tela; calibrar depois."
+  },
+  "timers": {
+    "house_interval": 45.0,
+    "idle_gap": 0.35,
+    "loop_sleep": 0.7
+  }
+}
