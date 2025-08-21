@@ -38,7 +38,7 @@ CURRENT_POP = 3
 # Instância única do mss para reutilização
 SCT = mss()
 MONITOR = SCT.monitors[1]  # tela principal
-# Posição do minimapa utilizada apenas como referência
+# Posição detectada do HUD usada apenas como referência
 HUD_ANCHOR = None
 
 
@@ -52,9 +52,9 @@ def _grab_frame(bbox=None):
     """Captura um frame da tela.
 
     Se ``bbox`` for fornecido, captura apenas a região especificada.
-    Caso contrário, captura a tela inteira. A posição do minimapa
-    (``HUD_ANCHOR``) não limita a área capturada; ela é utilizada apenas
-    como referência para cálculos de offset.
+    Caso contrário, captura a tela inteira. A detecção do HUD
+    (``HUD_ANCHOR``) serve apenas como confirmação visual e não
+    restringe a área capturada.
     """
     region = bbox or MONITOR
     img = np.array(SCT.grab(region))[:, :, :3]  # BGRA -> BGR
