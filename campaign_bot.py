@@ -117,40 +117,59 @@ def wait_hud(timeout=60):
 # =========================
 # LEITURA DE POPULAÇÃO NA HUD
 # =========================
-def read_population_from_hud():
+def read_population_from_hud(retries=3, conf_threshold=60):
     """Captura a população atual e o limite máximo a partir da HUD.
 
-    Retorna `(pop_atual, pop_limite)`. Em caso de falha, devolve `(0, 0)`.
+    Tenta realizar OCR algumas vezes para aumentar a robustez. Retorna
+    ``(pop_atual, pop_limite)``. Em caso de falha, devolve ``(0, 0)`` e loga
+    a causa para auxiliar na calibração.
     """
-    frame = _grab_frame()
     x, y, w, h = CFG["areas"]["pop_box"]
 
-    if HUD_REGION:
-        W_screen, H_screen = _screen_size()
-        abs_left = int(x * W_screen)
-        abs_top = int(y * H_screen)
-        pw = int(w * W_screen)
-        ph = int(h * H_screen)
-        px = abs_left - HUD_REGION["left"]
-        py = abs_top - HUD_REGION["top"]
-    else:
-        H, W = frame.shape[:2]
-        px = int(x * W)
-        py = int(y * H)
-        pw = int(w * W)
-        ph = int(h * H)
+    for attempt in range(retries):
+        frame = _grab_frame()
 
-    roi = frame[py : py + ph, px : px + pw]
-    gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
-    gray = cv2.resize(gray, None, fx=2, fy=2, interpolation=cv2.INTER_LINEAR)
-    _, thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-    text = pytesseract.image_to_string(thresh, config="--psm 7").strip()
+        if HUD_REGION:
+            W_screen, H_screen = _screen_size()
+            abs_left = int(x * W_screen)
+            abs_top = int(y * H_screen)
+            pw = int(w * W_screen)
+            ph = int(h * H_screen)
+            px = abs_left - HUD_REGION["left"]
+            py = abs_top - HUD_REGION["top"]
+        else:
+            H, W = frame.shape[:2]
+            px = int(x * W)
+            py = int(y * H)
+            pw = int(w * W)
+            ph = int(h * H)
 
-    parts = [p for p in text.replace(" ", "").split("/") if p]
-    if len(parts) >= 2:
-        cur = int("".join(filter(str.isdigit, parts[0])) or 0)
-        limit = int("".join(filter(str.isdigit, parts[1])) or 0)
-        return cur, limit
+        roi = frame[py : py + ph, px : px + pw]
+        gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+        gray = cv2.resize(gray, None, fx=2, fy=2, interpolation=cv2.INTER_LINEAR)
+        _, thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        data = pytesseract.image_to_data(
+            thresh,
+            config="--psm 7 -c tessedit_char_whitelist=0123456789/",
+            output_type=pytesseract.Output.DICT,
+        )
+        text = "".join(data.get("text", [])).replace(" ", "")
+        parts = [p for p in text.split("/") if p]
+        confidences = [int(c) for c in data.get("conf", []) if c != "-1"]
+
+        if len(parts) >= 2 and (not confidences or min(confidences) >= conf_threshold):
+            cur = int("".join(filter(str.isdigit, parts[0])) or 0)
+            limit = int("".join(filter(str.isdigit, parts[1])) or 0)
+            return cur, limit
+
+        logging.debug(
+            "OCR attempt %s failed: text='%s', conf=%s", attempt + 1, text, confidences
+        )
+        time.sleep(0.1)
+
+    logging.warning(
+        "Falha ao ler população da HUD após %s tentativas", retries
+    )
     return 0, 0
 
 # =========================
