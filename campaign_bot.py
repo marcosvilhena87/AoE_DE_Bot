@@ -192,16 +192,16 @@ def read_population_from_hud(retries=3, conf_threshold=None):
             "Recalibrate areas.pop_box in config.json."
         )
 
-    x1, y1, x2, y2 = abs_left, abs_top, abs_right, abs_bottom
+    bbox = {"left": abs_left, "top": abs_top, "width": pw, "height": ph}
 
     last_roi = None
     last_thresh = None
     last_text = ""
 
     for attempt in range(retries):
-        frame = _grab_frame()
+        frame = _grab_frame(bbox)
 
-        roi = frame[y1:y2, x1:x2]
+        roi = frame  # frame already contains only the population area
         if roi.size == 0:
             logging.warning("Population ROI has zero size")
             continue
