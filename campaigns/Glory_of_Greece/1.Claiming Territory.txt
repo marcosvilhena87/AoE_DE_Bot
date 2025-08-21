@@ -1,0 +1,24 @@
+Objectives
+Destroy all Pelasgian Farms.
+Build 5 Farms.
+
+Hints
+The Mycenaeans are restricted to the Tool Age and a population limit of 50.
+The first potential location for your Town Center is also the hardest to defend. Looking for a better place to construct your base is advisable.
+Attack only when you are truly ready; the Pelasgians are well prepared for an onslaught.
+Our rivals have claimed several important resource gathering sites. Seizing these will be vital to your success.
+
+Strategy
+This scenario is not as easy as one would expect from the first scenario of a campaign. The player and the Dorians are limited to the Tool Age, with only Axemen, Bowmen, Scouts, and (in The Rise of Rome) Slingers at the player's disposal. If the game takes too long to be finished, the Tyrynians (Danaans) and Ionians (Achaeans) may advance to the Bronze Age (this rarely happens though). However, if they manage to advance, they won't be able to do much anything with it since the map lacks Gold. In the Definitive Edition, all players are limited to the Tool Age.
+
+To the northwest of the player's starting position are a few Stone Mines, some huntable animals, and plenty of trees; the player may need all of these depending on their strategy. The player may choose to build a Town Center there, or may alternatively take over the Tyrinian (Danaan) base immediately. This is practical because their area has more resources and is easier to defend. This could be what the hints mean by "the best place for your town center may be poorly guarded". In other words, the best place to start is at the weak spot of the enemies. If the player chooses to opt for this strategy, the player should build up immediately. Closing off entrances to the base with makeshift walls consisting of Storage Pits or Barracks will impede most attacks directly, providing a warning for the player before they enter your base. If necessary for a last resort protection, the player may wish to construct secondary walls or close off other passageways using Houses.
+
+The player should Age up as quickly as possible. A Market will allow the ability to build farms. Not only will they be needed to complete the scenario, they will also be the best source of food when all other sources have been exhausted.
+
+Build a Barracks and an Archery Range, and start making Bowmen and Axemen (upgrading Clubmen will provide the player with the best soldiers on the map). Researching Watch Tower from the Granary will allow the ability to build defenses to impede Dorian (Pelasgian) assaults.
+
+Once the player has built up a force of a dozen or more soldiers, and upgraded their defense and attack at the Storage Pit, the player can now bring the offensive to the Dorians (Pelasgians). The player can bring along a Scout or two to find enemy Farms more feasibly, but they shouldn't be used for fighting unless as a last resort. They're too expensive for combat. Taking out all unit production buildings will cease their production of soldiers, which will make the main objective easier. However, this isn't strictly necessary. As long as the player searched and destroyed all enemy farms, the scenario will be complete.
+
+Alternatively, the player can win this campaign without even building up much of a base and instead attack the Dorians (Pelasgians) from the beginning. The player should immediately bring the offensive to the Dorians who reside along the northwest portion of the map. The player may choose to bring all of their units including Villagers into the attack or leave them behind to gather wood after completing the construction of a Storage Pit, a Barracks and several houses near the player's starting area. Once the Dorians have been weakened, the player can build a Barracks and a few Houses near the settlement if the player has not yet done so already. After all of Doria's (Pelasgia's) military units have been eliminated, the player may then attack the other surrounding tribes before either of them gets stronger. Once all enemy military units are out of the way, destroy any remaining buildings and Villagers, and you win. This can be very difficult though, especially on the Hardest difficulty.
+
+If other tribes have built their own Farms, the player will have to destroy them as well.
