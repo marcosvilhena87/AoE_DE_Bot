@@ -128,6 +128,10 @@ def read_population_from_hud(retries=3, conf_threshold=60):
     """
     x, y, w, h = CFG["areas"]["pop_box"]
 
+    last_roi = None
+    last_thresh = None
+    last_text = ""
+
     for attempt in range(retries):
         frame = _grab_frame()
 
@@ -163,6 +167,10 @@ def read_population_from_hud(retries=3, conf_threshold=60):
         parts = [p for p in text.split("/") if p]
         confidences = [int(c) for c in data.get("conf", []) if c != "-1"]
 
+        last_roi = roi
+        last_thresh = thresh
+        last_text = text
+
         if len(parts) >= 2 and (not confidences or min(confidences) >= conf_threshold):
             cur = int("".join(filter(str.isdigit, parts[0])) or 0)
             limit = int("".join(filter(str.isdigit, parts[1])) or 0)
@@ -176,6 +184,14 @@ def read_population_from_hud(retries=3, conf_threshold=60):
     logging.warning(
         "Falha ao ler população da HUD após %s tentativas", retries
     )
+    if CFG.get("debug") and last_roi is not None:
+        ts = int(time.time() * 1000)
+        roi_path = ROOT / f"debug_pop_roi_{ts}.png"
+        cv2.imwrite(str(roi_path), last_roi)
+        thresh_path = ROOT / f"debug_pop_thresh_{ts}.png"
+        cv2.imwrite(str(thresh_path), last_thresh)
+        logging.info("ROI salva em %s; texto extraído: '%s'", roi_path, last_text)
+        logging.debug("ROI binarizada salva em %s", thresh_path)
     return 0, 0
 
 # =========================
