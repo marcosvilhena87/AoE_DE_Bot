@@ -40,6 +40,8 @@ CFG = {
         "hunt_food": (0.46, 0.70),   # região onde geralmente ficam gazelas/arbustos
         "wood":      (0.62, 0.55),   # bloco de árvores frequente
         "house_spot":(0.47, 0.72),   # onde posicionar Casa (solo livre, próximo TC)
+        "granary_spot": (0.44, 0.66),    # local para Granary próximo a frutos
+        "storage_spot": (0.58, 0.52),    # local para Storage Pit próximo a madeira
         "pop_box":   (0.93, 0.02, 0.05, 0.04),  # x,y,w,h normalizados da população na HUD
     },
     # Heurísticas simples
@@ -177,6 +179,28 @@ def build_house():
         hx, hy = CFG["areas"]["house_spot"]
         _click_norm(hx, hy)
 
+def build_granary():
+    # Abre menu de construção e posiciona o "Granary" no local definido
+    pg.press(CFG["keys"]["build_menu"])
+    time.sleep(0.05)
+    g_key = CFG["keys"].get("granary")
+    if g_key:
+        pg.press(g_key)
+        time.sleep(0.15)
+        gx, gy = CFG["areas"]["granary_spot"]
+        _click_norm(gx, gy)
+
+def build_storage_pit():
+    # Abre menu de construção e posiciona o "Storage Pit" no local definido
+    pg.press(CFG["keys"]["build_menu"])
+    time.sleep(0.05)
+    s_key = CFG["keys"].get("storage_pit")
+    if s_key:
+        pg.press(s_key)
+        time.sleep(0.15)
+        sx, sy = CFG["areas"]["storage_spot"]
+        _click_norm(sx, sy)
+
 def train_villagers(target_pop: int):
     """Fila aldeões na Town Center até atingir `target_pop`.
 
@@ -194,6 +218,15 @@ def train_villagers(target_pop: int):
 def econ_loop(minutes=5):
     """Baseline para 'Hunting': prioriza comida (caça/frutos) + madeira p/ casas."""
     train_villagers(12)
+
+    # Construções iniciais: Granary e Storage Pit
+    select_idle_villager()
+    build_granary()
+    time.sleep(0.5)
+    select_idle_villager()
+    build_storage_pit()
+    time.sleep(0.5)
+
     hunt_x, hunt_y = CFG["areas"]["hunt_food"]
     wood_x, wood_y = CFG["areas"]["wood"]
     _, limit = read_population_from_hud()
