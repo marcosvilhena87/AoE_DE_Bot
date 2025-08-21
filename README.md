@@ -12,18 +12,17 @@ If neither option is provided, `pytesseract` will attempt to find `tesseract` on
 
 ## Configuration notes
 
-The bot locates the minimap on the screen to establish an anchor for HUD
-offset calculations. This anchor no longer limits the capture area—frames are
-grabbed from the whole screen unless a different region is explicitly
-requested.
+The bot locates HUD elements (such as the minimap or resource bar) only to
+confirm that the interface is visible. Frames are captured from the whole
+screen unless a different region is explicitly requested.
 
-HUD-related coordinates, such as `areas.pop_box`, are specified as
-``[dx, dy, width, height]`` fractions relative to this anchor. The minimap
-position serves as the reference origin for these offsets.
+HUD-related coordinates, such as `areas.pop_box`, use ``[x, y, width, height]``
+fractions of the entire screen. The default values in `config.json` are
+placeholders and should be calibrated for your setup.
 
 ## Capturing `hud_resources.png`
 
-Some HUD layouts place the minimap and the resource bar at different offsets.
+Some HUD layouts place the minimap and the resource bar at different positions.
 The bot now searches for either element, so a suitable `hud_resources.png`
 template is required for your configuration.
 
@@ -36,13 +35,13 @@ template is required for your configuration.
 
 ## Calibration helper
 
-To recalculate the `areas.pop_box` offsets interactively, run:
+To calibrate the `areas.pop_box` fractions interactively, run:
 
 ```
 python tools/calibrate_pop_box.py
 ```
 
 The script waits for the HUD to be detected, shows a screenshot, and lets you
-draw the population box. The normalized `[dx, dy, width, height]` values are
+draw the population box. The normalized `[x, y, width, height]` values are
 printed and you can choose to write them back to `config.json` automatically.
 
