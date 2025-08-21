@@ -135,11 +135,23 @@ def read_population_from_hud(retries=3, conf_threshold=60):
     for attempt in range(retries):
         frame = _grab_frame()
 
-        W_screen, H_screen = _screen_size()
-        abs_left = int(x * W_screen)
-        abs_top = int(y * H_screen)
-        pw = int(w * W_screen)
-        ph = int(h * H_screen)
+        if HUD_ANCHOR:
+            ax, ay, aw, ah = (
+                HUD_ANCHOR["left"],
+                HUD_ANCHOR["top"],
+                HUD_ANCHOR["width"],
+                HUD_ANCHOR["height"],
+            )
+            abs_left = int(ax + x * aw)
+            abs_top = int(ay + y * ah)
+            pw = int(w * aw)
+            ph = int(h * ah)
+        else:
+            W_screen, H_screen = _screen_size()
+            abs_left = int(x * W_screen)
+            abs_top = int(y * H_screen)
+            pw = int(w * W_screen)
+            ph = int(h * H_screen)
 
         h_frame, w_frame = frame.shape[:2]
         x1 = max(0, abs_left)
