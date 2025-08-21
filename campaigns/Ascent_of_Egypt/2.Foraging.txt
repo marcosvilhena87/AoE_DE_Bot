@@ -1,0 +1,20 @@
+Objectives
+Collect food and then construct 3 buildings: Granary, Storage Pit and Dock
+
+Hints
+You must forage for food to create villagers and chop wood to build Houses to support the new villagers. You can put the new villagers to work chopping wood as well as constructing the other required buildings (Storage Pit, Granary, and Dock)
+Forage sites are plentiful across the river, which you can reach by crossing at the shallows.
+Villagers automatically deposit food from foraging at the Town Center of Granary, whichever is closer. Building a Granary near the forage sites decreases the distance the villagers must travel to deposit the food in your stockpile.
+Villagers automatically deposit wood at the Town Center or Storage Pit, whichever is closer. Building a Storage Pit near a stand of trees decreases the distance villagers must travel to deposit the wood in your stockpile. (The Storage Pit is also a collection point for stone, gold, and food from hunting, which are not used in this scenario.)
+
+Strategy
+This scenario is very simple. Simply gather enough wood to build these structures mentioned at the objectives part of the scenario. It takes 340 wood to build these structures altogether. Although there are many Berry Bushes found on the map, gathering food from them is not required; however, the more Villagers a player has, the faster the scenario can be accomplished.
+
+Tutorial
+CHOPPING WOOD
+To chop wood, click a villager, and then right-click a tree. The villager chops the tree, gathers wood, and deposits it at the Town Center where it is added to your stockpile (as shown in the upper-left corner of the game screen). The more villagers you assign to chop wood, the faster your stockpile grows.
+FORAGING FOR FOOD
+To forage for food, click a villager, and then right-click a forage site (berry bush). The villager gathers food and deposits it at the Town Center, where it is added to your stockpile (as shown in the upper-left corner of the game screen). The more villagers you assign to forage, the faster your stockpile grows.
+CONSTRUCTING BUILDINGS
+You must construct Houses (30 wood) to support your new villagers (the Town Center and each House supports four villagers). You must also construct a Storage Pit (120 wood), Granary (120 wood), and Dock (100 wood). Before you can construct buildings, you must have enough wood in your stockpile to accomplish this task. To construct a building, click a villager, click the button of the building to build in the building panel in the lower-left corner, and then click a location on the map. The building is shown in red if you cannot build in a particular location. If you want to build more than one of the same building, press SHIFT, and then click multiple locations on the map.
+To display the objectives while you are playing the game, click the Objectives button in the upper-right corner of the game screen. For more tips on achieving the objective, click on Hints. To open this page again while you are playing the game, open the menu and click on the Scenario Instructions button.
