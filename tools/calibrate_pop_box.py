@@ -23,10 +23,12 @@ def main():
         print("No region selected. Aborting.")
         return
 
-    dx = (x - cb.HUD_ANCHOR["left"]) / cb.HUD_ANCHOR["width"]
-    dy = (y - cb.HUD_ANCHOR["top"]) / cb.HUD_ANCHOR["height"]
-    width = w / cb.HUD_ANCHOR["width"]
-    height = h / cb.HUD_ANCHOR["height"]
+    screen_w = frame.shape[1]
+    screen_h = frame.shape[0]
+    dx = x / screen_w
+    dy = y / screen_h
+    width = w / screen_w
+    height = h / screen_h
     values = [round(dx, 2), round(dy, 2), round(width, 2), round(height, 2)]
 
     print("Suggested areas.pop_box:")
