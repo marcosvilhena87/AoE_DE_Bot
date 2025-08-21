@@ -34,3 +34,15 @@ template is required for your configuration.
 4. If your layout differs between profiles, capture and replace this template
    for each one to ensure `wait_hud()` can anchor correctly.
 
+## Calibration helper
+
+To recalculate the `areas.pop_box` offsets interactively, run:
+
+```
+python tools/calibrate_pop_box.py
+```
+
+The script waits for the HUD to be detected, shows a screenshot, and lets you
+draw the population box. The normalized `[dx, dy, width, height]` values are
+printed and you can choose to write them back to `config.json` automatically.
+
