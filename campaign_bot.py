@@ -137,59 +137,39 @@ def wait_hud(timeout=60):
 # LEITURA DE POPULAÇÃO NA HUD
 # =========================
 def read_population_from_hud(retries=3, conf_threshold=None, save_failed_roi=False):
-    """Captura a população atual e o limite máximo a partir da HUD.
-
-    Tenta realizar OCR algumas vezes para aumentar a robustez. Retorna
-    ``(pop_atual, pop_limite)``. Se todas as tentativas falharem, lança
-    :class:`PopulationReadError` com detalhes para auxiliar na calibração.
-
-    Parameters
-    ----------
-    retries: int
-        Número de tentativas de OCR.
-    conf_threshold: int | None
-        Confiança mínima dos resultados do OCR.
-    save_failed_roi: bool
-        Se ``True``, salva a ROI e a versão binarizada em caso de falha
-        independentemente de ``CFG["debug"]``.
-    """
     if conf_threshold is None:
         conf_threshold = CFG.get("ocr_conf_threshold", 60)
-    x, y, w, h = CFG["areas"]["pop_box"]
-    if w <= 0 or h <= 0:
-        raise PopulationReadError(
-            "Population ROI has non-positive dimensions: "
-            f"w={w}, h={h}. Recalibrate areas.pop_box in config.json."
-        )
-    screen_width, screen_height = _screen_size()
-    abs_left = int(x * screen_width)
-    abs_top = int(y * screen_height)
-    pw = int(w * screen_width)
-    ph = int(h * screen_height)
 
-    if pw <= 0 or ph <= 0:
-        raise PopulationReadError(
-            "Population ROI has non-positive dimensions after scaling: "
-            f"width={pw}, height={ph}. Recalibrate areas.pop_box in config.json."
-        )
-
-    abs_right = abs_left + pw
-    abs_bottom = abs_top + ph
-
-    if (
-        abs_left < 0
-        or abs_top < 0
-        or abs_right > screen_width
-        or abs_bottom > screen_height
-    ):
-        raise PopulationReadError(
-            "Population ROI out of screen bounds: "
-            f"left={abs_left}, top={abs_top}, width={pw}, height={ph}, "
-            f"screen={screen_width}x{screen_height}. "
-            "Recalibrate areas.pop_box in config.json."
-        )
-
-    bbox = {"left": abs_left, "top": abs_top, "width": pw, "height": ph}
+    # 1) Tente ancorar pelo template da barra de recursos
+    frame_full = _grab_frame()
+    regions = locate_resource_panel(frame_full)
+    roi_bbox = None
+    if "population" in regions:
+        x, y, w, h = regions["population"]
+        roi_bbox = {"left": x, "top": y, "width": w, "height": h}
+    else:
+        # 2) Fallback: use areas.pop_box (normalizado à tela inteira)
+        x, y, w, h = CFG["areas"]["pop_box"]
+        screen_width, screen_height = _screen_size()
+        abs_left = int(x * screen_width)
+        abs_top = int(y * screen_height)
+        pw = int(w * screen_width)
+        ph = int(h * screen_height)
+        if pw <= 0 or ph <= 0:
+            raise PopulationReadError(
+                f"Population ROI has non-positive dimensions after scaling: width={pw}, height={ph}. "
+                "Recalibrate areas.pop_box in config.json."
+            )
+        abs_right = abs_left + pw
+        abs_bottom = abs_top + ph
+        if abs_left < 0 or abs_top < 0 or abs_right > screen_width or abs_bottom > screen_height:
+            raise PopulationReadError(
+                "Population ROI out of screen bounds: "
+                f"left={abs_left}, top={abs_top}, width={pw}, height={ph}, "
+                f"screen={screen_width}x{screen_height}. "
+                "Recalibrate areas.pop_box em config.json ou use a âncora por template."
+            )
+        roi_bbox = {"left": abs_left, "top": abs_top, "width": pw, "height": ph}
 
     last_roi = None
     last_thresh = None
@@ -197,22 +177,24 @@ def read_population_from_hud(retries=3, conf_threshold=None, save_failed_roi=Fal
     last_confidences = []
 
     for attempt in range(retries):
-        frame = _grab_frame(bbox)
-
-        roi = frame  # frame already contains only the population area
+        roi = _grab_frame(roi_bbox)
         if roi.size == 0:
             logging.warning("Population ROI has zero size")
             continue
+
         gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
         gray = cv2.resize(gray, None, fx=2, fy=2, interpolation=cv2.INTER_LINEAR)
+        # OTSU + binarização costuma funcionar bem na HUD
         _, thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+
         data = pytesseract.image_to_data(
             thresh,
+            # PERMITA A BARRA "/" para ler "atual/limite"
             config="--psm 7 -c tessedit_char_whitelist=0123456789/",
             output_type=pytesseract.Output.DICT,
         )
+
         text = "".join(data.get("text", [])).replace(" ", "")
-        parts = [p for p in text.split("/") if p]
         confidences = [int(c) for c in data.get("conf", []) if c != "-1"]
 
         last_roi = roi
@@ -220,38 +202,28 @@ def read_population_from_hud(retries=3, conf_threshold=None, save_failed_roi=Fal
         last_text = text
         last_confidences = confidences
 
+        # Aceite "12/20", "3/5", etc.
+        parts = [p for p in text.split("/") if p]
         if len(parts) >= 2 and (not confidences or min(confidences) >= conf_threshold):
             cur = int("".join(filter(str.isdigit, parts[0])) or 0)
             limit = int("".join(filter(str.isdigit, parts[1])) or 0)
             return cur, limit
 
-        logging.debug(
-            "OCR attempt %s failed: text='%s', conf=%s", attempt + 1, text, confidences
-        )
+        logging.debug("OCR attempt %s failed: text='%s', conf=%s", attempt + 1, text, confidences)
         time.sleep(0.1)
 
     logging.warning(
         "Falha ao ler população da HUD após %s tentativas; último texto='%s', conf=%s",
-        retries,
-        last_text,
-        last_confidences,
+        retries, last_text, last_confidences
     )
     if (CFG.get("debug") or save_failed_roi) and last_roi is not None:
         ts = int(time.time() * 1000)
-        roi_path = ROOT / f"debug_pop_roi_{ts}.png"
-        cv2.imwrite(str(roi_path), last_roi)
-        thresh_path = ROOT / f"debug_pop_thresh_{ts}.png"
-        cv2.imwrite(str(thresh_path), last_thresh)
-        logging.info(
-            "ROI salva em %s; texto extraído: '%s'; conf=%s",
-            roi_path,
-            last_text,
-            last_confidences,
-        )
-        logging.debug("ROI binarizada salva em %s", thresh_path)
+        cv2.imwrite(str(ROOT / f"debug_pop_roi_{ts}.png"), last_roi)
+        cv2.imwrite(str(ROOT / f"debug_pop_thresh_{ts}.png"), last_thresh)
+        logging.info("ROI salva; texto extraído: '%s'; conf=%s", last_text, last_confidences)
+
     raise PopulationReadError(
-        f"Falha ao ler população da HUD após {retries} tentativas. "
-        f"Texto='{last_text}', confs={last_confidences}"
+        f"Falha ao ler população da HUD após {retries} tentativas. Texto='{last_text}', confs={last_confidences}"
     )
 
 

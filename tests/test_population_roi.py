@@ -36,7 +36,8 @@ class TestPopulationROI(TestCase):
     def test_population_roi_outside_screen_raises_error(self):
         with patch("campaign_bot._screen_size", return_value=(200, 200)), \
             patch.dict(cb.CFG["areas"], {"pop_box": [2.0, 2.0, 0.1, 0.1]}), \
-            patch("campaign_bot._grab_frame") as grab_mock, \
+            patch("campaign_bot.locate_resource_panel", return_value={}), \
+            patch("campaign_bot._grab_frame", return_value=np.zeros((1, 1, 3))) as grab_mock, \
             patch("campaign_bot.pytesseract.image_to_data") as ocr_mock:
             with self.assertRaises(cb.PopulationReadError) as ctx:
                 cb.read_population_from_hud(
@@ -47,15 +48,18 @@ class TestPopulationROI(TestCase):
             self.assertIn("left=", msg)
             self.assertIn("top=", msg)
             self.assertNotIn("hud_anchor", msg)
-            grab_mock.assert_not_called()
+            grab_mock.assert_called_once()
             ocr_mock.assert_not_called()
 
     def test_read_population_raises_when_no_digits(self):
-        def fake_grab(bbox):
+        def fake_grab(bbox=None):
+            if bbox is None:
+                return np.zeros((200, 200, 3), dtype=np.uint8)
             h, w = bbox["height"], bbox["width"]
             return np.zeros((h, w, 3), dtype=np.uint8)
 
         with patch("campaign_bot._grab_frame", side_effect=fake_grab), \
+            patch("campaign_bot.locate_resource_panel", return_value={}), \
             patch("campaign_bot._screen_size", return_value=(200, 200)), \
             patch.dict(cb.CFG["areas"], {"pop_box": [0.1, 0.1, 0.5, 0.5]}), \
             patch("campaign_bot.cv2.cvtColor", side_effect=lambda img, code: img), \
@@ -74,7 +78,9 @@ class TestPopulationROI(TestCase):
 
         recorded = {}
 
-        def fake_grab(bbox):
+        def fake_grab(bbox=None):
+            if bbox is None:
+                return frame
             recorded["bbox"] = bbox
             l, t, w, h = (
                 bbox["left"],
@@ -89,6 +95,7 @@ class TestPopulationROI(TestCase):
             return src
 
         with patch("campaign_bot._grab_frame", side_effect=fake_grab), \
+            patch("campaign_bot.locate_resource_panel", return_value={}), \
             patch("campaign_bot._screen_size", return_value=(200, 200)), \
             patch.dict(cb.CFG["areas"], {"pop_box": pop_box}), \
             patch("campaign_bot.HUD_ANCHOR", {"left": 50, "top": 60, "width": 10, "height": 10}), \
@@ -125,7 +132,8 @@ class TestPopulationROI(TestCase):
     def test_non_positive_population_roi_raises_before_ocr(self):
         with patch("campaign_bot._screen_size", return_value=(200, 200)), \
             patch.dict(cb.CFG["areas"], {"pop_box": [0.1, 0.1, -0.5, 0.2]}), \
-            patch("campaign_bot._grab_frame") as grab_mock, \
+            patch("campaign_bot.locate_resource_panel", return_value={}), \
+            patch("campaign_bot._grab_frame", return_value=np.zeros((1, 1, 3))) as grab_mock, \
             patch("campaign_bot.pytesseract.image_to_data") as ocr_mock, \
             patch("campaign_bot.time.sleep") as sleep_mock:
             with self.assertRaises(cb.PopulationReadError) as ctx:
@@ -134,7 +142,7 @@ class TestPopulationROI(TestCase):
                 )
             msg = str(ctx.exception).lower()
             self.assertIn("recalibrate areas.pop_box", msg)
-            grab_mock.assert_not_called()
+            grab_mock.assert_called_once()
             ocr_mock.assert_not_called()
             sleep_mock.assert_not_called()
 
