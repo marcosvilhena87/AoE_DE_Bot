@@ -51,9 +51,11 @@ class TestPopulationROI(TestCase):
             ocr_mock.assert_not_called()
 
     def test_read_population_raises_when_no_digits(self):
-        frame = np.zeros((200, 200, 3), dtype=np.uint8)
+        def fake_grab(bbox):
+            h, w = bbox["height"], bbox["width"]
+            return np.zeros((h, w, 3), dtype=np.uint8)
 
-        with patch("campaign_bot._grab_frame", return_value=frame), \
+        with patch("campaign_bot._grab_frame", side_effect=fake_grab), \
             patch("campaign_bot._screen_size", return_value=(200, 200)), \
             patch.dict(cb.CFG["areas"], {"pop_box": [0.1, 0.1, 0.5, 0.5]}), \
             patch("campaign_bot.cv2.cvtColor", side_effect=lambda img, code: img), \
@@ -78,11 +80,21 @@ class TestPopulationROI(TestCase):
         for anchor in anchors:
             recorded = {}
 
+            def fake_grab(bbox):
+                recorded["bbox"] = bbox
+                l, t, w, h = (
+                    bbox["left"],
+                    bbox["top"],
+                    bbox["width"],
+                    bbox["height"],
+                )
+                return frame[t : t + h, l : l + w]
+
             def fake_cvtColor(src, code):
                 recorded["roi"] = src
                 return src
 
-            with patch("campaign_bot._grab_frame", return_value=frame), \
+            with patch("campaign_bot._grab_frame", side_effect=fake_grab), \
                 patch.object(cb, "HUD_ANCHOR", anchor), \
                 patch.dict(cb.CFG["areas"], {"pop_box": pop_box}), \
                 patch("campaign_bot.cv2.cvtColor", side_effect=fake_cvtColor), \
@@ -95,6 +107,7 @@ class TestPopulationROI(TestCase):
                 cb.read_population_from_hud(retries=1, conf_threshold=cb.CFG["ocr_conf_threshold"])
 
             roi = recorded["roi"]
+            bbox = recorded["bbox"]
             expected_left = anchor["left"] + int(pop_box[0] * anchor["width"])
             expected_top = anchor["top"] + int(pop_box[1] * anchor["height"])
             expected_w = int(pop_box[2] * anchor["width"])
@@ -104,6 +117,15 @@ class TestPopulationROI(TestCase):
                 expected_left : expected_left + expected_w,
             ]
             self.assertTrue(np.array_equal(roi, expected_roi))
+            self.assertEqual(
+                bbox,
+                {
+                    "left": expected_left,
+                    "top": expected_top,
+                    "width": expected_w,
+                    "height": expected_h,
+                },
+            )
 
     def test_non_positive_population_roi_raises_before_ocr(self):
         with patch("campaign_bot._screen_size", return_value=(200, 200)), \
