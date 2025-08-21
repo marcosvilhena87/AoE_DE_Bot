@@ -35,14 +35,24 @@ logging.basicConfig(
 # Contador interno da população atual
 CURRENT_POP = 3
 
+# Instância única do mss para reutilização
+SCT = mss()
+MONITOR = SCT.monitors[1]  # tela principal
+HUD_REGION = None  # definido após detecção da HUD
+
 # =========================
 # CAPTURA & TEMPLATE MATCH
 # =========================
-def _grab_frame():
-    with mss() as sct:
-        mon = sct.monitors[1]  # tela principal
-        img = np.array(sct.grab(mon))[:, :, :3]  # BGRA -> BGR
-        return img
+def _grab_frame(bbox=None):
+    """Captura um frame da tela.
+
+    Se ``bbox`` for fornecido, captura apenas a região especificada.
+    Caso contrário, usa a região da HUD se já conhecida; caso contrário,
+    captura a tela inteira.
+    """
+    region = bbox or HUD_REGION or MONITOR
+    img = np.array(SCT.grab(region))[:, :, :3]  # BGRA -> BGR
+    return img
 
 def _load_gray(path):
     im = cv2.imread(str(path), cv2.IMREAD_GRAYSCALE)
@@ -89,6 +99,8 @@ def wait_hud(timeout=60):
                     cv2.imwrite(f"debug_hud_{name}.png", frame)
                 x, y, w, h = box
                 logging.info("HUD detectada com template '%s'", name)
+                global HUD_REGION
+                HUD_REGION = {"left": x, "top": y, "width": w, "height": h}
                 return (x, y, w, h)
         time.sleep(0.25)
     logging.error(
@@ -112,9 +124,22 @@ def read_population_from_hud():
     """
     frame = _grab_frame()
     x, y, w, h = CFG["areas"]["pop_box"]
-    H, W = frame.shape[:2]
-    px, py = int(x * W), int(y * H)
-    pw, ph = int(w * W), int(h * H)
+
+    if HUD_REGION:
+        W_screen, H_screen = _screen_size()
+        abs_left = int(x * W_screen)
+        abs_top = int(y * H_screen)
+        pw = int(w * W_screen)
+        ph = int(h * H_screen)
+        px = abs_left - HUD_REGION["left"]
+        py = abs_top - HUD_REGION["top"]
+    else:
+        H, W = frame.shape[:2]
+        px = int(x * W)
+        py = int(y * H)
+        pw = int(w * W)
+        ph = int(h * H)
+
     roi = frame[py : py + ph, px : px + pw]
     gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
     gray = cv2.resize(gray, None, fx=2, fy=2, interpolation=cv2.INTER_LINEAR)
