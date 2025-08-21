@@ -8,6 +8,8 @@ import cv2
 from mss import mss
 import pyautogui as pg
 import pytesseract
+import pytesseract
+pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 
 # =========================
 # CONFIGURAÇÃO
