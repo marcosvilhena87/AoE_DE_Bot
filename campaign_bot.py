@@ -103,7 +103,7 @@ def wait_hud(timeout=60):
                 logging.info("HUD detectada com template '%s'", name)
                 global HUD_ANCHOR
                 HUD_ANCHOR = {"left": x, "top": y, "width": w, "height": h}
-                return (x, y, w, h)
+                return HUD_ANCHOR, name
         time.sleep(0.25)
     logging.error(
         "HUD não encontrada. Melhor score=%.3f no template '%s'. Re-capture o asset e verifique ESCALA 100%%.",
@@ -408,8 +408,8 @@ def main():
         "Entre na missão da campanha (Hunting). O script inicia quando detectar a HUD…"
     )
     try:
-        hud = wait_hud(timeout=90)
-        logging.info("HUD detectada em %s. Rodando rotina econômica…", hud)
+        hud, asset = wait_hud(timeout=90)
+        logging.info("HUD detectada em %s usando '%s'. Rodando rotina econômica…", hud, asset)
     except RuntimeError as e:
         logging.error(str(e))
         logging.info("Dando mais 25s para você ajustar a câmera/HUD (fallback)…")
