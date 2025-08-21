@@ -106,3 +106,17 @@ class TestPopulationROI(TestCase):
             ]
             self.assertTrue(np.array_equal(roi, expected_roi))
 
+    def test_invalid_population_roi_skips_ocr_and_sleep(self):
+        with patch("campaign_bot._screen_size", return_value=(200, 200)), \
+            patch.dict(cb.CFG["areas"], {"pop_box": [0.1, 0.1, -0.5, 0.2]}), \
+            patch("campaign_bot._grab_frame") as grab_mock, \
+            patch("campaign_bot.pytesseract.image_to_data") as ocr_mock, \
+            patch("campaign_bot.time.sleep") as sleep_mock:
+            with self.assertRaises(cb.PopulationReadError):
+                cb.read_population_from_hud(
+                    retries=1, conf_threshold=cb.CFG["ocr_conf_threshold"]
+                )
+            grab_mock.assert_not_called()
+            ocr_mock.assert_not_called()
+            sleep_mock.assert_not_called()
+

@@ -185,6 +185,15 @@ def read_population_from_hud(retries=3, conf_threshold=None):
     last_text = ""
 
     for attempt in range(retries):
+        if x2 <= x1 or y2 <= y1:
+            logging.warning(
+                "population ROI invalid: x1=%s, x2=%s, y1=%s, y2=%s",
+                x1,
+                x2,
+                y1,
+                y2,
+            )
+            continue
         frame = _grab_frame()
 
         roi = frame[y1:y2, x1:x2]
