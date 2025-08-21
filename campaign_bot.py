@@ -5,6 +5,7 @@ import numpy as np
 import cv2
 from mss import mss
 import pyautogui as pg
+import pytesseract
 
 # =========================
 # CONFIGURAÇÃO
@@ -39,6 +40,7 @@ CFG = {
         "hunt_food": (0.46, 0.70),   # região onde geralmente ficam gazelas/arbustos
         "wood":      (0.62, 0.55),   # bloco de árvores frequente
         "house_spot":(0.47, 0.72),   # onde posicionar Casa (solo livre, próximo TC)
+        "pop_box":   (0.93, 0.02, 0.05, 0.04),  # x,y,w,h normalizados da população na HUD
     },
     # Heurísticas simples
     "timers": {
@@ -118,6 +120,33 @@ def wait_hud(timeout=60):
         "Re-capture o asset (recorte mais justo) e verifique ESCALA 100%."
     )
 
+
+# =========================
+# LEITURA DE POPULAÇÃO NA HUD
+# =========================
+def read_population_from_hud():
+    """Captura a população atual e o limite máximo a partir da HUD.
+
+    Retorna `(pop_atual, pop_limite)`. Em caso de falha, devolve `(0, 0)`.
+    """
+    frame = _grab_frame()
+    x, y, w, h = CFG["areas"]["pop_box"]
+    H, W = frame.shape[:2]
+    px, py = int(x * W), int(y * H)
+    pw, ph = int(w * W), int(h * H)
+    roi = frame[py : py + ph, px : px + pw]
+    gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+    gray = cv2.resize(gray, None, fx=2, fy=2, interpolation=cv2.INTER_LINEAR)
+    _, thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    text = pytesseract.image_to_string(thresh, config="--psm 7").strip()
+
+    parts = [p for p in text.replace(" ", "").split("/") if p]
+    if len(parts) >= 2:
+        cur = int("".join(filter(str.isdigit, parts[0])) or 0)
+        limit = int("".join(filter(str.isdigit, parts[1])) or 0)
+        return cur, limit
+    return 0, 0
+
 # =========================
 # AÇÕES DE JOGO
 # =========================
@@ -167,7 +196,8 @@ def econ_loop(minutes=5):
     train_villagers(12)
     hunt_x, hunt_y = CFG["areas"]["hunt_food"]
     wood_x, wood_y = CFG["areas"]["wood"]
-    next_house = time.time() + CFG["timers"]["house_interval"]
+    _, limit = read_population_from_hud()
+    next_house = limit - 2
 
     t0 = time.time()
     while time.time() - t0 < minutes * 60:
@@ -181,11 +211,16 @@ def econ_loop(minutes=5):
         _click_norm(wood_x, wood_y)
         time.sleep(CFG["timers"]["idle_gap"])
 
-        # 3) Casas periódicas (heurístico)
-        if time.time() >= next_house:
+        # 3) Construir casa quando próximo do limite de população
+        current, limit = read_population_from_hud()
+        global CURRENT_POP
+        CURRENT_POP = current
+        if current >= next_house:
             select_idle_villager()
             build_house()
-            next_house = time.time() + CFG["timers"]["house_interval"]
+            time.sleep(0.5)
+            _, limit = read_population_from_hud()
+            next_house = limit - 2
 
         time.sleep(CFG["timers"]["loop_sleep"])
 
