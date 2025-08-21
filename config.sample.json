@@ -6,6 +6,7 @@
   "loop_minutes": 6,
   "debug": false,
   "verbose_logging": false,
+  "tesseract_path": "C:\\Program Files\\Tesseract-OCR\\tesseract.exe",
   "keys": {
     "idle_vill": ".",
     "build_menu": "b",
