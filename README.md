@@ -18,9 +18,8 @@ grabbed from the whole screen unless a different region is explicitly
 requested.
 
 HUD-related coordinates, such as `areas.pop_box`, are specified as
-``[x, y, width, height]`` fractions of the full screen. These values are
-interpreted relative to the screen; the minimap anchor is only used to adjust
-offsets when necessary.
+``[dx, dy, width, height]`` fractions relative to this anchor. The minimap
+position serves as the reference origin for these offsets.
 
 ## Capturing `hud_resources.png`
 
