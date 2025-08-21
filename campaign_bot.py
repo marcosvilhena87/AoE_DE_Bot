@@ -136,12 +136,22 @@ def wait_hud(timeout=60):
 # =========================
 # LEITURA DE POPULAÇÃO NA HUD
 # =========================
-def read_population_from_hud(retries=3, conf_threshold=None):
+def read_population_from_hud(retries=3, conf_threshold=None, save_failed_roi=False):
     """Captura a população atual e o limite máximo a partir da HUD.
 
     Tenta realizar OCR algumas vezes para aumentar a robustez. Retorna
     ``(pop_atual, pop_limite)``. Se todas as tentativas falharem, lança
     :class:`PopulationReadError` com detalhes para auxiliar na calibração.
+
+    Parameters
+    ----------
+    retries: int
+        Número de tentativas de OCR.
+    conf_threshold: int | None
+        Confiança mínima dos resultados do OCR.
+    save_failed_roi: bool
+        Se ``True``, salva a ROI e a versão binarizada em caso de falha
+        independentemente de ``CFG["debug"]``.
     """
     if conf_threshold is None:
         conf_threshold = CFG.get("ocr_conf_threshold", 60)
@@ -184,6 +194,7 @@ def read_population_from_hud(retries=3, conf_threshold=None):
     last_roi = None
     last_thresh = None
     last_text = ""
+    last_confidences = []
 
     for attempt in range(retries):
         frame = _grab_frame(bbox)
@@ -207,6 +218,7 @@ def read_population_from_hud(retries=3, conf_threshold=None):
         last_roi = roi
         last_thresh = thresh
         last_text = text
+        last_confidences = confidences
 
         if len(parts) >= 2 and (not confidences or min(confidences) >= conf_threshold):
             cur = int("".join(filter(str.isdigit, parts[0])) or 0)
@@ -219,18 +231,27 @@ def read_population_from_hud(retries=3, conf_threshold=None):
         time.sleep(0.1)
 
     logging.warning(
-        "Falha ao ler população da HUD após %s tentativas", retries
+        "Falha ao ler população da HUD após %s tentativas; último texto='%s', conf=%s",
+        retries,
+        last_text,
+        last_confidences,
     )
-    if CFG.get("debug") and last_roi is not None:
+    if (CFG.get("debug") or save_failed_roi) and last_roi is not None:
         ts = int(time.time() * 1000)
         roi_path = ROOT / f"debug_pop_roi_{ts}.png"
         cv2.imwrite(str(roi_path), last_roi)
         thresh_path = ROOT / f"debug_pop_thresh_{ts}.png"
         cv2.imwrite(str(thresh_path), last_thresh)
-        logging.info("ROI salva em %s; texto extraído: '%s'", roi_path, last_text)
+        logging.info(
+            "ROI salva em %s; texto extraído: '%s'; conf=%s",
+            roi_path,
+            last_text,
+            last_confidences,
+        )
         logging.debug("ROI binarizada salva em %s", thresh_path)
     raise PopulationReadError(
-        f"Falha ao ler população da HUD após {retries} tentativas"
+        f"Falha ao ler população da HUD após {retries} tentativas. "
+        f"Texto='{last_text}', confs={last_confidences}"
     )
 
 
