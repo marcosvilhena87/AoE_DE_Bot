@@ -22,3 +22,16 @@ HUD-related coordinates, such as `areas.pop_box`, are specified as
 interpreted relative to the screen; the minimap anchor is only used to adjust
 offsets when necessary.
 
+## Capturing `hud_resources.png`
+
+Some HUD layouts place the minimap and the resource bar at different offsets.
+The bot now searches for either element, so a suitable `hud_resources.png`
+template is required for your configuration.
+
+1. Set the game's UI scale to 100%.
+2. Take a screenshot of the in-game HUD.
+3. Crop a tight image around the resource bar and save it as
+   `assets/hud_resources.png`.
+4. If your layout differs between profiles, capture and replace this template
+   for each one to ensure `wait_hud()` can anchor correctly.
+
