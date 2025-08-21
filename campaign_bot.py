@@ -2,14 +2,13 @@ import logging
 import json
 import time
 from pathlib import Path
+import os
 
 import numpy as np
 import cv2
 from mss import mss
 import pyautogui as pg
 import pytesseract
-import pytesseract
-pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 
 # =========================
 # CONFIGURAÇÃO
@@ -22,6 +21,10 @@ ASSETS = ROOT / "assets"
 
 with open(ROOT / "config.json", encoding="utf-8") as cfg_file:
     CFG = json.load(cfg_file)
+
+tesseract_cmd = CFG.get("tesseract_path") or os.environ.get("TESSERACT_CMD")
+if tesseract_cmd:
+    pytesseract.pytesseract.tesseract_cmd = tesseract_cmd
 
 # Configuração de logging
 logging.basicConfig(
