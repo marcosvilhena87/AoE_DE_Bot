@@ -38,7 +38,8 @@ CURRENT_POP = 3
 # Instância única do mss para reutilização
 SCT = mss()
 MONITOR = SCT.monitors[1]  # tela principal
-HUD_REGION = None  # definido após detecção da HUD
+# Posição do minimapa utilizada apenas como referência
+HUD_ANCHOR = None
 
 # =========================
 # CAPTURA & TEMPLATE MATCH
@@ -47,10 +48,11 @@ def _grab_frame(bbox=None):
     """Captura um frame da tela.
 
     Se ``bbox`` for fornecido, captura apenas a região especificada.
-    Caso contrário, usa a região da HUD se já conhecida; caso contrário,
-    captura a tela inteira.
+    Caso contrário, captura a tela inteira. A posição do minimapa
+    (``HUD_ANCHOR``) não limita a área capturada; ela é utilizada apenas
+    como referência para cálculos de offset.
     """
-    region = bbox or HUD_REGION or MONITOR
+    region = bbox or MONITOR
     img = np.array(SCT.grab(region))[:, :, :3]  # BGRA -> BGR
     return img
 
@@ -99,8 +101,8 @@ def wait_hud(timeout=60):
                     cv2.imwrite(f"debug_hud_{name}.png", frame)
                 x, y, w, h = box
                 logging.info("HUD detectada com template '%s'", name)
-                global HUD_REGION
-                HUD_REGION = {"left": x, "top": y, "width": w, "height": h}
+                global HUD_ANCHOR
+                HUD_ANCHOR = {"left": x, "top": y, "width": w, "height": h}
                 return (x, y, w, h)
         time.sleep(0.25)
     logging.error(
@@ -129,47 +131,21 @@ def read_population_from_hud(retries=3, conf_threshold=60):
     for attempt in range(retries):
         frame = _grab_frame()
 
-        if HUD_REGION:
-            W_screen, H_screen = _screen_size()
-            abs_left = int(x * W_screen)
-            abs_top = int(y * H_screen)
-            pw = int(w * W_screen)
-            ph = int(h * H_screen)
-            px = abs_left - HUD_REGION["left"]
-            py = abs_top - HUD_REGION["top"]
-        else:
-            H, W = frame.shape[:2]
-            px = int(x * W)
-            py = int(y * H)
-            pw = int(w * W)
-            ph = int(h * H)
+        W_screen, H_screen = _screen_size()
+        abs_left = int(x * W_screen)
+        abs_top = int(y * H_screen)
+        pw = int(w * W_screen)
+        ph = int(h * H_screen)
 
         h_frame, w_frame = frame.shape[:2]
-        x1 = max(0, px)
-        y1 = max(0, py)
-        x2 = min(px + pw, w_frame)
-        y2 = min(py + ph, h_frame)
+        x1 = max(0, abs_left)
+        y1 = max(0, abs_top)
+        x2 = min(abs_left + pw, w_frame)
+        y2 = min(abs_top + ph, h_frame)
 
         if x2 <= x1 or y2 <= y1:
-            logging.warning(
-                "Population ROI outside HUD region; capturing full screen"
-            )
-            frame = _grab_frame(bbox=MONITOR)
-            h_frame, w_frame = frame.shape[:2]
-            px = int(x * w_frame)
-            py = int(y * h_frame)
-            pw = int(w * w_frame)
-            ph = int(h * h_frame)
-            x1 = max(0, px)
-            y1 = max(0, py)
-            x2 = min(px + pw, w_frame)
-            y2 = min(py + ph, h_frame)
-
-            if x2 <= x1 or y2 <= y1:
-                logging.warning(
-                    "Population ROI invalid even on full screen capture"
-                )
-                continue
+            logging.warning("Population ROI outside screen bounds")
+            continue
 
         roi = frame[y1:y2, x1:x2]
         if roi.size == 0:

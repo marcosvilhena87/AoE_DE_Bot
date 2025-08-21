@@ -33,20 +33,16 @@ import campaign_bot as cb
 
 
 class TestPopulationROI(TestCase):
-    def test_population_roi_outside_hud_does_not_raise(self):
-        cb.HUD_REGION = {"left": 0, "top": 0, "width": 100, "height": 100}
-
-        small_frame = np.zeros((100, 100, 3), dtype=np.uint8)
+    def test_population_roi_outside_screen_does_not_raise(self):
         big_frame = np.zeros((200, 200, 3), dtype=np.uint8)
 
-        def fake_grab_frame(bbox=None):
-            if bbox is cb.MONITOR:
-                return big_frame
-            return small_frame
-
-        with patch("campaign_bot._grab_frame", side_effect=fake_grab_frame), \
+        with patch("campaign_bot._grab_frame", return_value=big_frame), \
             patch("campaign_bot._screen_size", return_value=(200, 200)), \
-            patch("campaign_bot.pytesseract.image_to_data", return_value={"text": [""], "conf": ["-1"]}):
+            patch.dict(cb.CFG["areas"], {"pop_box": [2.0, 2.0, 0.1, 0.1]}), \
+            patch(
+                "campaign_bot.pytesseract.image_to_data",
+                return_value={"text": [""], "conf": ["-1"]},
+            ):
             try:
                 cb.read_population_from_hud(retries=1)
             except Exception as exc:  # pragma: no cover
