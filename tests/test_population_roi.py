@@ -34,22 +34,21 @@ import campaign_bot as cb
 
 class TestPopulationROI(TestCase):
     def test_population_roi_outside_screen_raises_error(self):
-        big_frame = np.zeros((200, 200, 3), dtype=np.uint8)
-
-        with patch("campaign_bot._grab_frame", return_value=big_frame), \
-            patch("campaign_bot._screen_size", return_value=(200, 200)), \
+        with patch("campaign_bot._screen_size", return_value=(200, 200)), \
             patch.dict(cb.CFG["areas"], {"pop_box": [2.0, 2.0, 0.1, 0.1]}), \
-            patch(
-                "campaign_bot.pytesseract.image_to_data",
-                return_value={"text": [""], "conf": ["-1"]},
-            ):
+            patch("campaign_bot._grab_frame") as grab_mock, \
+            patch("campaign_bot.pytesseract.image_to_data") as ocr_mock:
             with self.assertRaises(cb.PopulationReadError) as ctx:
-                cb.read_population_from_hud(retries=1, conf_threshold=cb.CFG["ocr_conf_threshold"])
+                cb.read_population_from_hud(
+                    retries=1, conf_threshold=cb.CFG["ocr_conf_threshold"]
+                )
             msg = str(ctx.exception).lower()
             self.assertIn("recalibrate areas.pop_box", msg)
             self.assertIn("left=", msg)
             self.assertIn("top=", msg)
             self.assertIn("hud_anchor", msg)
+            grab_mock.assert_not_called()
+            ocr_mock.assert_not_called()
 
     def test_read_population_raises_when_no_digits(self):
         frame = np.zeros((200, 200, 3), dtype=np.uint8)
@@ -106,16 +105,18 @@ class TestPopulationROI(TestCase):
             ]
             self.assertTrue(np.array_equal(roi, expected_roi))
 
-    def test_invalid_population_roi_skips_ocr_and_sleep(self):
+    def test_non_positive_population_roi_raises_before_ocr(self):
         with patch("campaign_bot._screen_size", return_value=(200, 200)), \
             patch.dict(cb.CFG["areas"], {"pop_box": [0.1, 0.1, -0.5, 0.2]}), \
             patch("campaign_bot._grab_frame") as grab_mock, \
             patch("campaign_bot.pytesseract.image_to_data") as ocr_mock, \
             patch("campaign_bot.time.sleep") as sleep_mock:
-            with self.assertRaises(cb.PopulationReadError):
+            with self.assertRaises(cb.PopulationReadError) as ctx:
                 cb.read_population_from_hud(
                     retries=1, conf_threshold=cb.CFG["ocr_conf_threshold"]
                 )
+            msg = str(ctx.exception).lower()
+            self.assertIn("recalibrate areas.pop_box", msg)
             grab_mock.assert_not_called()
             ocr_mock.assert_not_called()
             sleep_mock.assert_not_called()

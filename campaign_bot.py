@@ -146,6 +146,11 @@ def read_population_from_hud(retries=3, conf_threshold=None):
     if conf_threshold is None:
         conf_threshold = CFG.get("ocr_conf_threshold", 60)
     x, y, w, h = CFG["areas"]["pop_box"]
+    if w <= 0 or h <= 0:
+        raise PopulationReadError(
+            "Population ROI has non-positive dimensions: "
+            f"w={w}, h={h}. Recalibrate areas.pop_box in config.json."
+        )
     screen_width, screen_height = _screen_size()
 
     if HUD_ANCHOR:
@@ -164,6 +169,12 @@ def read_population_from_hud(retries=3, conf_threshold=None):
         abs_top = int(y * screen_height)
         pw = int(w * screen_width)
         ph = int(h * screen_height)
+
+    if pw <= 0 or ph <= 0:
+        raise PopulationReadError(
+            "Population ROI has non-positive dimensions after scaling: "
+            f"width={pw}, height={ph}. Recalibrate areas.pop_box in config.json."
+        )
 
     abs_right = abs_left + pw
     abs_bottom = abs_top + ph
@@ -188,15 +199,6 @@ def read_population_from_hud(retries=3, conf_threshold=None):
     last_text = ""
 
     for attempt in range(retries):
-        if x2 <= x1 or y2 <= y1:
-            logging.warning(
-                "population ROI invalid: x1=%s, x2=%s, y1=%s, y2=%s",
-                x1,
-                x2,
-                y1,
-                y2,
-            )
-            continue
         frame = _grab_frame()
 
         roi = frame[y1:y2, x1:x2]
