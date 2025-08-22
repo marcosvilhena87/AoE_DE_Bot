@@ -46,6 +46,7 @@ def build_house():
         common._press_key_safe(common.CFG["keys"]["build_menu"], 0.05)
         common._press_key_safe(house_key, 0.15)
         common._click_norm(hx, hy)
+        common._click_norm(hx, hy, button="right")
         time.sleep(0.5)
 
         try:
