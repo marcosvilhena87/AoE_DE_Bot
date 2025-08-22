@@ -19,15 +19,24 @@
     "storage_pit": "s"
   },
   "resource_panel": {
-    "debug_failed_ocr": true,
-    "top_pct": 0.18,
-    "height_pct": 0.70,
-    "icon_trim_pct": [0.42, 0.42, 0.35, 0.35, 0.35, 0.35],
-    "right_trim_pct": 0.05,
-    "anchor_top_pct": 0.20,
+    "top_pct": 0.08,
+    "height_pct": 0.84,
+    "icon_trim_pct": [0.18, 0.18, 0.18, 0.18, 0.18, 0.18],
+    "right_trim_pct": 0.02,
+    "anchor_top_pct": 0.15,
     "anchor_height_pct": 0.70,
     "anchor_icon_trim_pct": [0.42, 0.42, 0.35, 0.35, 0.35, 0.35],
-    "anchor_right_trim_pct": 0.05
+    "anchor_right_trim_pct": 0.02,
+    "debug_failed_ocr": false
+  },
+  "areas": {
+    "hunt_food": [0.46, 0.7],
+    "wood": [0.62, 0.55],
+    "house_spot": [0.47, 0.72],
+    "granary_spot": [0.44, 0.66],
+    "storage_spot": [0.58, 0.52],
+    "pop_box": [0.0, 0.0, 0.1, 0.1],
+    "//pop_box": "[x, y, w, h] como frações da tela; calibrar depois."
   },
   "timers": {
     "house_interval": 45.0,

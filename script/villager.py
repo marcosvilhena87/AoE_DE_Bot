@@ -45,8 +45,13 @@ def build_house():
         logging.warning("Tecla de construção de casa não configurada.")
         return False
 
-    spots = [common.CFG["areas"]["house_spot"]]
-    alt_spot = common.CFG["areas"].get("house_spot_alt")
+    areas = common.CFG.get("areas", {})
+    main_spot = areas.get("house_spot")
+    if not main_spot:
+        logging.warning("House spot not configured.")
+        return False
+    spots = [main_spot]
+    alt_spot = areas.get("house_spot_alt")
     if alt_spot:
         spots.append(alt_spot)
 
@@ -95,8 +100,13 @@ def build_granary():
     if not g_key:
         logging.warning("Tecla de construção de Granary não configurada.")
         return False
+    areas = common.CFG.get("areas", {})
+    spot = areas.get("granary_spot")
+    if not spot:
+        logging.warning("Granary spot not configured.")
+        return False
     common._press_key_safe(g_key, 0.15)
-    gx, gy = common.CFG["areas"]["granary_spot"]
+    gx, gy = spot
     common._click_norm(gx, gy)
     return True
 
@@ -108,8 +118,13 @@ def build_storage_pit():
     if not s_key:
         logging.warning("Tecla de construção de Storage Pit não configurada.")
         return False
+    areas = common.CFG.get("areas", {})
+    spot = areas.get("storage_spot")
+    if not spot:
+        logging.warning("Storage spot not configured.")
+        return False
     common._press_key_safe(s_key, 0.15)
-    sx, sy = common.CFG["areas"]["storage_spot"]
+    sx, sy = spot
     common._click_norm(sx, sy)
     return True
 
@@ -134,8 +149,17 @@ def econ_loop(minutes=5):
         logging.warning("Falha ao posicionar Storage Pit")
     time.sleep(0.5)
 
-    hunt_x, hunt_y = common.CFG["areas"]["hunt_food"]
-    wood_x, wood_y = common.CFG["areas"]["wood"]
+    areas = common.CFG.get("areas", {})
+    hunt_spot = areas.get("hunt_food")
+    if not hunt_spot:
+        logging.warning("Hunt food spot not configured.")
+        return False
+    wood_spot = areas.get("wood")
+    if not wood_spot:
+        logging.warning("Wood spot not configured.")
+        return False
+    hunt_x, hunt_y = hunt_spot
+    wood_x, wood_y = wood_spot
 
     t0 = time.time()
     while time.time() - t0 < minutes * 60:
