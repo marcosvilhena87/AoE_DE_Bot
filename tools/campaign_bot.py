@@ -496,8 +496,8 @@ def econ_loop(minutes=5):
     logging.info("Storage Pit posicionado")
     time.sleep(0.5)
 
-    hunt_x, hunt_y = CFG["areas"]["hunt_food"]
-    wood_x, wood_y = CFG["areas"]["wood"]
+    hunt_x, hunt_y = CFG["areas"]["food_stockpile"]
+    wood_x, wood_y = CFG["areas"]["wood_stockpile"]
     try:
         _, limit = read_population_from_hud(conf_threshold=CFG.get("ocr_conf_threshold", 60))
     except PopulationReadError as e:
