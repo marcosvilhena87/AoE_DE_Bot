@@ -89,7 +89,13 @@ def wait_hud(timeout=60):
                 x, y, w, h = box
                 logging.info("HUD detectada com template '%s'", name)
                 global HUD_ANCHOR
-                HUD_ANCHOR = {"left": x, "top": y, "width": w, "height": h}
+                HUD_ANCHOR = {
+                    "left": x,
+                    "top": y,
+                    "width": w,
+                    "height": h,
+                    "asset": name,
+                }
                 return HUD_ANCHOR, name
         time.sleep(0.25)
     logging.error(
@@ -258,6 +264,63 @@ def read_resources_from_hud():
     """Lê os valores de recursos diretamente da HUD."""
     frame = _grab_frame()
     regions = locate_resource_panel(frame)
+
+    if not regions and HUD_ANCHOR:
+        if HUD_ANCHOR.get("asset") == "assets/resources.png":
+            x = HUD_ANCHOR["left"]
+            y = HUD_ANCHOR["top"]
+            w = HUD_ANCHOR["width"]
+            h = HUD_ANCHOR["height"]
+
+            slice_w = w / 6
+            res_cfg = CFG.get("resource_panel", {})
+            top_pct = res_cfg.get("top_pct", 0.08)
+            height_pct = res_cfg.get("height_pct", 0.84)
+            icon_trims = res_cfg.get("icon_trim_pct", 0.18)
+            if not isinstance(icon_trims, (list, tuple)):
+                icon_trims = [icon_trims] * 6
+            right_trim = res_cfg.get("right_trim_pct", 0.02)
+
+            top = y + int(top_pct * h)
+            height = int(height_pct * h)
+            names = ["food", "wood", "gold", "stone", "population", "idle_villager"]
+            regions = {}
+            for idx, name in enumerate(names):
+                icon_trim = icon_trims[idx] if idx < len(icon_trims) else icon_trims[-1]
+                left = x + int(idx * slice_w + icon_trim * slice_w)
+                right_limit = x + int((idx + 1) * slice_w - right_trim * slice_w)
+                width = max(18, right_limit - left)
+                regions[name] = (left, top, width, height)
+        else:
+            W, H = _screen_size()
+            margin = int(0.01 * W)
+            panel_w = int(568 / 1920 * W)
+            panel_h = int(59 / 1080 * H)
+            x = HUD_ANCHOR["left"] + HUD_ANCHOR["width"] + margin
+            y = HUD_ANCHOR["top"]
+
+            res_cfg = CFG.get("resource_panel", {})
+            top_pct = res_cfg.get("anchor_top_pct", 0.15)
+            height_pct = res_cfg.get("anchor_height_pct", 0.70)
+            icon_trims = res_cfg.get(
+                "anchor_icon_trim_pct", [0.42, 0.42, 0.35, 0.35, 0.35, 0.35]
+            )
+            if not isinstance(icon_trims, (list, tuple)):
+                icon_trims = [icon_trims] * 6
+            right_trim = res_cfg.get("anchor_right_trim_pct", 0.02)
+
+            slice_w = panel_w / 6
+            top = y + int(top_pct * panel_h)
+            height = int(height_pct * panel_h)
+            names = ["food", "wood", "gold", "stone", "population", "idle_villager"]
+            regions = {}
+            for idx, name in enumerate(names):
+                icon_trim = icon_trims[idx] if idx < len(icon_trims) else icon_trims[-1]
+                left = x + int(idx * slice_w + icon_trim * slice_w)
+                right_limit = x + int((idx + 1) * slice_w - right_trim * slice_w)
+                width = max(10, right_limit - left)
+                regions[name] = (left, top, width, height)
+
     results = {}
     for name, (x, y, w, h) in regions.items():
         roi = _grab_frame({"left": x, "top": y, "width": w, "height": h})
