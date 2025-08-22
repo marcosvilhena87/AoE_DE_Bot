@@ -286,14 +286,18 @@ def locate_resource_panel(frame):
 
     x, y, w, h = box
     slice_w = w / 6
-    top = y + int(0.2 * h)
-    height = int(0.6 * h)
+    top = y + int(0.15 * h)
+    height = int(0.70 * h)
     regions = {}
     names = ["food", "wood", "gold", "stone", "population", "idle_villager"]
     for idx, name in enumerate(names):
-        left = x + int(idx * slice_w + 0.35 * slice_w)
-        width = int(0.55 * slice_w)
-        regions[name] = (left, top, width, height)
+        icon_trim = 0.42 if idx < 2 else 0.35
+        left = x + int(idx * slice_w + icon_trim * slice_w)
+        width = min(
+            int(0.78 * slice_w),
+            x + int((idx + 1) * slice_w) - 2 - left,
+        )
+        regions[name] = (left, top, max(width, 10), height)
 
     return regions
 
@@ -316,14 +320,18 @@ def read_resources_from_hud():
         y = HUD_ANCHOR["top"]
 
         slice_w = panel_w / 6
-        top = y + int(0.2 * panel_h)
-        height = int(0.6 * panel_h)
+        top = y + int(0.15 * panel_h)
+        height = int(0.70 * panel_h)
         names = ["food", "wood", "gold", "stone", "population", "idle_villager"]
         regions = {}
         for idx, name in enumerate(names):
-            left = x + int(idx * slice_w + 0.35 * slice_w)
-            width = int(0.55 * slice_w)
-            regions[name] = (left, top, width, height)
+            icon_trim = 0.42 if idx < 2 else 0.35
+            left = x + int(idx * slice_w + icon_trim * slice_w)
+            width = min(
+                int(0.78 * slice_w),
+                x + int((idx + 1) * slice_w) - 2 - left,
+            )
+            regions[name] = (left, top, max(width, 10), height)
 
     if not regions:
         raise ResourceReadError("Resource bar not located on HUD")
