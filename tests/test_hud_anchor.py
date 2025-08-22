@@ -73,8 +73,8 @@ class TestHudAnchor(TestCase):
             result = common.read_resources_from_hud()
 
         expected = {
-            "wood_stockpile": 100,
-            "food_stockpile": 200,
+            "wood": 100,
+            "food": 200,
             "gold": 300,
             "stone": 400,
             "population": 500,
@@ -83,12 +83,12 @@ class TestHudAnchor(TestCase):
         self.assertEqual(result, expected)
 
         expected_boxes = [
-            {"left": 69, "top": 24, "width": 40, "height": 50},
-            {"left": 169, "top": 24, "width": 40, "height": 50},
-            {"left": 269, "top": 24, "width": 40, "height": 50},
-            {"left": 369, "top": 24, "width": 40, "height": 50},
-            {"left": 428, "top": 24, "width": 81, "height": 50},
-            {"left": 528, "top": 24, "width": 81, "height": 50},
+            {"left": 28, "top": 24, "width": 80, "height": 50},
+            {"left": 128, "top": 24, "width": 80, "height": 50},
+            {"left": 228, "top": 24, "width": 80, "height": 50},
+            {"left": 328, "top": 24, "width": 80, "height": 50},
+            {"left": 428, "top": 24, "width": 80, "height": 50},
+            {"left": 528, "top": 24, "width": 80, "height": 50},
         ]
         self.assertEqual(grab_calls, expected_boxes)
 
