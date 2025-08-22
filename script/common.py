@@ -286,14 +286,22 @@ def locate_resource_panel(frame):
 
     x, y, w, h = box
     slice_w = w / 6
-    top = y + int(0.08 * h)
-    height = int(0.84 * h)
+    res_cfg = CFG.get("resource_panel", {})
+    top_pct = res_cfg.get("top_pct", 0.08)
+    height_pct = res_cfg.get("height_pct", 0.84)
+    icon_trims = res_cfg.get("icon_trim_pct", 0.18)
+    if not isinstance(icon_trims, (list, tuple)):
+        icon_trims = [icon_trims] * 6
+    right_trim = res_cfg.get("right_trim_pct", 0.02)
+
+    top = y + int(top_pct * h)
+    height = int(height_pct * h)
     regions = {}
     names = ["food", "wood", "gold", "stone", "population", "idle_villager"]
     for idx, name in enumerate(names):
-        icon_trim = 0.18
+        icon_trim = icon_trims[idx] if idx < len(icon_trims) else icon_trims[-1]
         left = x + int(idx * slice_w + icon_trim * slice_w)
-        right_limit = x + int((idx + 1) * slice_w) - 2
+        right_limit = x + int((idx + 1) * slice_w - right_trim * slice_w)
         width = max(18, right_limit - left)
         regions[name] = (left, top, width, height)
 
@@ -303,10 +311,9 @@ def locate_resource_panel(frame):
 def _ocr_digits_better(gray):
     gray = cv2.resize(gray, None, fx=2, fy=2, interpolation=cv2.INTER_LINEAR)
     _, thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-    normal = thresh
-    inverted = cv2.bitwise_not(thresh)
+    masks = [thresh, cv2.bitwise_not(thresh)]
     results = []
-    for mask in (normal, inverted):
+    for mask in masks:
         data = pytesseract.image_to_data(
             mask,
             config="--psm 7 --oem 3 -c tessedit_char_whitelist=0123456789",
@@ -314,10 +321,9 @@ def _ocr_digits_better(gray):
         )
         text = "".join(data.get("text", [])).strip()
         digits = "".join(filter(str.isdigit, text))
-        results.append((digits, data))
-    if len(results[0][0]) >= len(results[1][0]):
-        return results[0]
-    return results[1]
+        results.append((digits, data, mask))
+    results.sort(key=lambda r: len(r[0]), reverse=True)
+    return results[0]
 
 def read_resources_from_hud():
     frame = _grab_frame()
@@ -328,8 +334,8 @@ def read_resources_from_hud():
         # detected HUD anchor.  The anchor is assumed to sit at the top of the
         # screen and the resource panel spans to its right.  The original
         # template ``resources.png`` measured 568x59 px on a
-        # 1920x1080 display.  We convert those values to screen fractions so
-        # they can be tweaked for different resolutions or HUD scales.
+        # 1920x1080 display.  Offsets are configurable via
+        # ``resource_panel`` entries in ``config.json``.
         W, H = _screen_size()
         margin = int(0.01 * W)  # ~1% horizontal gap between anchor and panel
         panel_w = int(568 / 1920 * W)
@@ -337,19 +343,27 @@ def read_resources_from_hud():
         x = HUD_ANCHOR["left"] + HUD_ANCHOR["width"] + margin
         y = HUD_ANCHOR["top"]
 
+        res_cfg = CFG.get("resource_panel", {})
+        top_pct = res_cfg.get("anchor_top_pct", 0.15)
+        height_pct = res_cfg.get("anchor_height_pct", 0.70)
+        icon_trims = res_cfg.get(
+            "anchor_icon_trim_pct", [0.42, 0.42, 0.35, 0.35, 0.35, 0.35]
+        )
+        if not isinstance(icon_trims, (list, tuple)):
+            icon_trims = [icon_trims] * 6
+        right_trim = res_cfg.get("anchor_right_trim_pct", 0.02)
+
         slice_w = panel_w / 6
-        top = y + int(0.15 * panel_h)
-        height = int(0.70 * panel_h)
+        top = y + int(top_pct * panel_h)
+        height = int(height_pct * panel_h)
         names = ["food", "wood", "gold", "stone", "population", "idle_villager"]
         regions = {}
         for idx, name in enumerate(names):
-            icon_trim = 0.42 if idx < 2 else 0.35
+            icon_trim = icon_trims[idx] if idx < len(icon_trims) else icon_trims[-1]
             left = x + int(idx * slice_w + icon_trim * slice_w)
-            width = min(
-                int(0.78 * slice_w),
-                x + int((idx + 1) * slice_w) - 2 - left,
-            )
-            regions[name] = (left, top, max(width, 10), height)
+            right_limit = x + int((idx + 1) * slice_w - right_trim * slice_w)
+            width = max(10, right_limit - left)
+            regions[name] = (left, top, width, height)
 
     if not regions:
         raise ResourceReadError("Resource bar not located on HUD")
@@ -360,9 +374,16 @@ def read_resources_from_hud():
         gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
         gray = cv2.medianBlur(gray, 3)
 
-        digits, data = _ocr_digits_better(gray)
+        digits, data, mask = _ocr_digits_better(gray)
         if not digits:
             logging.debug("OCR failed for %s; raw boxes=%s", name, data.get("text"))
+            debug_cfg = CFG.get("resource_panel", {}).get("debug_failed_ocr")
+            if CFG.get("debug") or debug_cfg:
+                debug_dir = ROOT / "debug"
+                debug_dir.mkdir(exist_ok=True)
+                ts = int(time.time() * 1000)
+                cv2.imwrite(str(debug_dir / f"resource_{name}_roi_{ts}.png"), roi)
+                cv2.imwrite(str(debug_dir / f"resource_{name}_thresh_{ts}.png"), mask)
             results[name] = None
         else:
             results[name] = int(digits)

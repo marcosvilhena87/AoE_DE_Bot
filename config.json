@@ -27,6 +27,17 @@
     "pop_box": [0.24, 0.04, 0.02, 0.02],
     "//pop_box": "[x, y, w, h] como frações da tela; calibrar depois."
   },
+  "resource_panel": {
+    "top_pct": 0.08,
+    "height_pct": 0.84,
+    "icon_trim_pct": [0.18, 0.18, 0.18, 0.18, 0.18, 0.18],
+    "right_trim_pct": 0.02,
+    "anchor_top_pct": 0.15,
+    "anchor_height_pct": 0.70,
+    "anchor_icon_trim_pct": [0.42, 0.42, 0.35, 0.35, 0.35, 0.35],
+    "anchor_right_trim_pct": 0.02,
+    "debug_failed_ocr": false
+  },
   "timers": {
     "house_interval": 45.0,
     "idle_gap": 0.35,
