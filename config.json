@@ -21,7 +21,7 @@
   "resource_panel": {
     "top_pct": 0.08,
     "height_pct": 0.84,
-    "icon_trim_pct": [0.44, 0.60, 0.30, 0.30, 0.18, 0.18],
+    "icon_trim_pct": [0.59, 0.59, 0.59, 0.59, 0.18, 0.18],
     "right_trim_pct": 0.01,
     "anchor_top_pct": 0.15,
     "anchor_height_pct": 0.70,
