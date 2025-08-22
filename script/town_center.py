@@ -14,7 +14,7 @@ def train_villagers(target_pop: int):
             resources = common.read_resources_from_hud()
         except common.ResourceReadError as exc:
             logging.error(
-                "Resource bar not located; stopping villager training: %s", exc
+                "Resource read error while training villagers: %s", exc
             )
             break
         food = resources.get("food")
