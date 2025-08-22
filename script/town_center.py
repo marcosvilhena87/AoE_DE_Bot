@@ -10,8 +10,14 @@ def train_villagers(target_pop: int):
     common._press_key_safe(common.CFG["keys"]["select_tc"], 0.10)
 
     while common.CURRENT_POP < target_pop:
-        resources = common.read_resources_from_hud()
-        if resources is None:
+        try:
+            resources = common.read_resources_from_hud()
+        except common.ResourceReadError as exc:
+            logging.error(
+                "Resource bar not located; stopping villager training: %s", exc
+            )
+            break
+        if not resources:
             logging.error("Resource bar not located; stopping villager training")
             break
         if resources.get("food", 0) < 50:
