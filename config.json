@@ -18,13 +18,6 @@
     "granary": "g",
     "storage_pit": "s"
   },
-  "areas": {
-    "food_num":  [0.15, 0.25, 0.10, 0.50],
-    "wood_num":  [0.35, 0.25, 0.10, 0.50],
-    "stone_num": [0.55, 0.25, 0.10, 0.50],
-    "gold_num":  [0.75, 0.25, 0.10, 0.50],
-    "pop_box":   [0.24, 0.04, 0.02, 0.02]
-  },
   "resource_panel": {
     "debug_failed_ocr": true,
     "top_pct": 0.18,
