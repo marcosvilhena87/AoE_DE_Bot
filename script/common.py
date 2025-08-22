@@ -42,8 +42,8 @@ def validate_config(cfg: dict) -> None:
         "house_spot",
         "granary_spot",
         "storage_spot",
-        "wood_stockpile",
-        "food_stockpile",
+        "wood_spot",
+        "food_spot",
         "pop_box",
     ]
     areas = cfg.get("areas", {})
@@ -388,7 +388,14 @@ def read_resources_from_hud():
 
             top = y + int(top_pct * h)
             height = int(height_pct * h)
-            names = ["wood", "food", "gold", "stone", "population", "idle_villager"]
+            names = [
+                "wood_stockpile",
+                "food_stockpile",
+                "gold",
+                "stone",
+                "population",
+                "idle_villager",
+            ]
             regions = {}
             for idx, name in enumerate(names):
                 icon_trim = icon_trims[idx] if idx < len(icon_trims) else icon_trims[-1]
@@ -423,7 +430,14 @@ def read_resources_from_hud():
             slice_w = panel_w / 6
             top = y + int(top_pct * panel_h)
             height = int(height_pct * panel_h)
-            names = ["wood", "food", "gold", "stone", "population", "idle_villager"]
+            names = [
+                "wood_stockpile",
+                "food_stockpile",
+                "gold",
+                "stone",
+                "population",
+                "idle_villager",
+            ]
             regions = {}
             for idx, name in enumerate(names):
                 icon_trim = icon_trims[idx] if idx < len(icon_trims) else icon_trims[-1]

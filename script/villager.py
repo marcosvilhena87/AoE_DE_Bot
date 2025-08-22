@@ -29,7 +29,7 @@ def build_house():
     except common.ResourceReadError as exc:
         logging.error("Resource read error while building house: %s", exc)
         return False
-    wood = resources.get("wood")
+    wood = resources.get("wood_stockpile")
     if wood is None:
         logging.error("Failed to read wood; cannot build house")
         return False
@@ -80,7 +80,7 @@ def build_house():
                 "Resource read error while retrying house construction: %s", exc
             )
             return False
-        wood = resources.get("wood")
+        wood = resources.get("wood_stockpile")
         if wood is None:
             logging.error("Failed to read wood; aborting house construction")
             return False
@@ -150,13 +150,13 @@ def econ_loop(minutes=5):
     time.sleep(0.5)
 
     areas = common.CFG.get("areas", {})
-    food_spot = areas.get("food_stockpile")
+    food_spot = areas.get("food_spot")
     if not food_spot:
-        logging.warning("Food stockpile spot not configured.")
+        logging.warning("Food spot not configured.")
         return False
-    wood_spot = areas.get("wood_stockpile")
+    wood_spot = areas.get("wood_spot")
     if not wood_spot:
-        logging.warning("Wood stockpile spot not configured.")
+        logging.warning("Wood spot not configured.")
         return False
     food_x, food_y = food_spot
     wood_x, wood_y = wood_spot

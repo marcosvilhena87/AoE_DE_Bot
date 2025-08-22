@@ -43,7 +43,10 @@ class TestClickAndBuildHouse(TestCase):
     def test_build_house_uses_right_click_and_updates_population(self):
         common.POP_CAP = 4
         expected_coords = tuple(common.CFG["areas"]["house_spot"])
-        with patch("script.common.read_resources_from_hud", return_value={"wood": 100}), \
+        with patch(
+            "script.common.read_resources_from_hud",
+            return_value={"wood_stockpile": 100},
+        ), \
             patch("script.common._press_key_safe"), \
             patch("script.common._click_norm") as click_mock, \
             patch("script.common.read_population_from_hud", return_value=(0, 8)) as read_pop_mock, \
