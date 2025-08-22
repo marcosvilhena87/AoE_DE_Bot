@@ -17,7 +17,7 @@ def train_villagers(target_pop: int):
                 "Resource read error while training villagers: %s", exc
             )
             break
-        food = resources.get("food")
+        food = resources.get("food_stockpile")
         if food is None:
             logging.error("Failed to read food; stopping villager training")
             break

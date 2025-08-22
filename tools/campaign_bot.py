@@ -283,7 +283,14 @@ def read_resources_from_hud():
 
             top = y + int(top_pct * h)
             height = int(height_pct * h)
-            names = ["wood", "food", "gold", "stone", "population", "idle_villager"]
+            names = [
+                "wood_stockpile",
+                "food_stockpile",
+                "gold",
+                "stone",
+                "population",
+                "idle_villager",
+            ]
             regions = {}
             for idx, name in enumerate(names):
                 icon_trim = icon_trims[idx] if idx < len(icon_trims) else icon_trims[-1]
@@ -312,7 +319,14 @@ def read_resources_from_hud():
             slice_w = panel_w / 6
             top = y + int(top_pct * panel_h)
             height = int(height_pct * panel_h)
-            names = ["wood", "food", "gold", "stone", "population", "idle_villager"]
+            names = [
+                "wood_stockpile",
+                "food_stockpile",
+                "gold",
+                "stone",
+                "population",
+                "idle_villager",
+            ]
             regions = {}
             for idx, name in enumerate(names):
                 icon_trim = icon_trims[idx] if idx < len(icon_trims) else icon_trims[-1]
@@ -452,7 +466,7 @@ def train_villagers(target_pop: int):
 
     while CURRENT_POP < target_pop:
         resources = read_resources_from_hud()
-        food = resources.get("food")
+        food = resources.get("food_stockpile")
         if food is None:
             logging.error("Failed to read food; stopping villager training")
             break
@@ -496,8 +510,8 @@ def econ_loop(minutes=5):
     logging.info("Storage Pit posicionado")
     time.sleep(0.5)
 
-    hunt_x, hunt_y = CFG["areas"]["food_stockpile"]
-    wood_x, wood_y = CFG["areas"]["wood_stockpile"]
+    hunt_x, hunt_y = CFG["areas"]["food_spot"]
+    wood_x, wood_y = CFG["areas"]["wood_spot"]
     try:
         _, limit = read_population_from_hud(conf_threshold=CFG.get("ocr_conf_threshold", 60))
     except PopulationReadError as e:
