@@ -49,6 +49,10 @@ class PopulationReadError(RuntimeError):
     """Raised when population values cannot be extracted from the HUD."""
 
 
+class ResourceReadError(RuntimeError):
+    """Raised when resource values cannot be extracted from the HUD."""
+
+
 @dataclass
 class ScenarioInfo:
     starting_villagers: int = 0
@@ -274,12 +278,39 @@ def locate_resource_panel(frame):
     if tmpl is None:
         return {}
 
-    box, score, _ = _find_template(
+    def _save_debug(img, heatmap):
+        debug_dir = ROOT / "debug"
+        debug_dir.mkdir(exist_ok=True)
+        ts = int(time.time() * 1000)
+        cv2.imwrite(str(debug_dir / f"resource_panel_fail_{ts}.png"), img)
+        if heatmap is not None:
+            hm = cv2.normalize(heatmap, None, 0, 255, cv2.NORM_MINMAX)
+            cv2.imwrite(
+                str(debug_dir / f"resource_panel_heat_{ts}.png"), hm.astype("uint8")
+            )
+
+    box, score, heat = _find_template(
         frame, tmpl, threshold=CFG["threshold"], scales=CFG["scales"]
     )
     if not box:
-        logging.warning("Resource panel template not matched; score=%.3f", score)
-        return {}
+        logging.warning(
+            "Resource panel template not matched; score=%.3f", score
+        )
+        _save_debug(frame, heat)
+        fallback = CFG.get("threshold_fallback")
+        if fallback is not None:
+            box, score, heat = _find_template(
+                frame, tmpl, threshold=fallback, scales=CFG["scales"]
+            )
+            if not box:
+                logging.warning(
+                    "Resource panel template not matched with fallback; score=%.3f",
+                    score,
+                )
+                _save_debug(frame, heat)
+                return {}
+        else:
+            return {}
 
     x, y, w, h = box
     slice_w = w / 6
@@ -323,8 +354,7 @@ def read_resources_from_hud():
             regions[name] = (left, top, width, height)
 
     if not regions:
-        logging.error("Resource bar not located on HUD")
-        return None
+        raise ResourceReadError("Resource bar not located on HUD")
 
     results = {}
     for name, (x, y, w, h) in regions.items():
@@ -342,6 +372,10 @@ def read_resources_from_hud():
         if not digits:
             logging.debug("OCR failed for %s; raw text=%r", name, text)
         results[name] = int(digits) if digits else 0
+
+    if all(v == 0 for v in results.values()):
+        raise ResourceReadError("OCR failed to read resource values")
+
     return results
 
 # =========================

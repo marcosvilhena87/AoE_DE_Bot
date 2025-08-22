@@ -24,8 +24,12 @@ def build_house():
     """
 
     wood_needed = 30
-    resources = common.read_resources_from_hud()
-    if resources is None:
+    try:
+        resources = common.read_resources_from_hud()
+    except common.ResourceReadError as exc:
+        logging.error("Resource bar not located; cannot build house: %s", exc)
+        return False
+    if not resources:
         logging.error("Resource bar not located; cannot build house")
         return False
     if resources.get("wood", 0) < wood_needed:
@@ -63,8 +67,14 @@ def build_house():
             return True
 
         logging.warning("Tentativa %s de construir casa falhou.", idx)
-        resources = common.read_resources_from_hud()
-        if resources is None:
+        try:
+            resources = common.read_resources_from_hud()
+        except common.ResourceReadError as exc:
+            logging.error(
+                "Resource bar not located; aborting house construction: %s", exc
+            )
+            return False
+        if not resources:
             logging.error("Resource bar not located; aborting house construction")
             return False
         if resources.get("wood", 0) < wood_needed:
@@ -126,8 +136,14 @@ def econ_loop(minutes=5):
         time.sleep(common.CFG["timers"]["idle_gap"])
 
         if common.CURRENT_POP >= common.POP_CAP - 2:
-            resources = common.read_resources_from_hud()
-            if resources is None:
+            try:
+                resources = common.read_resources_from_hud()
+            except common.ResourceReadError as exc:
+                logging.error(
+                    "Resource bar not located; ending economic loop: %s", exc
+                )
+                break
+            if not resources:
                 logging.error("Resource bar not located; ending economic loop")
                 break
             idle_before = resources.get("idle_villager", 0)
@@ -136,7 +152,14 @@ def econ_loop(minutes=5):
             if idle_before > 0:
                 select_idle_villager()
                 time.sleep(0.1)
-                idle_after_res = common.read_resources_from_hud()
+                try:
+                    idle_after_res = common.read_resources_from_hud()
+                except common.ResourceReadError as exc:
+                    logging.error(
+                        "Resource bar not located when checking idle villagers: %s",
+                        exc,
+                    )
+                    idle_after_res = {}
                 idle_after = idle_after_res.get("idle_villager", 0) if idle_after_res else 0
                 if idle_after >= idle_before:
                     common._click_norm(wood_x, wood_y)
