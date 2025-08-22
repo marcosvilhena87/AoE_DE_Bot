@@ -323,8 +323,8 @@ def read_resources_from_hud():
             regions[name] = (left, top, width, height)
 
     if not regions:
-        logging.warning("No resource regions located on HUD; returning zeros")
-        return {k: 0 for k in ["food", "wood", "gold", "stone", "population", "idle_villager"]}
+        logging.error("Resource bar not located on HUD")
+        return None
 
     results = {}
     for name, (x, y, w, h) in regions.items():
