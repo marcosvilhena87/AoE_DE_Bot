@@ -17,13 +17,14 @@ def train_villagers(target_pop: int):
                 "Resource bar not located; stopping villager training: %s", exc
             )
             break
-        if not resources:
-            logging.error("Resource bar not located; stopping villager training")
+        food = resources.get("food")
+        if food is None:
+            logging.error("Failed to read food; stopping villager training")
             break
-        if resources.get("food", 0) < 50:
+        if food < 50:
             logging.info(
                 "Comida insuficiente (%s) para treinar aldeões.",
-                resources.get("food", 0),
+                food,
             )
             break
         common._press_key_safe(common.CFG["keys"]["train_vill"], 0.0)
