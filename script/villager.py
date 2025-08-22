@@ -1,475 +1,51 @@
 import logging
-import json
 import time
-from pathlib import Path
-import os
-import re
-from dataclasses import dataclass
 
-import numpy as np
-import cv2
-from mss import mss
-import pyautogui as pg
-import pytesseract
+import script.common as common
 
-# =========================
-# CONFIGURAÇÃO
-# =========================
-pg.PAUSE = 0.05
-pg.FAILSAFE = True  # mouse no canto sup-esq aborta instantaneamente
-
-ROOT = Path(__file__).resolve().parent
-ASSETS = ROOT / "assets"
-
-with open(ROOT / "config.json", encoding="utf-8") as cfg_file:
-    CFG = json.load(cfg_file)
-
-tesseract_cmd = CFG.get("tesseract_path") or os.environ.get("TESSERACT_CMD")
-if tesseract_cmd:
-    pytesseract.pytesseract.tesseract_cmd = tesseract_cmd
-
-# Configuração de logging
-logging.basicConfig(
-    level=logging.DEBUG if CFG.get("verbose_logging") else logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-)
-
-# Contadores internos de população
-CURRENT_POP = 0
-POP_CAP = 0
-TARGET_POP = 0
-
-# Instância única do mss para reutilização
-SCT = mss()
-MONITOR = SCT.monitors[1]  # tela principal
-# Posição detectada do HUD usada apenas como referência
-HUD_ANCHOR = None
-
-
-class PopulationReadError(RuntimeError):
-    """Raised when population values cannot be extracted from the HUD."""
-
-
-@dataclass
-class ScenarioInfo:
-    starting_villagers: int = 0
-    population_limit: int = 0
-    objective_villagers: int = 0
-
-
-def parse_scenario_info(path: str) -> ScenarioInfo:
-    """Parse basic scenario information from a text file.
-
-    Extracts starting villagers, global population limit and the
-    number of villagers required by the objectives.
-    """
-    info = ScenarioInfo()
-    in_objectives = False
-    try:
-        with open(path, encoding="utf-8") as fh:
-            for line in fh:
-                line = line.strip()
-                if not line:
-                    # blank line ends objectives block
-                    in_objectives = False
-                    continue
-                lower = line.lower()
-                if lower.startswith("population limit"):
-                    m = re.search(r"(\d+)", line)
-                    if m:
-                        info.population_limit = int(m.group(1))
-                elif lower.startswith("starting units"):
-                    m = re.search(r"(\d+)\s+villagers", line, re.IGNORECASE)
-                    if m:
-                        info.starting_villagers = int(m.group(1))
-                elif lower.startswith("objectives"):
-                    in_objectives = True
-                    continue
-                elif in_objectives:
-                    m = re.search(r"(\d+)\s+villagers", line, re.IGNORECASE)
-                    if m:
-                        info.objective_villagers = int(m.group(1))
-                        in_objectives = False
-    except FileNotFoundError:
-        logging.error("Scenario file not found: %s", path)
-    return info
-
-# =========================
-# CAPTURA & TEMPLATE MATCH
-# =========================
-def _grab_frame(bbox=None):
-    """Captura um frame da tela.
-
-    Se ``bbox`` for fornecido, captura apenas a região especificada.
-    Caso contrário, captura a tela inteira. A detecção do HUD
-    (``HUD_ANCHOR``) serve apenas como confirmação visual e não
-    restringe a área capturada.
-    """
-    region = bbox or MONITOR
-    img = np.array(SCT.grab(region))[:, :, :3]  # BGRA -> BGR
-    return img
-
-def _load_gray(path):
-    im = cv2.imread(str(path), cv2.IMREAD_GRAYSCALE)
-    if im is None:
-        raise FileNotFoundError(f"Asset não encontrado: {path}")
-    return im
-
-# Preload grayscale templates referenced in the configuration to avoid
-# repeatedly reading them from disk during HUD detection.
-HUD_TEMPLATES = {name: _load_gray(ROOT / name) for name in CFG.get("look_for", [])}
-
-def _find_template(frame_bgr, tmpl_gray, threshold=0.82, scales=None):
-    frame_gray = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2GRAY)
-    h0, w0 = tmpl_gray.shape[:2]
-    best = (None, -1, None)  # (box, score, heatmap)
-
-    for s in (scales or [1.0]):
-        th, tw = int(h0 * s), int(w0 * s)
-        if th < 10 or tw < 10:
-            continue
-        if th > frame_gray.shape[0] or tw > frame_gray.shape[1]:
-            logging.debug(
-                "Template %sx%s exceeds frame %sx%s at scale %.2f, skipping",
-                tw,
-                th,
-                frame_gray.shape[1],
-                frame_gray.shape[0],
-                s,
-            )
-            continue
-        tmpl = cv2.resize(tmpl_gray, (tw, th), interpolation=cv2.INTER_AREA)
-        res = cv2.matchTemplate(frame_gray, tmpl, cv2.TM_CCOEFF_NORMED)
-        min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
-        if max_val > best[1]:
-            x, y = max_loc
-            best = ((x, y, tw, th), max_val, res)
-
-    box, score, heat = best
-    if score >= threshold:
-        return box, score, heat
-    return None, score, heat
-
-def wait_hud(timeout=60):
-    logging.info("Aguardando HUD por até %ss...", timeout)
-    t0 = time.time()
-    last_best = (-1, None)  # (score, name)
-    while time.time() - t0 < timeout:
-        frame = _grab_frame()
-        for name, tmpl in HUD_TEMPLATES.items():
-            box, score, heat = _find_template(
-                frame, tmpl, threshold=CFG["threshold"], scales=CFG["scales"]
-            )
-            if score > last_best[0]:
-                last_best = (score, name)
-            if box:
-                if CFG["debug"]:
-                    cv2.imwrite(f"debug_hud_{name}.png", frame)
-                x, y, w, h = box
-                logging.info("HUD detectada com template '%s'", name)
-                global HUD_ANCHOR
-                HUD_ANCHOR = {"left": x, "top": y, "width": w, "height": h}
-                return HUD_ANCHOR, name
-        time.sleep(0.25)
-    logging.error(
-        "HUD não encontrada. Melhor score=%.3f no template '%s'. Re-capture o asset e verifique ESCALA 100%%.",
-        last_best[0],
-        last_best[1],
-    )
-    raise RuntimeError(
-        f"HUD não encontrada. Melhor score={last_best[0]:.3f} no template '{last_best[1]}'. "
-        "Re-capture o asset (recorte mais justo) e verifique ESCALA 100%."
-    )
-
-
-# =========================
-# LEITURA DE POPULAÇÃO NA HUD
-# =========================
-def read_population_from_hud(retries=3, conf_threshold=None, save_failed_roi=False):
-    if conf_threshold is None:
-        conf_threshold = CFG.get("ocr_conf_threshold", 60)
-
-    # 1) Tente ancorar pelo template da barra de recursos
-    frame_full = _grab_frame()
-    regions = locate_resource_panel(frame_full)
-    roi_bbox = None
-    if "population" in regions:
-        x, y, w, h = regions["population"]
-        roi_bbox = {"left": x, "top": y, "width": w, "height": h}
-    else:
-        # 2) Fallback: use areas.pop_box (normalizado à tela inteira)
-        x, y, w, h = CFG["areas"]["pop_box"]
-        screen_width, screen_height = _screen_size()
-        abs_left = int(x * screen_width)
-        abs_top = int(y * screen_height)
-        pw = int(w * screen_width)
-        ph = int(h * screen_height)
-        if pw <= 0 or ph <= 0:
-            raise PopulationReadError(
-                f"Population ROI has non-positive dimensions after scaling: width={pw}, height={ph}. "
-                "Recalibrate areas.pop_box in config.json."
-            )
-        abs_right = abs_left + pw
-        abs_bottom = abs_top + ph
-        if abs_left < 0 or abs_top < 0 or abs_right > screen_width or abs_bottom > screen_height:
-            raise PopulationReadError(
-                "Population ROI out of screen bounds: "
-                f"left={abs_left}, top={abs_top}, width={pw}, height={ph}, "
-                f"screen={screen_width}x{screen_height}. "
-                "Recalibrate areas.pop_box em config.json ou use a âncora por template."
-            )
-        roi_bbox = {"left": abs_left, "top": abs_top, "width": pw, "height": ph}
-
-    last_roi = None
-    last_thresh = None
-    last_text = ""
-    last_confidences = []
-
-    for attempt in range(retries):
-        roi = _grab_frame(roi_bbox)
-        if roi.size == 0:
-            logging.warning("Population ROI has zero size")
-            continue
-
-        gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
-        gray = cv2.resize(gray, None, fx=2, fy=2, interpolation=cv2.INTER_LINEAR)
-        # OTSU + binarização costuma funcionar bem na HUD
-        _, thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-
-        data = pytesseract.image_to_data(
-            thresh,
-            # PERMITA A BARRA "/" para ler "atual/limite"
-            config="--psm 7 -c tessedit_char_whitelist=0123456789/",
-            output_type=pytesseract.Output.DICT,
-        )
-
-        text = "".join(data.get("text", [])).replace(" ", "")
-        confidences = [int(c) for c in data.get("conf", []) if c != "-1"]
-
-        last_roi = roi
-        last_thresh = thresh
-        last_text = text
-        last_confidences = confidences
-
-        # Aceite "12/20", "3/5", etc.
-        parts = [p for p in text.split("/") if p]
-        if len(parts) >= 2 and (not confidences or min(confidences) >= conf_threshold):
-            cur = int("".join(filter(str.isdigit, parts[0])) or 0)
-            limit = int("".join(filter(str.isdigit, parts[1])) or 0)
-            return cur, limit
-
-        logging.debug("OCR attempt %s failed: text='%s', conf=%s", attempt + 1, text, confidences)
-        time.sleep(0.1)
-
-    logging.warning(
-        "Falha ao ler população da HUD após %s tentativas; último texto='%s', conf=%s",
-        retries, last_text, last_confidences
-    )
-    if (CFG.get("debug") or save_failed_roi) and last_roi is not None:
-        ts = int(time.time() * 1000)
-        cv2.imwrite(str(ROOT / f"debug_pop_roi_{ts}.png"), last_roi)
-        cv2.imwrite(str(ROOT / f"debug_pop_thresh_{ts}.png"), last_thresh)
-        logging.info("ROI salva; texto extraído: '%s'; conf=%s", last_text, last_confidences)
-
-    raise PopulationReadError(
-        f"Falha ao ler população da HUD após {retries} tentativas. Texto='{last_text}', confs={last_confidences}"
-    )
-
-
-# =========================
-# RECURSOS NA HUD
-# =========================
-def locate_resource_panel(frame):
-    """Localiza o painel de recursos e retorna sub-regiões absolutas.
-
-    O dicionário resultante possui chaves para cada contador com valores
-    ``(x, y, w, h)`` absolutos.
-    """
-    tmpl = HUD_TEMPLATES.get("assets/resources_population.png")
-    if tmpl is None:
-        return {}
-    box, score, _ = _find_template(
-        frame, tmpl, threshold=CFG["threshold"], scales=CFG["scales"]
-    )
-    if not box:
-        return {}
-    x, y, w, h = box
-    offsets = {
-        "food": (0.05, 0.2, 0.1, 0.6),
-        "wood": (0.21, 0.2, 0.1, 0.6),
-        "gold": (0.37, 0.2, 0.1, 0.6),
-        "stone": (0.53, 0.2, 0.1, 0.6),
-        "population": (0.69, 0.2, 0.1, 0.6),
-        "idle_villager": (0.85, 0.2, 0.1, 0.6),
-    }
-    regions = {}
-    for name, (ox, oy, fw, fh) in offsets.items():
-        regions[name] = (
-            x + int(ox * w),
-            y + int(oy * h),
-            int(fw * w),
-            int(fh * h),
-        )
-    return regions
-
-
-def read_resources_from_hud():
-    """Lê os valores de recursos diretamente da HUD."""
-    frame = _grab_frame()
-    regions = locate_resource_panel(frame)
-    results = {}
-    for name, (x, y, w, h) in regions.items():
-        roi = _grab_frame({"left": x, "top": y, "width": w, "height": h})
-        gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
-        _, thresh = cv2.threshold(
-            gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU
-        )
-        data = pytesseract.image_to_data(
-            thresh,
-            config="--psm 7 -c tessedit_char_whitelist=0123456789",
-            output_type=pytesseract.Output.DICT,
-        )
-        text = "".join(data.get("text", [])).strip()
-        digits = "".join(filter(str.isdigit, text))
-        results[name] = int(digits) if digits else 0
-    return results
-
-# =========================
-# AÇÕES DE JOGO
-# =========================
-def _screen_size():
-    """Retorna as dimensões da tela principal.
-
-    Usa as informações do monitor capturadas pelo ``mss`` em vez de
-    ``pyautogui.size`` para garantir consistência entre as leituras de
-    pixels e as capturas de tela.
-    """
-    return MONITOR["width"], MONITOR["height"]
-
-def _to_px(nx, ny):
-    W, H = _screen_size()
-    return int(nx * W), int(ny * H)
-
-def _click_norm(nx, ny):
-    x, y = _to_px(nx, ny)
-    try:
-        pg.click(x, y)
-    except pg.FailSafeException:
-        logging.warning(
-            "Fail-safe triggered during click at (%s, %s). Moving cursor to center.",
-            x,
-            y,
-        )
-        _move_cursor_safe()
-        pg.click(x, y)
-
-def _move_cursor_safe():
-    W, H = _screen_size()
-    failsafe_state = pg.FAILSAFE
-    pg.FAILSAFE = False
-    pg.moveTo(W // 2, H // 2)
-    pg.FAILSAFE = failsafe_state
-
-
-def _press_key_safe(key, pause):
-    try:
-        pg.press(key)
-        time.sleep(pause)
-    except pg.FailSafeException:
-        logging.warning(
-            "Fail-safe triggered while pressing '%s'. Moving cursor to center.",
-            key,
-        )
-        _move_cursor_safe()
-        pg.press(key)
-        time.sleep(pause)
 
 def select_idle_villager():
-    try:
-        pg.press(CFG["keys"]["idle_vill"])
-        time.sleep(0.10)
-    except pg.FailSafeException:
-        logging.warning(
-            "Fail-safe triggered while selecting idle villager. Moving cursor to center."
-        )
-        _move_cursor_safe()
-        pg.press(CFG["keys"]["idle_vill"])
-        time.sleep(0.10)
+    """Selecione um aldeão ocioso usando a tecla configurada."""
+    common._press_key_safe(common.CFG["keys"]["idle_vill"], 0.10)
+
 
 def build_house():
-    # Abra menu de construção e selecione a tecla configurada para "Casa"
-    _press_key_safe(CFG["keys"]["build_menu"], 0.05)
-    house_key = CFG["keys"]["house"]
+    """Constrói uma casa no local predefinido."""
+    common._press_key_safe(common.CFG["keys"]["build_menu"], 0.05)
+    house_key = common.CFG["keys"].get("house")
     if house_key:
-        _press_key_safe(house_key, 0.15)
-        hx, hy = CFG["areas"]["house_spot"]
-        _click_norm(hx, hy)
+        common._press_key_safe(house_key, 0.15)
+        hx, hy = common.CFG["areas"]["house_spot"]
+        common._click_norm(hx, hy)
+
 
 def build_granary():
-    # Abre menu de construção e posiciona o "Granary" no local definido
-    _press_key_safe(CFG["keys"]["build_menu"], 0.05)
-    g_key = CFG["keys"].get("granary")
+    """Posiciona um Granary no ponto configurado."""
+    common._press_key_safe(common.CFG["keys"]["build_menu"], 0.05)
+    g_key = common.CFG["keys"].get("granary")
     if g_key:
-        _press_key_safe(g_key, 0.15)
-        gx, gy = CFG["areas"]["granary_spot"]
-        _click_norm(gx, gy)
+        common._press_key_safe(g_key, 0.15)
+        gx, gy = common.CFG["areas"]["granary_spot"]
+        common._click_norm(gx, gy)
+
 
 def build_storage_pit():
-    # Abre menu de construção e posiciona o "Storage Pit" no local definido
-    _press_key_safe(CFG["keys"]["build_menu"], 0.05)
-    s_key = CFG["keys"].get("storage_pit")
+    """Posiciona um Storage Pit no ponto configurado."""
+    common._press_key_safe(common.CFG["keys"]["build_menu"], 0.05)
+    s_key = common.CFG["keys"].get("storage_pit")
     if s_key:
-        _press_key_safe(s_key, 0.15)
-        sx, sy = CFG["areas"]["storage_spot"]
-        _click_norm(sx, sy)
-
-def train_villagers(target_pop: int):
-    """Fila aldeões na Town Center até atingir `target_pop`.
-
-    Usa contadores internos para população e constrói casas
-    automaticamente ao atingir o limite atual.
-    """
-    global CURRENT_POP, POP_CAP
-    try:
-        pg.press(CFG["keys"]["select_tc"])  # seleciona a TC
-        time.sleep(0.10)
-    except pg.FailSafeException:
-        logging.warning(
-            "Fail-safe triggered while selecting Town Center. Moving cursor to center."
-        )
-        _move_cursor_safe()
-        pg.press(CFG["keys"]["select_tc"])
-        time.sleep(0.10)
-    while CURRENT_POP < target_pop:
-        resources = read_resources_from_hud()
-        if resources.get("food", 0) < 50:
-            logging.info(
-                "Comida insuficiente (%s) para treinar aldeões.",
-                resources.get("food", 0),
-            )
-            break
-        try:
-            pg.press(CFG["keys"]["train_vill"])
-        except pg.FailSafeException:
-            logging.warning(
-                "Fail-safe triggered while training villager. Moving cursor to center.",
-            )
-            _move_cursor_safe()
-            pg.press(CFG["keys"]["train_vill"])
-        CURRENT_POP += 1
-        if CURRENT_POP == POP_CAP:
-            build_house()
-            POP_CAP += 4
-        time.sleep(0.10)
+        common._press_key_safe(s_key, 0.15)
+        sx, sy = common.CFG["areas"]["storage_spot"]
+        common._click_norm(sx, sy)
 
 
 def econ_loop(minutes=5):
-    """Baseline para 'Hunting': prioriza comida (caça/frutos) + madeira p/ casas."""
-    global POP_CAP, TARGET_POP, CURRENT_POP
-    logging.info("Iniciando rotina econômica por %s minutos", minutes)
-    train_villagers(TARGET_POP)
+    """Rotina econômica básica para a missão Hunting."""
+    import script.town_center as town_center
 
-    # Construções iniciais: Granary e Storage Pit
+    logging.info("Iniciando rotina econômica por %s minutos", minutes)
+    town_center.train_villagers(common.TARGET_POP)
+
     select_idle_villager()
     build_granary()
     logging.info("Granary posicionado")
@@ -479,55 +55,25 @@ def econ_loop(minutes=5):
     logging.info("Storage Pit posicionado")
     time.sleep(0.5)
 
-    hunt_x, hunt_y = CFG["areas"]["hunt_food"]
-    wood_x, wood_y = CFG["areas"]["wood"]
+    hunt_x, hunt_y = common.CFG["areas"]["hunt_food"]
+    wood_x, wood_y = common.CFG["areas"]["wood"]
 
     t0 = time.time()
     while time.time() - t0 < minutes * 60:
-        # 1) Um ocioso para COMIDA (caça/arbusto)
         select_idle_villager()
-        _click_norm(hunt_x, hunt_y)
-        time.sleep(CFG["timers"]["idle_gap"])
+        common._click_norm(hunt_x, hunt_y)
+        time.sleep(common.CFG["timers"]["idle_gap"])
 
-        # 2) Um ocioso para MADEIRA (garantir casas)
         select_idle_villager()
-        _click_norm(wood_x, wood_y)
-        time.sleep(CFG["timers"]["idle_gap"])
+        common._click_norm(wood_x, wood_y)
+        time.sleep(common.CFG["timers"]["idle_gap"])
 
-        # 3) Construir casa quando próximo do limite de população
-        if CURRENT_POP >= POP_CAP - 2:
+        if common.CURRENT_POP >= common.POP_CAP - 2:
             select_idle_villager()
             build_house()
             logging.info("Casa construída para expandir população")
             time.sleep(0.5)
-            POP_CAP += 4
+            common.POP_CAP += 4
 
-        time.sleep(CFG["timers"]["loop_sleep"])
+        time.sleep(common.CFG["timers"]["loop_sleep"])
     logging.info("Rotina econômica finalizada")
-
-# =========================
-# MAIN
-# =========================
-def main():
-    logging.info(
-        "Entre na missão da campanha (Hunting). O script inicia quando detectar a HUD…"
-    )
-    try:
-        hud, asset = wait_hud(timeout=90)
-        logging.info("HUD detectada em %s usando '%s'. Rodando rotina econômica…", hud, asset)
-    except RuntimeError as e:
-        logging.error(str(e))
-        logging.info("Dando mais 25s para você ajustar a câmera/HUD (fallback)…")
-        time.sleep(25)
-
-    info = parse_scenario_info("campaigns/Ascent_of_Egypt/1.Hunting.txt")
-    global CURRENT_POP, POP_CAP, TARGET_POP
-    CURRENT_POP = info.starting_villagers
-    POP_CAP = 4  # 1 Town Center
-    TARGET_POP = info.objective_villagers
-
-    econ_loop(minutes=CFG["loop_minutes"])
-    logging.info("Rotina concluída.")
-
-if __name__ == "__main__":
-    main()
