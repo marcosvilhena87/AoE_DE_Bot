@@ -119,11 +119,29 @@ def econ_loop(minutes=5):
         time.sleep(common.CFG["timers"]["idle_gap"])
 
         if common.CURRENT_POP >= common.POP_CAP - 2:
-            select_idle_villager()
+            resources = common.read_resources_from_hud()
+            idle_before = resources.get("idle_villager", 0)
+            took_from_wood = False
+
+            if idle_before > 0:
+                select_idle_villager()
+                time.sleep(0.1)
+                idle_after = common.read_resources_from_hud().get("idle_villager", 0)
+                if idle_after >= idle_before:
+                    common._click_norm(wood_x, wood_y)
+                    took_from_wood = True
+            else:
+                common._click_norm(wood_x, wood_y)
+                took_from_wood = True
+
             if build_house():
                 logging.info("Casa construída para expandir população")
             else:
                 logging.warning("Falha ao construir casa para expandir população")
+
+            if took_from_wood:
+                common._click_norm(wood_x, wood_y)
+
             time.sleep(0.5)
 
         time.sleep(common.CFG["timers"]["loop_sleep"])
