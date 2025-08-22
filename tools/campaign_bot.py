@@ -234,6 +234,26 @@ def locate_resource_panel(frame):
     return regions
 
 
+def _ocr_digits_better(gray):
+    gray = cv2.resize(gray, None, fx=2, fy=2, interpolation=cv2.INTER_LINEAR)
+    _, thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    normal = thresh
+    inverted = cv2.bitwise_not(thresh)
+    results = []
+    for mask in (normal, inverted):
+        data = pytesseract.image_to_data(
+            mask,
+            config="--psm 7 --oem 3 -c tessedit_char_whitelist=0123456789",
+            output_type=pytesseract.Output.DICT,
+        )
+        text = "".join(data.get("text", [])).strip()
+        digits = "".join(filter(str.isdigit, text))
+        results.append((digits, data))
+    if len(results[0][0]) >= len(results[1][0]):
+        return results[0]
+    return results[1]
+
+
 def read_resources_from_hud():
     """Lê os valores de recursos diretamente da HUD."""
     frame = _grab_frame()
@@ -242,17 +262,14 @@ def read_resources_from_hud():
     for name, (x, y, w, h) in regions.items():
         roi = _grab_frame({"left": x, "top": y, "width": w, "height": h})
         gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
-        _, thresh = cv2.threshold(
-            gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU
-        )
-        data = pytesseract.image_to_data(
-            thresh,
-            config="--psm 7 -c tessedit_char_whitelist=0123456789",
-            output_type=pytesseract.Output.DICT,
-        )
-        text = "".join(data.get("text", [])).strip()
-        digits = "".join(filter(str.isdigit, text))
-        results[name] = int(digits) if digits else None
+        gray = cv2.medianBlur(gray, 3)
+
+        digits, data = _ocr_digits_better(gray)
+        if not digits:
+            logging.debug("OCR failed for %s; raw boxes=%s", name, data.get("text"))
+            results[name] = None
+        else:
+            results[name] = int(digits)
     return results
 
 # =========================
