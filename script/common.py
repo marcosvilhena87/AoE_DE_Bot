@@ -22,8 +22,43 @@ pg.FAILSAFE = True  # mouse no canto sup-esq aborta instantaneamente
 ROOT = Path(__file__).resolve().parent.parent
 ASSETS = ROOT / "assets"
 
+
+def validate_config(cfg: dict) -> None:
+    """Ensure mandatory config sections and coordinates are present.
+
+    Raises
+    ------
+    RuntimeError
+        If required sections or fields are missing, suggesting how to fix it.
+    """
+
+    if "areas" not in cfg:
+        raise RuntimeError(
+            "Missing mandatory 'areas' section in config.json. "
+            "Copy values from config.sample.json or run the calibration tools."
+        )
+
+    required_coords = [
+        "house_spot",
+        "granary_spot",
+        "storage_spot",
+        "wood",
+        "hunt_food",
+        "pop_box",
+    ]
+    areas = cfg.get("areas", {})
+    missing = [name for name in required_coords if name not in areas]
+    if missing:
+        raise RuntimeError(
+            "Missing required coordinate(s) in 'areas': "
+            + ", ".join(missing)
+            + ". Copy them from config.sample.json or run the calibration tools."
+        )
+
 with open(ROOT / "config.json", encoding="utf-8") as cfg_file:
     CFG = json.load(cfg_file)
+    
+validate_config(CFG)
 
 tesseract_cmd = CFG.get("tesseract_path") or os.environ.get("TESSERACT_CMD")
 if tesseract_cmd:
