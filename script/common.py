@@ -297,6 +297,31 @@ def locate_resource_panel(frame):
 def read_resources_from_hud():
     frame = _grab_frame()
     regions = locate_resource_panel(frame)
+
+    if not regions and HUD_ANCHOR:
+        # Fallback: estimate the resource bar position from the previously
+        # detected HUD anchor.  The anchor is assumed to sit at the top of the
+        # screen and the resource panel spans to its right.  The original
+        # template ``resources_population.png`` measured 568x59 px on a
+        # 1920x1080 display.  We convert those values to screen fractions so
+        # they can be tweaked for different resolutions or HUD scales.
+        W, H = _screen_size()
+        margin = int(0.01 * W)  # ~1% horizontal gap between anchor and panel
+        panel_w = int(568 / 1920 * W)
+        panel_h = int(59 / 1080 * H)
+        x = HUD_ANCHOR["left"] + HUD_ANCHOR["width"] + margin
+        y = HUD_ANCHOR["top"]
+
+        slice_w = panel_w / 6
+        top = y + int(0.2 * panel_h)
+        height = int(0.6 * panel_h)
+        names = ["food", "wood", "gold", "stone", "population", "idle_villager"]
+        regions = {}
+        for idx, name in enumerate(names):
+            left = x + int(idx * slice_w + 0.35 * slice_w)
+            width = int(0.55 * slice_w)
+            regions[name] = (left, top, width, height)
+
     if not regions:
         logging.warning("No resource regions located on HUD; returning zeros")
         return {k: 0 for k in ["food", "wood", "gold", "stone", "population", "idle_villager"]}
