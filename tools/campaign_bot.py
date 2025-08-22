@@ -282,7 +282,7 @@ def read_resources_from_hud():
         )
         text = "".join(data.get("text", [])).strip()
         digits = "".join(filter(str.isdigit, text))
-        results[name] = int(digits) if digits else 0
+        results[name] = int(digits) if digits else None
     return results
 
 # =========================
@@ -402,10 +402,14 @@ def train_villagers(target_pop: int):
 
     while CURRENT_POP < target_pop:
         resources = read_resources_from_hud()
-        if resources.get("food", 0) < 50:
+        food = resources.get("food")
+        if food is None:
+            logging.error("Failed to read food; stopping villager training")
+            break
+        if food < 50:
             logging.info(
                 "Comida insuficiente (%s) para treinar aldeões.",
-                resources.get("food", 0),
+                food,
             )
             break
         try:

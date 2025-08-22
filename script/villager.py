@@ -29,13 +29,14 @@ def build_house():
     except common.ResourceReadError as exc:
         logging.error("Resource bar not located; cannot build house: %s", exc)
         return False
-    if not resources:
-        logging.error("Resource bar not located; cannot build house")
+    wood = resources.get("wood")
+    if wood is None:
+        logging.error("Failed to read wood; cannot build house")
         return False
-    if resources.get("wood", 0) < wood_needed:
+    if wood < wood_needed:
         logging.warning(
             "Madeira insuficiente (%s) para construir casa.",
-            resources.get("wood", 0),
+            wood,
         )
         return False
 
@@ -74,12 +75,13 @@ def build_house():
                 "Resource bar not located; aborting house construction: %s", exc
             )
             return False
-        if not resources:
-            logging.error("Resource bar not located; aborting house construction")
+        wood = resources.get("wood")
+        if wood is None:
+            logging.error("Failed to read wood; aborting house construction")
             return False
-        if resources.get("wood", 0) < wood_needed:
+        if wood < wood_needed:
             logging.warning(
-                "Madeira insuficiente após tentativa (%s).", resources.get("wood", 0)
+                "Madeira insuficiente após tentativa (%s).", wood
             )
             break
 
@@ -143,10 +145,10 @@ def econ_loop(minutes=5):
                     "Resource bar not located; ending economic loop: %s", exc
                 )
                 break
-            if not resources:
-                logging.error("Resource bar not located; ending economic loop")
+            idle_before = resources.get("idle_villager")
+            if idle_before is None:
+                logging.error("Failed to read idle villager count; ending economic loop")
                 break
-            idle_before = resources.get("idle_villager", 0)
             took_from_wood = False
 
             if idle_before > 0:
@@ -160,7 +162,10 @@ def econ_loop(minutes=5):
                         exc,
                     )
                     idle_after_res = {}
-                idle_after = idle_after_res.get("idle_villager", 0) if idle_after_res else 0
+                idle_after = idle_after_res.get("idle_villager") if idle_after_res else None
+                if idle_after is None:
+                    logging.error("Failed to read idle villager count after selection")
+                    idle_after = 0
                 if idle_after >= idle_before:
                     common._click_norm(wood_x, wood_y)
                     took_from_wood = True

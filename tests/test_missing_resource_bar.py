@@ -39,7 +39,7 @@ class TestMissingResourceBar(TestCase):
     def test_train_villagers_handles_missing_bar(self):
         common.CURRENT_POP = 3
         common.POP_CAP = 5
-        with patch("script.common.read_resources_from_hud", return_value=None), \
+        with patch("script.common.read_resources_from_hud", return_value={"food": None}), \
              patch("script.town_center.select_idle_villager"), \
              patch("script.town_center.build_house"):
             tc.train_villagers(5)
@@ -47,5 +47,5 @@ class TestMissingResourceBar(TestCase):
 
     def test_build_house_handles_missing_bar(self):
         common.POP_CAP = 4
-        with patch("script.common.read_resources_from_hud", return_value=None):
+        with patch("script.common.read_resources_from_hud", return_value={"wood": None}):
             self.assertFalse(villager.build_house())

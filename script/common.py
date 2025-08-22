@@ -371,9 +371,9 @@ def read_resources_from_hud():
         digits = "".join(filter(str.isdigit, text))
         if not digits:
             logging.debug("OCR failed for %s; raw text=%r", name, text)
-        results[name] = int(digits) if digits else 0
+        results[name] = int(digits) if digits else None
 
-    if all(v == 0 for v in results.values()):
+    if all(v is None for v in results.values()):
         raise ResourceReadError("OCR failed to read resource values")
 
     return results
