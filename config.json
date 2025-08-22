@@ -5,9 +5,9 @@
   "threshold_fallback": 0.68,
   "scales": [0.84, 0.88, 0.92, 0.96, 1.0, 1.04, 1.08, 1.12, 1.16],
   "loop_minutes": 6,
-  "debug": true,
+  "debug": false,
   "verbose_logging": false,
-  "ocr_conf_threshold": 60,
+  "ocr_conf_threshold": 45,
   "tesseract_path": "C:\\Program Files\\Tesseract-OCR\\tesseract.exe",
   "keys": {
     "idle_vill": ".",
@@ -21,13 +21,13 @@
   "resource_panel": {
     "top_pct": 0.08,
     "height_pct": 0.84,
-    "icon_trim_pct": [0.18, 0.18, 0.18, 0.18, 0.18, 0.18],
-    "right_trim_pct": 0.02,
+    "icon_trim_pct": [0.44, 0.60, 0.30, 0.30, 0.18, 0.18],
+    "right_trim_pct": 0.01,
     "anchor_top_pct": 0.15,
     "anchor_height_pct": 0.70,
     "anchor_icon_trim_pct": [0.42, 0.42, 0.35, 0.35, 0.35, 0.35],
     "anchor_right_trim_pct": 0.02,
-    "debug_failed_ocr": false
+    "debug_failed_ocr": true
   },
   "areas": {
     "food_stockpile": [0.46, 0.7],
