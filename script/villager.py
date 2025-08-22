@@ -10,13 +10,63 @@ def select_idle_villager():
 
 
 def build_house():
-    """Constrói uma casa no local predefinido."""
-    common._press_key_safe(common.CFG["keys"]["build_menu"], 0.05)
+    """Constrói uma casa no local predefinido.
+
+    Verifica se há madeira suficiente antes de tentar construir e confirma
+    que a casa foi posicionada checando o aumento do ``POP_CAP``. Caso a
+    construção falhe, tenta novamente em um ponto alternativo (se
+    configurado) ou após reunir mais recursos.
+
+    Returns
+    -------
+    bool
+        ``True`` se a casa foi construída com sucesso.
+    """
+
+    wood_needed = 30
+    resources = common.read_resources_from_hud()
+    if resources.get("wood", 0) < wood_needed:
+        logging.warning(
+            "Madeira insuficiente (%s) para construir casa.",
+            resources.get("wood", 0),
+        )
+        return False
+
     house_key = common.CFG["keys"].get("house")
-    if house_key:
+    if not house_key:
+        logging.warning("Tecla de construção de casa não configurada.")
+        return False
+
+    spots = [common.CFG["areas"]["house_spot"]]
+    alt_spot = common.CFG["areas"].get("house_spot_alt")
+    if alt_spot:
+        spots.append(alt_spot)
+
+    for idx, (hx, hy) in enumerate(spots, start=1):
+        common._press_key_safe(common.CFG["keys"]["build_menu"], 0.05)
         common._press_key_safe(house_key, 0.15)
-        hx, hy = common.CFG["areas"]["house_spot"]
         common._click_norm(hx, hy)
+        time.sleep(0.5)
+
+        try:
+            cur, limit = common.read_population_from_hud()
+        except Exception as exc:  # pragma: no cover - falha de OCR
+            logging.warning("Falha ao ler população: %s", exc)
+            limit = common.POP_CAP
+
+        if limit > common.POP_CAP:
+            common.POP_CAP = limit
+            return True
+
+        logging.warning("Tentativa %s de construir casa falhou.", idx)
+        resources = common.read_resources_from_hud()
+        if resources.get("wood", 0) < wood_needed:
+            logging.warning(
+                "Madeira insuficiente após tentativa (%s).", resources.get("wood", 0)
+            )
+            break
+
+    return False
 
 
 def build_granary():
@@ -70,10 +120,11 @@ def econ_loop(minutes=5):
 
         if common.CURRENT_POP >= common.POP_CAP - 2:
             select_idle_villager()
-            build_house()
-            logging.info("Casa construída para expandir população")
+            if build_house():
+                logging.info("Casa construída para expandir população")
+            else:
+                logging.warning("Falha ao construir casa para expandir população")
             time.sleep(0.5)
-            common.POP_CAP += 4
 
         time.sleep(common.CFG["timers"]["loop_sleep"])
     logging.info("Rotina econômica finalizada")

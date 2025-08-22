@@ -45,8 +45,12 @@ class TestInternalPopulation(TestCase):
     def test_train_villagers_updates_population_without_ocr(self):
         common.CURRENT_POP = 3
         common.POP_CAP = 4
+        def fake_build_house():
+            common.POP_CAP += 4
+            return True
+
         with patch("script.common.read_resources_from_hud", return_value={"food": 500}), \
-             patch("script.town_center.build_house") as build_house_mock, \
+             patch("script.town_center.build_house", side_effect=fake_build_house) as build_house_mock, \
              patch("script.town_center.select_idle_villager"), \
              patch("script.common.read_population_from_hud") as read_pop_mock:
             tc.train_villagers(7)
