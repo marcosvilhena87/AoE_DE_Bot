@@ -394,7 +394,7 @@ def _ocr_digits_better(gray):
     for mask in masks:
         data = pytesseract.image_to_data(
             mask,
-            config="--psm 7 --oem 3 -c tessedit_char_whitelist=0123456789",
+            config="--psm 6 --oem 3 -c tessedit_char_whitelist=0123456789",
             output_type=pytesseract.Output.DICT,
         )
         text = "".join(data.get("text", [])).strip()
