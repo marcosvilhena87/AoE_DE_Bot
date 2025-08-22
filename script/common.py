@@ -60,9 +60,14 @@ with open(ROOT / "config.json", encoding="utf-8") as cfg_file:
     
 validate_config(CFG)
 
-tesseract_cmd = CFG.get("tesseract_path") or os.environ.get("TESSERACT_CMD")
+tesseract_cmd = os.environ.get("TESSERACT_CMD") or CFG.get("tesseract_path")
 if tesseract_cmd:
-    pytesseract.pytesseract.tesseract_cmd = tesseract_cmd
+    tesseract_path = Path(tesseract_cmd)
+    if not (tesseract_path.is_file() and os.access(tesseract_path, os.X_OK)):
+        raise RuntimeError(
+            "Invalid Tesseract OCR path. Install Tesseract or update 'tesseract_path' in config.json."
+        )
+    pytesseract.pytesseract.tesseract_cmd = str(tesseract_path)
 
 logging.basicConfig(
     level=logging.DEBUG if CFG.get("verbose_logging") else logging.INFO,
