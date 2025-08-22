@@ -129,7 +129,13 @@ def wait_hud(timeout=60):
                 x, y, w, h = box
                 logging.info("HUD detectada com template '%s'", name)
                 global HUD_ANCHOR
-                HUD_ANCHOR = {"left": x, "top": y, "width": w, "height": h}
+                HUD_ANCHOR = {
+                    "left": x,
+                    "top": y,
+                    "width": w,
+                    "height": h,
+                    "asset": name,
+                }
                 return HUD_ANCHOR, name
         time.sleep(0.25)
     logging.error(
