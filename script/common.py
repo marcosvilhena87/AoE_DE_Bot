@@ -286,16 +286,15 @@ def locate_resource_panel(frame):
 
     x, y, w, h = box
     slice_w = w / 6
-    top = y + int(0.12 * h)
-    height = int(0.76 * h)
+    top = y + int(0.08 * h)
+    height = int(0.84 * h)
     regions = {}
     names = ["food", "wood", "gold", "stone", "population", "idle_villager"]
     for idx, name in enumerate(names):
-        icon_trim = 0.30 if idx < 2 else 0.28
+        icon_trim = 0.18
         left = x + int(idx * slice_w + icon_trim * slice_w)
         right_limit = x + int((idx + 1) * slice_w) - 2
-        left = max(x + int(idx * slice_w + 0.22 * slice_w), left)
-        width = max(12, right_limit - left)
+        width = max(18, right_limit - left)
         regions[name] = (left, top, width, height)
 
     return regions
