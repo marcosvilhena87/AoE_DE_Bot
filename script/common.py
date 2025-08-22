@@ -1,3 +1,11 @@
+"""Utility functions for interacting with the game screen.
+
+This module bundles screen-capture helpers, HUD detection and OCR routines.
+Resource reading first tries a thresholded OCR via :func:`_ocr_digits_better`.
+If no digits are detected it falls back to ``pytesseract.image_to_string`` on
+the raw region before reporting a failure.
+"""
+
 import logging
 import json
 import time
@@ -493,6 +501,16 @@ def read_resources_from_hud():
         gray = cv2.medianBlur(gray, 3)
 
         digits, data, mask = _ocr_digits_better(gray)
+        if not digits:
+            text = pytesseract.image_to_string(
+                gray,
+                config="--psm 6 --oem 3 -c tessedit_char_whitelist=0123456789",
+            )
+            fallback = "".join(filter(str.isdigit, text))
+            if fallback:
+                digits = fallback
+                data = {"text": [text.strip()]}
+                mask = gray
         if not digits:
             logging.debug("OCR failed for %s; raw boxes=%s", name, data.get("text"))
             debug_cfg = CFG.get("resource_panel", {}).get("debug_failed_ocr")
