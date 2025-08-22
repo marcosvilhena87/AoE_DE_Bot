@@ -15,8 +15,8 @@
     "house": "e",
     "select_tc": "h",
     "train_vill": "q",
-    "granary": null,
-    "storage_pit": null
+    "granary": "g",
+    "storage_pit": "s"
   },
   "areas": {
     "hunt_food": [0.46, 0.7],
