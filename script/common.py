@@ -456,7 +456,17 @@ def read_resources_from_hud():
             results[name] = int(digits)
 
     if all(v is None for v in results.values()):
-        raise ResourceReadError("OCR failed to read resource values")
+        debug_cfg = CFG.get("resource_panel", {}).get("debug_failed_ocr")
+        if CFG.get("debug") or debug_cfg:
+            debug_dir = ROOT / "debug"
+            debug_dir.mkdir(exist_ok=True)
+            ts = int(time.time() * 1000)
+            cv2.imwrite(str(debug_dir / f"resource_panel_fail_{ts}.png"), frame)
+        tess_path = pytesseract.pytesseract.tesseract_cmd
+        raise ResourceReadError(
+            "OCR failed to read resource values "
+            f"(regions={regions}, tesseract_cmd={tess_path})"
+        )
 
     return results
 
