@@ -239,14 +239,14 @@ def read_population_from_hud(retries=3, conf_threshold=None, save_failed_roi=Fal
 def locate_resource_panel(frame):
     """Locate the resource panel and return bounding boxes for each value.
 
-    The template ``assets/resources_population.png`` was captured at 568x59 in
+    The template ``assets/resources.png`` was captured at 568x59 in
     a 100% scaled HUD.  We avoid hard coded pixel offsets by dividing the
     detected panel into six equal slices – one per resource counter – and then
     trimming each slice to skip the icon on the left.  This keeps the regions
     aligned even if the panel is slightly scaled.
     """
 
-    tmpl = HUD_TEMPLATES.get("assets/resources_population.png")
+    tmpl = HUD_TEMPLATES.get("assets/resources.png")
     if tmpl is None:
         return {}
 
@@ -329,7 +329,7 @@ def read_resources_from_hud():
         # Fallback: estimate the resource bar position from the previously
         # detected HUD anchor.  The anchor is assumed to sit at the top of the
         # screen and the resource panel spans to its right.  The original
-        # template ``resources_population.png`` measured 568x59 px on a
+        # template ``resources.png`` measured 568x59 px on a
         # 1920x1080 display.  We convert those values to screen fractions so
         # they can be tweaked for different resolutions or HUD scales.
         W, H = _screen_size()
