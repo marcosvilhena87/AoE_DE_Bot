@@ -21,6 +21,8 @@ def train_villagers(target_pop: int):
         common.CURRENT_POP += 1
         if common.CURRENT_POP == common.POP_CAP:
             select_idle_villager()
-            build_house()
-            common.POP_CAP += 4
+            if build_house():
+                logging.info("Casa construída para expandir população")
+            else:
+                logging.warning("Falha ao construir casa para expandir população")
         time.sleep(0.10)
