@@ -30,12 +30,14 @@ class DummyMSS:
 sys.modules.setdefault("pyautogui", dummy_pg)
 sys.modules.setdefault("mss", types.SimpleNamespace(mss=lambda: DummyMSS()))
 
+os.environ.setdefault("TESSERACT_CMD", "/usr/bin/true")
+
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import script.common as common
 
 
 class TestResourceOcrFailure(TestCase):
-    def test_read_resources_ocr_failure(self):
+    def test_read_resources_fallback(self):
         def fake_grab_frame(bbox=None):
             if bbox:
                 return np.zeros((bbox["height"], bbox["width"], 3), dtype=np.uint8)
@@ -46,6 +48,7 @@ class TestResourceOcrFailure(TestCase):
 
         with patch("script.common._grab_frame", side_effect=fake_grab_frame), \
              patch("script.common.locate_resource_panel", return_value={"wood": (0, 0, 50, 50)}), \
-             patch("script.common._ocr_digits_better", side_effect=fake_ocr):
-            with self.assertRaises(common.ResourceReadError):
-                common.read_resources_from_hud()
+             patch("script.common._ocr_digits_better", side_effect=fake_ocr), \
+             patch("script.common.pytesseract.image_to_string", return_value="123"):
+            result = common.read_resources_from_hud()
+            self.assertEqual(result["wood"], 123)
