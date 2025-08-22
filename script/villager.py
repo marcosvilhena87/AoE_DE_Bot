@@ -27,7 +27,7 @@ def build_house():
     try:
         resources = common.read_resources_from_hud()
     except common.ResourceReadError as exc:
-        logging.error("Resource bar not located; cannot build house: %s", exc)
+        logging.error("Resource read error while building house: %s", exc)
         return False
     wood = resources.get("wood")
     if wood is None:
@@ -72,7 +72,7 @@ def build_house():
             resources = common.read_resources_from_hud()
         except common.ResourceReadError as exc:
             logging.error(
-                "Resource bar not located; aborting house construction: %s", exc
+                "Resource read error while retrying house construction: %s", exc
             )
             return False
         wood = resources.get("wood")
@@ -152,7 +152,7 @@ def econ_loop(minutes=5):
                 resources = common.read_resources_from_hud()
             except common.ResourceReadError as exc:
                 logging.error(
-                    "Resource bar not located; ending economic loop: %s", exc
+                    "Resource read error during economic loop: %s", exc
                 )
                 break
             idle_before = resources.get("idle_villager")
@@ -168,7 +168,7 @@ def econ_loop(minutes=5):
                     idle_after_res = common.read_resources_from_hud()
                 except common.ResourceReadError as exc:
                     logging.error(
-                        "Resource bar not located when checking idle villagers: %s",
+                        "Resource read error when checking idle villagers: %s",
                         exc,
                     )
                     idle_after_res = {}
