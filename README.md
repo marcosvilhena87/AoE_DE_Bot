@@ -33,6 +33,12 @@ template is required for your configuration.
 4. If your layout differs between profiles, capture and replace this template
    for each one to ensure `wait_hud()` can anchor correctly.
 
+## Resource Icons
+
+`assets/resources.png` contains the resource icons in order: wood stockpile,
+food stockpile, gold stockpile, stone stockpile, population limit, and idle
+villager.
+
 ## Calibration helper
 
 To calibrate the `areas.pop_box` fractions interactively, run:
