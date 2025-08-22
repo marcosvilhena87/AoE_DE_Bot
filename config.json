@@ -1,6 +1,6 @@
 {
   "profile": "aoe1de",
-  "look_for": ["assets/resources_population.png", "assets/ui_minimap.png"],
+  "look_for": ["assets/resources.png"],
   "threshold": 0.82,
   "threshold_fallback": 0.7,
   "scales": [0.88, 0.92, 0.96, 1.0, 1.04, 1.08, 1.12],
