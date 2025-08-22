@@ -11,6 +11,9 @@ def train_villagers(target_pop: int):
 
     while common.CURRENT_POP < target_pop:
         resources = common.read_resources_from_hud()
+        if resources is None:
+            logging.error("Resource bar not located; stopping villager training")
+            break
         if resources.get("food", 0) < 50:
             logging.info(
                 "Comida insuficiente (%s) para treinar aldeões.",

@@ -25,6 +25,9 @@ def build_house():
 
     wood_needed = 30
     resources = common.read_resources_from_hud()
+    if resources is None:
+        logging.error("Resource bar not located; cannot build house")
+        return False
     if resources.get("wood", 0) < wood_needed:
         logging.warning(
             "Madeira insuficiente (%s) para construir casa.",
@@ -61,6 +64,9 @@ def build_house():
 
         logging.warning("Tentativa %s de construir casa falhou.", idx)
         resources = common.read_resources_from_hud()
+        if resources is None:
+            logging.error("Resource bar not located; aborting house construction")
+            return False
         if resources.get("wood", 0) < wood_needed:
             logging.warning(
                 "Madeira insuficiente após tentativa (%s).", resources.get("wood", 0)
@@ -121,13 +127,17 @@ def econ_loop(minutes=5):
 
         if common.CURRENT_POP >= common.POP_CAP - 2:
             resources = common.read_resources_from_hud()
+            if resources is None:
+                logging.error("Resource bar not located; ending economic loop")
+                break
             idle_before = resources.get("idle_villager", 0)
             took_from_wood = False
 
             if idle_before > 0:
                 select_idle_villager()
                 time.sleep(0.1)
-                idle_after = common.read_resources_from_hud().get("idle_villager", 0)
+                idle_after_res = common.read_resources_from_hud()
+                idle_after = idle_after_res.get("idle_villager", 0) if idle_after_res else 0
                 if idle_after >= idle_before:
                     common._click_norm(wood_x, wood_y)
                     took_from_wood = True
