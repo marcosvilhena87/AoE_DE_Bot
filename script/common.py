@@ -1,0 +1,351 @@
+import logging
+import json
+import time
+from pathlib import Path
+import os
+import re
+from dataclasses import dataclass
+
+import numpy as np
+import cv2
+from mss import mss
+import pyautogui as pg
+import pytesseract
+
+# =========================
+# CONFIGURAÇÃO
+# =========================
+pg.PAUSE = 0.05
+pg.FAILSAFE = True  # mouse no canto sup-esq aborta instantaneamente
+
+ROOT = Path(__file__).resolve().parent.parent
+ASSETS = ROOT / "assets"
+
+with open(ROOT / "config.json", encoding="utf-8") as cfg_file:
+    CFG = json.load(cfg_file)
+
+tesseract_cmd = CFG.get("tesseract_path") or os.environ.get("TESSERACT_CMD")
+if tesseract_cmd:
+    pytesseract.pytesseract.tesseract_cmd = tesseract_cmd
+
+logging.basicConfig(
+    level=logging.DEBUG if CFG.get("verbose_logging") else logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+)
+
+# Contadores internos de população
+CURRENT_POP = 0
+POP_CAP = 0
+TARGET_POP = 0
+
+# Instância única do mss para reutilização
+SCT = mss()
+MONITOR = SCT.monitors[1]  # tela principal
+# Posição detectada do HUD usada apenas como referência
+HUD_ANCHOR = None
+
+
+class PopulationReadError(RuntimeError):
+    """Raised when population values cannot be extracted from the HUD."""
+
+
+@dataclass
+class ScenarioInfo:
+    starting_villagers: int = 0
+    population_limit: int = 0
+    objective_villagers: int = 0
+
+
+def parse_scenario_info(path: str) -> ScenarioInfo:
+    """Parse basic scenario information from a text file."""
+    info = ScenarioInfo()
+    in_objectives = False
+    try:
+        with open(path, encoding="utf-8") as fh:
+            for line in fh:
+                line = line.strip()
+                if not line:
+                    in_objectives = False
+                    continue
+                lower = line.lower()
+                if lower.startswith("population limit"):
+                    m = re.search(r"(\d+)", line)
+                    if m:
+                        info.population_limit = int(m.group(1))
+                elif lower.startswith("starting units"):
+                    m = re.search(r"(\d+)\s+villagers", line, re.IGNORECASE)
+                    if m:
+                        info.starting_villagers = int(m.group(1))
+                elif lower.startswith("objectives"):
+                    in_objectives = True
+                    continue
+                elif in_objectives:
+                    m = re.search(r"(\d+)\s+villagers", line, re.IGNORECASE)
+                    if m:
+                        info.objective_villagers = int(m.group(1))
+                        in_objectives = False
+    except FileNotFoundError:
+        logging.error("Scenario file not found: %s", path)
+    return info
+
+# =========================
+# CAPTURA & TEMPLATE MATCH
+# =========================
+
+def _grab_frame(bbox=None):
+    """Captura um frame da tela."""
+    region = bbox or MONITOR
+    img = np.array(SCT.grab(region))[:, :, :3]  # BGRA -> BGR
+    return img
+
+def _load_gray(path):
+    im = cv2.imread(str(path), cv2.IMREAD_GRAYSCALE)
+    if im is None:
+        raise FileNotFoundError(f"Asset não encontrado: {path}")
+    return im
+
+HUD_TEMPLATES = {name: _load_gray(ROOT / name) for name in CFG.get("look_for", [])}
+
+def _find_template(frame_bgr, tmpl_gray, threshold=0.82, scales=None):
+    frame_gray = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2GRAY)
+    h0, w0 = tmpl_gray.shape[:2]
+    best = (None, -1, None)  # (box, score, heatmap)
+    for s in (scales or [1.0]):
+        th, tw = int(h0 * s), int(w0 * s)
+        if th < 10 or tw < 10:
+            continue
+        if th > frame_gray.shape[0] or tw > frame_gray.shape[1]:
+            logging.debug(
+                "Template %sx%s exceeds frame %sx%s at scale %.2f, skipping",
+                tw,
+                th,
+                frame_gray.shape[1],
+                frame_gray.shape[0],
+                s,
+            )
+            continue
+        tmpl = cv2.resize(tmpl_gray, (tw, th), interpolation=cv2.INTER_AREA)
+        res = cv2.matchTemplate(frame_gray, tmpl, cv2.TM_CCOEFF_NORMED)
+        _, max_val, _, max_loc = cv2.minMaxLoc(res)
+        if max_val > best[1]:
+            x, y = max_loc
+            best = ((x, y, tw, th), max_val, res)
+    box, score, heat = best
+    if score >= threshold:
+        return box, score, heat
+    return None, score, heat
+
+def wait_hud(timeout=60):
+    logging.info("Aguardando HUD por até %ss...", timeout)
+    t0 = time.time()
+    last_best = (-1, None)
+    while time.time() - t0 < timeout:
+        frame = _grab_frame()
+        for name, tmpl in HUD_TEMPLATES.items():
+            box, score, heat = _find_template(
+                frame, tmpl, threshold=CFG["threshold"], scales=CFG["scales"]
+            )
+            if score > last_best[0]:
+                last_best = (score, name)
+            if box:
+                if CFG["debug"]:
+                    cv2.imwrite(f"debug_hud_{name}.png", frame)
+                x, y, w, h = box
+                logging.info("HUD detectada com template '%s'", name)
+                global HUD_ANCHOR
+                HUD_ANCHOR = {"left": x, "top": y, "width": w, "height": h}
+                return HUD_ANCHOR, name
+        time.sleep(0.25)
+    logging.error(
+        "HUD não encontrada. Melhor score=%.3f no template '%s'. Re-capture o asset e verifique ESCALA 100%%.",
+        last_best[0],
+        last_best[1],
+    )
+    raise RuntimeError(
+        f"HUD não encontrada. Melhor score={last_best[0]:.3f} no template '{last_best[1]}'. "
+        "Re-capture o asset (recorte mais justo) e verifique ESCALA 100%."
+    )
+
+# =========================
+# LEITURA DE POPULAÇÃO NA HUD
+# =========================
+
+def read_population_from_hud(retries=3, conf_threshold=None, save_failed_roi=False):
+    if conf_threshold is None:
+        conf_threshold = CFG.get("ocr_conf_threshold", 60)
+
+    frame_full = _grab_frame()
+    regions = locate_resource_panel(frame_full)
+    roi_bbox = None
+    if "population" in regions:
+        x, y, w, h = regions["population"]
+        roi_bbox = {"left": x, "top": y, "width": w, "height": h}
+    else:
+        x, y, w, h = CFG["areas"]["pop_box"]
+        screen_width, screen_height = _screen_size()
+        abs_left = int(x * screen_width)
+        abs_top = int(y * screen_height)
+        pw = int(w * screen_width)
+        ph = int(h * screen_height)
+        if pw <= 0 or ph <= 0:
+            raise PopulationReadError(
+                f"Population ROI has non-positive dimensions after scaling: width={pw}, height={ph}. "
+                "Recalibrate areas.pop_box in config.json."
+            )
+        abs_right = abs_left + pw
+        abs_bottom = abs_top + ph
+        if (
+            abs_left < 0
+            or abs_top < 0
+            or abs_right > screen_width
+            or abs_bottom > screen_height
+        ):
+            raise PopulationReadError(
+                "Population ROI out of screen bounds: "
+                f"left={abs_left}, top={abs_top}, width={pw}, height={ph}, "
+                f"screen={screen_width}x{screen_height}. "
+                "Recalibrate areas.pop_box em config.json ou use a âncora por template."
+            )
+        roi_bbox = {"left": abs_left, "top": abs_top, "width": pw, "height": ph}
+
+    last_roi = None
+    last_thresh = None
+    last_text = ""
+    last_confidences = []
+
+    for attempt in range(retries):
+        roi = _grab_frame(roi_bbox)
+        if roi.size == 0:
+            logging.warning("Population ROI has zero size")
+            continue
+        gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+        gray = cv2.resize(gray, None, fx=2, fy=2, interpolation=cv2.INTER_LINEAR)
+        _, thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        data = pytesseract.image_to_data(
+            thresh,
+            config="--psm 7 -c tessedit_char_whitelist=0123456789/",
+            output_type=pytesseract.Output.DICT,
+        )
+        text = "".join(data.get("text", [])).replace(" ", "")
+        confidences = [int(c) for c in data.get("conf", []) if c != "-1"]
+        last_roi = roi
+        last_thresh = thresh
+        last_text = text
+        last_confidences = confidences
+        parts = [p for p in text.split("/") if p]
+        if len(parts) >= 2 and (not confidences or min(confidences) >= conf_threshold):
+            cur = int("".join(filter(str.isdigit, parts[0])) or 0)
+            limit = int("".join(filter(str.isdigit, parts[1])) or 0)
+            return cur, limit
+        logging.debug("OCR attempt %s failed: text='%s', conf=%s", attempt + 1, text, confidences)
+        time.sleep(0.1)
+
+    logging.warning(
+        "Falha ao ler população da HUD após %s tentativas; último texto='%s', conf=%s",
+        retries,
+        last_text,
+        last_confidences,
+    )
+    if (CFG.get("debug") or save_failed_roi) and last_roi is not None:
+        ts = int(time.time() * 1000)
+        cv2.imwrite(str(ROOT / f"debug_pop_roi_{ts}.png"), last_roi)
+        cv2.imwrite(str(ROOT / f"debug_pop_thresh_{ts}.png"), last_thresh)
+        logging.info("ROI salva; texto extraído: '%s'; conf=%s", last_text, last_confidences)
+
+    raise PopulationReadError(
+        f"Falha ao ler população da HUD após {retries} tentativas. Texto='{last_text}', confs={last_confidences}"
+    )
+
+# =========================
+# RECURSOS NA HUD
+# =========================
+
+def locate_resource_panel(frame):
+    tmpl = HUD_TEMPLATES.get("assets/resources_population.png")
+    if tmpl is None:
+        return {}
+    box, score, _ = _find_template(
+        frame, tmpl, threshold=CFG["threshold"], scales=CFG["scales"]
+    )
+    if not box:
+        return {}
+    x, y, w, h = box
+    offsets = {
+        "food": (0.05, 0.2, 0.1, 0.6),
+        "wood": (0.21, 0.2, 0.1, 0.6),
+        "gold": (0.37, 0.2, 0.1, 0.6),
+        "stone": (0.53, 0.2, 0.1, 0.6),
+        "population": (0.69, 0.2, 0.1, 0.6),
+        "idle_villager": (0.85, 0.2, 0.1, 0.6),
+    }
+    regions = {}
+    for name, (ox, oy, fw, fh) in offsets.items():
+        regions[name] = (
+            x + int(ox * w),
+            y + int(oy * h),
+            int(fw * w),
+            int(fh * h),
+        )
+    return regions
+
+def read_resources_from_hud():
+    frame = _grab_frame()
+    regions = locate_resource_panel(frame)
+    results = {}
+    for name, (x, y, w, h) in regions.items():
+        roi = _grab_frame({"left": x, "top": y, "width": w, "height": h})
+        gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+        _, thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        data = pytesseract.image_to_data(
+            thresh,
+            config="--psm 7 -c tessedit_char_whitelist=0123456789",
+            output_type=pytesseract.Output.DICT,
+        )
+        text = "".join(data.get("text", [])).strip()
+        digits = "".join(filter(str.isdigit, text))
+        results[name] = int(digits) if digits else 0
+    return results
+
+# =========================
+# AÇÕES DE JOGO BÁSICAS
+# =========================
+
+def _screen_size():
+    return MONITOR["width"], MONITOR["height"]
+
+def _to_px(nx, ny):
+    W, H = _screen_size()
+    return int(nx * W), int(ny * H)
+
+def _click_norm(nx, ny):
+    x, y = _to_px(nx, ny)
+    try:
+        pg.click(x, y)
+    except pg.FailSafeException:
+        logging.warning(
+            "Fail-safe triggered during click at (%s, %s). Moving cursor to center.",
+            x,
+            y,
+        )
+        _move_cursor_safe()
+        pg.click(x, y)
+
+def _move_cursor_safe():
+    W, H = _screen_size()
+    failsafe_state = pg.FAILSAFE
+    pg.FAILSAFE = False
+    pg.moveTo(W // 2, H // 2)
+    pg.FAILSAFE = failsafe_state
+
+def _press_key_safe(key, pause):
+    try:
+        pg.press(key)
+        time.sleep(pause)
+    except pg.FailSafeException:
+        logging.warning(
+            "Fail-safe triggered while pressing '%s'. Moving cursor to center.",
+            key,
+        )
+        _move_cursor_safe()
+        pg.press(key)
+        time.sleep(pause)

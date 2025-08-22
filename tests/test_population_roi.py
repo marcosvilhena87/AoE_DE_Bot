@@ -6,7 +6,8 @@ from unittest.mock import patch
 
 import numpy as np
 
-# Stub modules that require a GUI/display before importing campaign_bot
+# Stub modules that require a GUI/display before importing the bot modules
+
 dummy_pg = types.SimpleNamespace(
     PAUSE=0,
     FAILSAFE=False,
@@ -29,19 +30,19 @@ sys.modules.setdefault("pyautogui", dummy_pg)
 sys.modules.setdefault("mss", types.SimpleNamespace(mss=lambda: DummyMSS()))
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-import campaign_bot as cb
+import script.common as common
 
 
 class TestPopulationROI(TestCase):
     def test_population_roi_outside_screen_raises_error(self):
-        with patch("campaign_bot._screen_size", return_value=(200, 200)), \
-            patch.dict(cb.CFG["areas"], {"pop_box": [2.0, 2.0, 0.1, 0.1]}), \
-            patch("campaign_bot.locate_resource_panel", return_value={}), \
-            patch("campaign_bot._grab_frame", return_value=np.zeros((1, 1, 3))) as grab_mock, \
-            patch("campaign_bot.pytesseract.image_to_data") as ocr_mock:
-            with self.assertRaises(cb.PopulationReadError) as ctx:
-                cb.read_population_from_hud(
-                    retries=1, conf_threshold=cb.CFG["ocr_conf_threshold"]
+        with patch("script.common._screen_size", return_value=(200, 200)), \
+            patch.dict(common.CFG["areas"], {"pop_box": [2.0, 2.0, 0.1, 0.1]}), \
+            patch("script.common.locate_resource_panel", return_value={}), \
+            patch("script.common._grab_frame", return_value=np.zeros((1, 1, 3))) as grab_mock, \
+            patch("script.common.pytesseract.image_to_data") as ocr_mock:
+            with self.assertRaises(common.PopulationReadError) as ctx:
+                common.read_population_from_hud(
+                    retries=1, conf_threshold=common.CFG["ocr_conf_threshold"]
                 )
             msg = str(ctx.exception).lower()
             self.assertIn("recalibrate areas.pop_box", msg)
@@ -58,19 +59,21 @@ class TestPopulationROI(TestCase):
             h, w = bbox["height"], bbox["width"]
             return np.zeros((h, w, 3), dtype=np.uint8)
 
-        with patch("campaign_bot._grab_frame", side_effect=fake_grab), \
-            patch("campaign_bot.locate_resource_panel", return_value={}), \
-            patch("campaign_bot._screen_size", return_value=(200, 200)), \
-            patch.dict(cb.CFG["areas"], {"pop_box": [0.1, 0.1, 0.5, 0.5]}), \
-            patch("campaign_bot.cv2.cvtColor", side_effect=lambda img, code: img), \
-            patch("campaign_bot.cv2.resize", side_effect=lambda img, *a, **k: img), \
-            patch("campaign_bot.cv2.threshold", side_effect=lambda img, *a, **k: (None, img)), \
+        with patch("script.common._grab_frame", side_effect=fake_grab), \
+            patch("script.common.locate_resource_panel", return_value={}), \
+            patch("script.common._screen_size", return_value=(200, 200)), \
+            patch.dict(common.CFG["areas"], {"pop_box": [0.1, 0.1, 0.5, 0.5]}), \
+            patch("script.common.cv2.cvtColor", side_effect=lambda img, code: img), \
+            patch("script.common.cv2.resize", side_effect=lambda img, *a, **k: img), \
+            patch("script.common.cv2.threshold", side_effect=lambda img, *a, **k: (None, img)), \
             patch(
-                "campaign_bot.pytesseract.image_to_data",
+                "script.common.pytesseract.image_to_data",
                 return_value={"text": ["xx"], "conf": ["70"]},
             ):
-            with self.assertRaises(cb.PopulationReadError):
-                cb.read_population_from_hud(retries=1, conf_threshold=cb.CFG["ocr_conf_threshold"])
+            with self.assertRaises(common.PopulationReadError):
+                common.read_population_from_hud(
+                    retries=1, conf_threshold=common.CFG["ocr_conf_threshold"]
+                )
 
     def test_population_roi_ignores_hud_anchor(self):
         frame = np.arange(200 * 200 * 3, dtype=np.uint8).reshape(200, 200, 3)
@@ -94,19 +97,21 @@ class TestPopulationROI(TestCase):
             recorded["roi"] = src
             return src
 
-        with patch("campaign_bot._grab_frame", side_effect=fake_grab), \
-            patch("campaign_bot.locate_resource_panel", return_value={}), \
-            patch("campaign_bot._screen_size", return_value=(200, 200)), \
-            patch.dict(cb.CFG["areas"], {"pop_box": pop_box}), \
-            patch("campaign_bot.HUD_ANCHOR", {"left": 50, "top": 60, "width": 10, "height": 10}), \
-            patch("campaign_bot.cv2.cvtColor", side_effect=fake_cvtColor), \
-            patch("campaign_bot.cv2.resize", side_effect=lambda img, *a, **k: img), \
-            patch("campaign_bot.cv2.threshold", side_effect=lambda img, *a, **k: (None, img)), \
+        with patch("script.common._grab_frame", side_effect=fake_grab), \
+            patch("script.common.locate_resource_panel", return_value={}), \
+            patch("script.common._screen_size", return_value=(200, 200)), \
+            patch.dict(common.CFG["areas"], {"pop_box": pop_box}), \
+            patch("script.common.HUD_ANCHOR", {"left": 50, "top": 60, "width": 10, "height": 10}), \
+            patch("script.common.cv2.cvtColor", side_effect=fake_cvtColor), \
+            patch("script.common.cv2.resize", side_effect=lambda img, *a, **k: img), \
+            patch("script.common.cv2.threshold", side_effect=lambda img, *a, **k: (None, img)), \
             patch(
-                "campaign_bot.pytesseract.image_to_data",
+                "script.common.pytesseract.image_to_data",
                 return_value={"text": ["12/34"], "conf": ["70"]},
             ):
-            cb.read_population_from_hud(retries=1, conf_threshold=cb.CFG["ocr_conf_threshold"])
+            common.read_population_from_hud(
+                retries=1, conf_threshold=common.CFG["ocr_conf_threshold"]
+            )
 
         roi = recorded["roi"]
         bbox = recorded["bbox"]
@@ -130,19 +135,18 @@ class TestPopulationROI(TestCase):
         )
 
     def test_non_positive_population_roi_raises_before_ocr(self):
-        with patch("campaign_bot._screen_size", return_value=(200, 200)), \
-            patch.dict(cb.CFG["areas"], {"pop_box": [0.1, 0.1, -0.5, 0.2]}), \
-            patch("campaign_bot.locate_resource_panel", return_value={}), \
-            patch("campaign_bot._grab_frame", return_value=np.zeros((1, 1, 3))) as grab_mock, \
-            patch("campaign_bot.pytesseract.image_to_data") as ocr_mock, \
-            patch("campaign_bot.time.sleep") as sleep_mock:
-            with self.assertRaises(cb.PopulationReadError) as ctx:
-                cb.read_population_from_hud(
-                    retries=1, conf_threshold=cb.CFG["ocr_conf_threshold"]
+        with patch("script.common._screen_size", return_value=(200, 200)), \
+            patch.dict(common.CFG["areas"], {"pop_box": [0.1, 0.1, -0.5, 0.2]}), \
+            patch("script.common.locate_resource_panel", return_value={}), \
+            patch("script.common._grab_frame", return_value=np.zeros((1, 1, 3))) as grab_mock, \
+            patch("script.common.pytesseract.image_to_data") as ocr_mock, \
+            patch("script.common.time.sleep") as sleep_mock:
+            with self.assertRaises(common.PopulationReadError) as ctx:
+                common.read_population_from_hud(
+                    retries=1, conf_threshold=common.CFG["ocr_conf_threshold"]
                 )
             msg = str(ctx.exception).lower()
             self.assertIn("recalibrate areas.pop_box", msg)
             grab_mock.assert_called_once()
             ocr_mock.assert_not_called()
             sleep_mock.assert_not_called()
-
