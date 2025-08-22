@@ -42,8 +42,8 @@ def validate_config(cfg: dict) -> None:
         "house_spot",
         "granary_spot",
         "storage_spot",
-        "wood",
-        "hunt_food",
+        "wood_stockpile",
+        "food_stockpile",
         "pop_box",
     ]
     areas = cfg.get("areas", {})
