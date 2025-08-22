@@ -9,6 +9,7 @@ import cv2
 from mss import mss
 import pyautogui as pg
 import pytesseract
+from script.template_utils import find_template
 
 # =========================
 # CONFIGURAÇÃO
@@ -70,37 +71,6 @@ def _load_gray(path):
 # repeatedly reading them from disk during HUD detection.
 HUD_TEMPLATES = {name: _load_gray(ROOT / name) for name in CFG.get("look_for", [])}
 
-def _find_template(frame_bgr, tmpl_gray, threshold=0.82, scales=None):
-    frame_gray = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2GRAY)
-    h0, w0 = tmpl_gray.shape[:2]
-    best = (None, -1, None)  # (box, score, heatmap)
-
-    for s in (scales or [1.0]):
-        th, tw = int(h0 * s), int(w0 * s)
-        if th < 10 or tw < 10:
-            continue
-        if th > frame_gray.shape[0] or tw > frame_gray.shape[1]:
-            logging.debug(
-                "Template %sx%s exceeds frame %sx%s at scale %.2f, skipping",
-                tw,
-                th,
-                frame_gray.shape[1],
-                frame_gray.shape[0],
-                s,
-            )
-            continue
-        tmpl = cv2.resize(tmpl_gray, (tw, th), interpolation=cv2.INTER_AREA)
-        res = cv2.matchTemplate(frame_gray, tmpl, cv2.TM_CCOEFF_NORMED)
-        min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
-        if max_val > best[1]:
-            x, y = max_loc
-            best = ((x, y, tw, th), max_val, res)
-
-    box, score, heat = best
-    if score >= threshold:
-        return box, score, heat
-    return None, score, heat
-
 def wait_hud(timeout=60):
     logging.info("Aguardando HUD por até %ss...", timeout)
     t0 = time.time()
@@ -108,7 +78,7 @@ def wait_hud(timeout=60):
     while time.time() - t0 < timeout:
         frame = _grab_frame()
         for name, tmpl in HUD_TEMPLATES.items():
-            box, score, heat = _find_template(
+            box, score, heat = find_template(
                 frame, tmpl, threshold=CFG["threshold"], scales=CFG["scales"]
             )
             if score > last_best[0]:
@@ -239,7 +209,7 @@ def locate_resource_panel(frame):
     tmpl = HUD_TEMPLATES.get("assets/resources_population.png")
     if tmpl is None:
         return {}
-    box, score, _ = _find_template(
+    box, score, _ = find_template(
         frame, tmpl, threshold=CFG["threshold"], scales=CFG["scales"]
     )
     if not box:
