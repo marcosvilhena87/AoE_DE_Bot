@@ -150,21 +150,21 @@ def econ_loop(minutes=5):
     time.sleep(0.5)
 
     areas = common.CFG.get("areas", {})
-    hunt_spot = areas.get("hunt_food")
-    if not hunt_spot:
-        logging.warning("Hunt food spot not configured.")
+    food_spot = areas.get("food_stockpile")
+    if not food_spot:
+        logging.warning("Food stockpile spot not configured.")
         return False
-    wood_spot = areas.get("wood")
+    wood_spot = areas.get("wood_stockpile")
     if not wood_spot:
-        logging.warning("Wood spot not configured.")
+        logging.warning("Wood stockpile spot not configured.")
         return False
-    hunt_x, hunt_y = hunt_spot
+    food_x, food_y = food_spot
     wood_x, wood_y = wood_spot
 
     t0 = time.time()
     while time.time() - t0 < minutes * 60:
         select_idle_villager()
-        common._click_norm(hunt_x, hunt_y)
+        common._click_norm(food_x, food_y)
         time.sleep(common.CFG["timers"]["idle_gap"])
 
         select_idle_villager()
