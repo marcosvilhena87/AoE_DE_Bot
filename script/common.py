@@ -389,8 +389,8 @@ def read_resources_from_hud():
             top = y + int(top_pct * h)
             height = int(height_pct * h)
             names = [
-                "wood_stockpile",
-                "food_stockpile",
+                "wood",
+                "food",
                 "gold",
                 "stone",
                 "population",
@@ -431,8 +431,8 @@ def read_resources_from_hud():
             top = y + int(top_pct * panel_h)
             height = int(height_pct * panel_h)
             names = [
-                "wood_stockpile",
-                "food_stockpile",
+                "wood",
+                "food",
                 "gold",
                 "stone",
                 "population",
