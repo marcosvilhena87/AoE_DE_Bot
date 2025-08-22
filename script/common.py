@@ -278,14 +278,7 @@ def read_population_from_hud(retries=3, conf_threshold=None, save_failed_roi=Fal
 # =========================
 
 def locate_resource_panel(frame):
-    """Locate the resource panel and return bounding boxes for each value.
-
-    The template ``assets/resources.png`` was captured at 568x59 in
-    a 100% scaled HUD.  We avoid hard coded pixel offsets by dividing the
-    detected panel into six equal slices – one per resource counter – and then
-    trimming each slice to skip the icon on the left.  This keeps the regions
-    aligned even if the panel is slightly scaled.
-    """
+    """Locate the resource panel and return bounding boxes for each value."""
 
     tmpl = HUD_TEMPLATES.get("assets/resources.png")
     if tmpl is None:
@@ -326,24 +319,54 @@ def locate_resource_panel(frame):
             return {}
 
     x, y, w, h = box
-    slice_w = w / 6
+    panel_gray = cv2.cvtColor(frame[y : y + h, x : x + w], cv2.COLOR_BGR2GRAY)
+
     res_cfg = CFG.get("resource_panel", {})
+    match_threshold = res_cfg.get("match_threshold", 0.8)
+    scales = res_cfg.get("scales", CFG.get("scales", [1.0]))
+    pad_left = res_cfg.get("roi_padding_left", 0)
+    pad_right = res_cfg.get("roi_padding_right", 0)
+    min_width = res_cfg.get("min_width", 18)
     top_pct = res_cfg.get("top_pct", 0.08)
     height_pct = res_cfg.get("height_pct", 0.84)
-    icon_trims = res_cfg.get("icon_trim_pct", 0.18)
-    if not isinstance(icon_trims, (list, tuple)):
-        icon_trims = [icon_trims] * 6
-    right_trim = res_cfg.get("right_trim_pct", 0.02)
 
+    icons_dir = ASSETS / "icons"
+    names = ["wood", "food", "gold", "stone", "population", "idle_villager"]
+    detections = []
+    for name in names:
+        icon = cv2.imread(str(icons_dir / f"{name}.png"), cv2.IMREAD_GRAYSCALE)
+        if icon is None:
+            logging.warning("Icon asset missing: %s", name)
+            continue
+        best = (-1, None, None)  # score, loc, (w,h)
+        for scale in scales:
+            icon_scaled = cv2.resize(icon, None, fx=scale, fy=scale)
+            if (
+                icon_scaled.shape[0] > panel_gray.shape[0]
+                or icon_scaled.shape[1] > panel_gray.shape[1]
+            ):
+                continue
+            result = cv2.matchTemplate(panel_gray, icon_scaled, cv2.TM_CCOEFF_NORMED)
+            _, max_val, _, max_loc = cv2.minMaxLoc(result)
+            if max_val > best[0]:
+                best = (max_val, max_loc, icon_scaled.shape[::-1])
+        if best[0] >= match_threshold and best[1] is not None:
+            (bw, bh) = best[2]
+            detections.append((name, best[1][0], best[1][1], bw, bh))
+        else:
+            logging.warning("Icon '%s' not matched; score=%.3f", name, best[0])
+
+    detections.sort(key=lambda d: d[1])  # sort by x position
     top = y + int(top_pct * h)
     height = int(height_pct * h)
     regions = {}
-    names = ["wood", "food", "gold", "stone", "population", "idle_villager"]
-    for idx, name in enumerate(names):
-        icon_trim = icon_trims[idx] if idx < len(icon_trims) else icon_trims[-1]
-        left = x + int(idx * slice_w + icon_trim * slice_w)
-        right_limit = x + int((idx + 1) * slice_w - right_trim * slice_w)
-        width = max(18, right_limit - left)
+    for idx, (name, xi, yi, wi, hi) in enumerate(detections):
+        left = x + xi + wi + pad_left
+        if idx + 1 < len(detections):
+            right = x + detections[idx + 1][1] - pad_right
+        else:
+            right = x + w - pad_right
+        width = max(min_width, right - left)
         regions[name] = (left, top, width, height)
 
     return regions

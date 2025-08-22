@@ -19,14 +19,13 @@
     "storage_pit": "s"
   },
   "resource_panel": {
+    "match_threshold": 0.8,
+    "scales": [0.9, 0.95, 1.0, 1.05, 1.1],
+    "roi_padding_left": 2,
+    "roi_padding_right": 2,
+    "min_width": 18,
     "top_pct": 0.08,
     "height_pct": 0.84,
-    "icon_trim_pct": [0.59, 0.59, 0.59, 0.59, 0.18, 0.18],
-    "right_trim_pct": 0.01,
-    "anchor_top_pct": 0.15,
-    "anchor_height_pct": 0.70,
-    "anchor_icon_trim_pct": [0.42, 0.42, 0.35, 0.35, 0.35, 0.35],
-    "anchor_right_trim_pct": 0.02,
     "debug_failed_ocr": true
   },
   "areas": {
