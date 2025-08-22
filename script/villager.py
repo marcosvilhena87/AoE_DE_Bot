@@ -172,11 +172,24 @@ def econ_loop(minutes=5):
         time.sleep(common.CFG["timers"]["idle_gap"])
 
         if common.CURRENT_POP >= common.POP_CAP - 2:
-            try:
-                resources = common.read_resources_from_hud()
-            except common.ResourceReadError as exc:
+            resources = None
+            for attempt in range(1, 4):
+                logging.debug(
+                    "Attempt %s to read resources during economic loop", attempt
+                )
+                try:
+                    resources = common.read_resources_from_hud()
+                    break
+                except common.ResourceReadError as exc:
+                    logging.error(
+                        "Resource read error during economic loop (attempt %s/3): %s",
+                        attempt,
+                        exc,
+                    )
+                    time.sleep(0.1)
+            if resources is None:
                 logging.error(
-                    "Resource read error during economic loop: %s", exc
+                    "Failed to read resources after 3 attempts; ending economic loop"
                 )
                 break
             idle_before = resources.get("idle_villager")
@@ -188,13 +201,23 @@ def econ_loop(minutes=5):
             if idle_before > 0:
                 select_idle_villager()
                 time.sleep(0.1)
-                try:
-                    idle_after_res = common.read_resources_from_hud()
-                except common.ResourceReadError as exc:
-                    logging.error(
-                        "Resource read error when checking idle villagers: %s",
-                        exc,
+                idle_after_res = None
+                for attempt in range(1, 4):
+                    logging.debug(
+                        "Attempt %s to read idle villager count during economic loop",
+                        attempt,
                     )
+                    try:
+                        idle_after_res = common.read_resources_from_hud()
+                        break
+                    except common.ResourceReadError as exc:
+                        logging.error(
+                            "Resource read error when checking idle villagers (attempt %s/3): %s",
+                            attempt,
+                            exc,
+                        )
+                        time.sleep(0.1)
+                if idle_after_res is None:
                     idle_after_res = {}
                 idle_after = idle_after_res.get("idle_villager") if idle_after_res else None
                 if idle_after is None:
