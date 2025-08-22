@@ -330,10 +330,10 @@ def _to_px(nx, ny):
     W, H = _screen_size()
     return int(nx * W), int(ny * H)
 
-def _click_norm(nx, ny):
+def _click_norm(nx, ny, button="left"):
     x, y = _to_px(nx, ny)
     try:
-        pg.click(x, y)
+        pg.click(x, y, button=button)
     except pg.FailSafeException:
         logging.warning(
             "Fail-safe triggered during click at (%s, %s). Moving cursor to center.",
@@ -341,7 +341,7 @@ def _click_norm(nx, ny):
             y,
         )
         _move_cursor_safe()
-        pg.click(x, y)
+        pg.click(x, y, button=button)
 
 def _move_cursor_safe():
     W, H = _screen_size()
