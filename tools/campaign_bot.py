@@ -283,7 +283,7 @@ def read_resources_from_hud():
 
             top = y + int(top_pct * h)
             height = int(height_pct * h)
-            names = ["food", "wood", "gold", "stone", "population", "idle_villager"]
+            names = ["wood", "food", "gold", "stone", "population", "idle_villager"]
             regions = {}
             for idx, name in enumerate(names):
                 icon_trim = icon_trims[idx] if idx < len(icon_trims) else icon_trims[-1]
@@ -312,7 +312,7 @@ def read_resources_from_hud():
             slice_w = panel_w / 6
             top = y + int(top_pct * panel_h)
             height = int(height_pct * panel_h)
-            names = ["food", "wood", "gold", "stone", "population", "idle_villager"]
+            names = ["wood", "food", "gold", "stone", "population", "idle_villager"]
             regions = {}
             for idx, name in enumerate(names):
                 icon_trim = icon_trims[idx] if idx < len(icon_trims) else icon_trims[-1]
