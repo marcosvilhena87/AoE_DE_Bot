@@ -73,8 +73,8 @@ class TestHudAnchor(TestCase):
             result = common.read_resources_from_hud()
 
         expected = {
-            "food": 100,
-            "wood": 200,
+            "wood": 100,
+            "food": 200,
             "gold": 300,
             "stone": 400,
             "population": 500,
@@ -128,8 +128,8 @@ class TestHudAnchorTools(TestCase):
             result = cb.read_resources_from_hud()
 
         expected = {
-            "food": 100,
-            "wood": 200,
+            "wood": 100,
+            "food": 200,
             "gold": 300,
             "stone": 400,
             "population": 500,
