@@ -261,48 +261,61 @@ def read_population_from_hud(retries=3, conf_threshold=None, save_failed_roi=Fal
 # =========================
 
 def locate_resource_panel(frame):
+    """Locate the resource panel and return bounding boxes for each value.
+
+    The template ``assets/resources_population.png`` was captured at 568x59 in
+    a 100% scaled HUD.  We avoid hard coded pixel offsets by dividing the
+    detected panel into six equal slices – one per resource counter – and then
+    trimming each slice to skip the icon on the left.  This keeps the regions
+    aligned even if the panel is slightly scaled.
+    """
+
     tmpl = HUD_TEMPLATES.get("assets/resources_population.png")
     if tmpl is None:
         return {}
+
     box, score, _ = _find_template(
         frame, tmpl, threshold=CFG["threshold"], scales=CFG["scales"]
     )
     if not box:
+        logging.warning("Resource panel template not matched; score=%.3f", score)
         return {}
+
     x, y, w, h = box
-    offsets = {
-        "food": (0.05, 0.2, 0.1, 0.6),
-        "wood": (0.21, 0.2, 0.1, 0.6),
-        "gold": (0.37, 0.2, 0.1, 0.6),
-        "stone": (0.53, 0.2, 0.1, 0.6),
-        "population": (0.69, 0.2, 0.1, 0.6),
-        "idle_villager": (0.85, 0.2, 0.1, 0.6),
-    }
+    slice_w = w / 6
+    top = y + int(0.2 * h)
+    height = int(0.6 * h)
     regions = {}
-    for name, (ox, oy, fw, fh) in offsets.items():
-        regions[name] = (
-            x + int(ox * w),
-            y + int(oy * h),
-            int(fw * w),
-            int(fh * h),
-        )
+    names = ["food", "wood", "gold", "stone", "population", "idle_villager"]
+    for idx, name in enumerate(names):
+        left = x + int(idx * slice_w + 0.35 * slice_w)
+        width = int(0.55 * slice_w)
+        regions[name] = (left, top, width, height)
+
     return regions
 
 def read_resources_from_hud():
     frame = _grab_frame()
     regions = locate_resource_panel(frame)
+    if not regions:
+        logging.warning("No resource regions located on HUD; returning zeros")
+        return {k: 0 for k in ["food", "wood", "gold", "stone", "population", "idle_villager"]}
+
     results = {}
     for name, (x, y, w, h) in regions.items():
         roi = _grab_frame({"left": x, "top": y, "width": w, "height": h})
         gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+        gray = cv2.medianBlur(gray, 3)
         _, thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
         data = pytesseract.image_to_data(
             thresh,
-            config="--psm 7 -c tessedit_char_whitelist=0123456789",
+            config="--psm 7 --oem 3 -c tessedit_char_whitelist=0123456789",
             output_type=pytesseract.Output.DICT,
         )
         text = "".join(data.get("text", [])).strip()
         digits = "".join(filter(str.isdigit, text))
+        if not digits:
+            logging.debug("OCR failed for %s; raw text=%r", name, text)
         results[name] = int(digits) if digits else 0
     return results
 
