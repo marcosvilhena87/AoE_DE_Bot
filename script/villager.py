@@ -92,20 +92,26 @@ def build_granary():
     """Posiciona um Granary no ponto configurado."""
     common._press_key_safe(common.CFG["keys"]["build_menu"], 0.05)
     g_key = common.CFG["keys"].get("granary")
-    if g_key:
-        common._press_key_safe(g_key, 0.15)
-        gx, gy = common.CFG["areas"]["granary_spot"]
-        common._click_norm(gx, gy)
+    if not g_key:
+        logging.warning("Tecla de construção de Granary não configurada.")
+        return False
+    common._press_key_safe(g_key, 0.15)
+    gx, gy = common.CFG["areas"]["granary_spot"]
+    common._click_norm(gx, gy)
+    return True
 
 
 def build_storage_pit():
     """Posiciona um Storage Pit no ponto configurado."""
     common._press_key_safe(common.CFG["keys"]["build_menu"], 0.05)
     s_key = common.CFG["keys"].get("storage_pit")
-    if s_key:
-        common._press_key_safe(s_key, 0.15)
-        sx, sy = common.CFG["areas"]["storage_spot"]
-        common._click_norm(sx, sy)
+    if not s_key:
+        logging.warning("Tecla de construção de Storage Pit não configurada.")
+        return False
+    common._press_key_safe(s_key, 0.15)
+    sx, sy = common.CFG["areas"]["storage_spot"]
+    common._click_norm(sx, sy)
+    return True
 
 
 def econ_loop(minutes=5):
@@ -116,12 +122,16 @@ def econ_loop(minutes=5):
     town_center.train_villagers(common.TARGET_POP)
 
     select_idle_villager()
-    build_granary()
-    logging.info("Granary posicionado")
+    if build_granary():
+        logging.info("Granary posicionado")
+    else:
+        logging.warning("Falha ao posicionar Granary")
     time.sleep(0.5)
     select_idle_villager()
-    build_storage_pit()
-    logging.info("Storage Pit posicionado")
+    if build_storage_pit():
+        logging.info("Storage Pit posicionado")
+    else:
+        logging.warning("Falha ao posicionar Storage Pit")
     time.sleep(0.5)
 
     hunt_x, hunt_y = common.CFG["areas"]["hunt_food"]
