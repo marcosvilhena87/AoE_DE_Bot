@@ -1,11 +1,11 @@
 {
   "profile": "aoe1de",
   "look_for": ["assets/resources.png"],
-  "threshold": 0.82,
-  "threshold_fallback": 0.7,
-  "scales": [0.88, 0.92, 0.96, 1.0, 1.04, 1.08, 1.12],
+  "threshold": 0.80,
+  "threshold_fallback": 0.68,
+  "scales": [0.84, 0.88, 0.92, 0.96, 1.0, 1.04, 1.08, 1.12, 1.16],
   "loop_minutes": 6,
-  "debug": false,
+  "debug": true,
   "verbose_logging": false,
   "ocr_conf_threshold": 60,
   "tesseract_path": "C:\\Program Files\\Tesseract-OCR\\tesseract.exe",
@@ -19,24 +19,22 @@
     "storage_pit": "s"
   },
   "areas": {
-    "hunt_food": [0.46, 0.7],
-    "wood": [0.62, 0.55],
-    "house_spot": [0.47, 0.72],
-    "granary_spot": [0.44, 0.66],
-    "storage_spot": [0.58, 0.52],
-    "pop_box": [0.24, 0.04, 0.02, 0.02],
-    "//pop_box": "[x, y, w, h] como frações da tela; calibrar depois."
+    "food_num":  [0.15, 0.25, 0.10, 0.50],
+    "wood_num":  [0.35, 0.25, 0.10, 0.50],
+    "stone_num": [0.55, 0.25, 0.10, 0.50],
+    "gold_num":  [0.75, 0.25, 0.10, 0.50],
+    "pop_box":   [0.24, 0.04, 0.02, 0.02]
   },
   "resource_panel": {
-    "top_pct": 0.08,
-    "height_pct": 0.84,
-    "icon_trim_pct": [0.18, 0.18, 0.18, 0.18, 0.18, 0.18],
-    "right_trim_pct": 0.02,
-    "anchor_top_pct": 0.15,
+    "debug_failed_ocr": true,
+    "top_pct": 0.18,
+    "height_pct": 0.70,
+    "icon_trim_pct": [0.42, 0.42, 0.35, 0.35, 0.35, 0.35],
+    "right_trim_pct": 0.05,
+    "anchor_top_pct": 0.20,
     "anchor_height_pct": 0.70,
     "anchor_icon_trim_pct": [0.42, 0.42, 0.35, 0.35, 0.35, 0.35],
-    "anchor_right_trim_pct": 0.02,
-    "debug_failed_ocr": false
+    "anchor_right_trim_pct": 0.05
   },
   "timers": {
     "house_interval": 45.0,
