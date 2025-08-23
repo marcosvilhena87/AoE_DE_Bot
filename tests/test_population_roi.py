@@ -36,7 +36,7 @@ import script.hud as hud
 
 class TestPopulationROI(TestCase):
     def test_population_roi_outside_screen_raises_error(self):
-        with patch("script.common._screen_size", return_value=(200, 200)), \
+        with patch("script.input_utils._screen_size", return_value=(200, 200)), \
             patch.dict(common.CFG["areas"], {"pop_box": [2.0, 2.0, 0.1, 0.1]}), \
             patch("script.resources.locate_resource_panel", return_value={}), \
             patch("script.screen_utils._grab_frame", return_value=np.zeros((1, 1, 3))) as grab_mock, \
@@ -62,7 +62,7 @@ class TestPopulationROI(TestCase):
 
         with patch("script.screen_utils._grab_frame", side_effect=fake_grab), \
             patch("script.resources.locate_resource_panel", return_value={}), \
-            patch("script.common._screen_size", return_value=(200, 200)), \
+            patch("script.input_utils._screen_size", return_value=(200, 200)), \
             patch.dict(common.CFG["areas"], {"pop_box": [0.1, 0.1, 0.5, 0.5]}), \
             patch("script.hud.cv2.cvtColor", side_effect=lambda img, code: img), \
             patch("script.hud.cv2.resize", side_effect=lambda img, *a, **k: img), \
@@ -100,7 +100,7 @@ class TestPopulationROI(TestCase):
 
         with patch("script.screen_utils._grab_frame", side_effect=fake_grab), \
             patch("script.resources.locate_resource_panel", return_value={}), \
-            patch("script.common._screen_size", return_value=(200, 200)), \
+            patch("script.input_utils._screen_size", return_value=(200, 200)), \
             patch.dict(common.CFG["areas"], {"pop_box": pop_box}), \
             patch("script.common.HUD_ANCHOR", {"left": 50, "top": 60, "width": 10, "height": 10}), \
             patch("script.hud.cv2.cvtColor", side_effect=fake_cvtColor), \
@@ -136,7 +136,7 @@ class TestPopulationROI(TestCase):
         )
 
     def test_non_positive_population_roi_raises_before_ocr(self):
-        with patch("script.common._screen_size", return_value=(200, 200)), \
+        with patch("script.input_utils._screen_size", return_value=(200, 200)), \
             patch.dict(common.CFG["areas"], {"pop_box": [0.1, 0.1, -0.5, 0.2]}), \
             patch("script.resources.locate_resource_panel", return_value={}), \
             patch("script.screen_utils._grab_frame", return_value=np.zeros((1, 1, 3))) as grab_mock, \

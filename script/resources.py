@@ -10,7 +10,7 @@ import pytesseract
 
 from .template_utils import find_template
 from .config_utils import CFG
-from . import screen_utils, common
+from . import screen_utils, common, input_utils
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -220,7 +220,7 @@ def read_resources_from_hud():
                 regions[name] = (left, top, width, height)
         else:
             # Fallback: estimate resource bar from HUD anchor
-            W, H = common._screen_size()
+            W, H = input_utils._screen_size()
             margin = int(0.01 * W)
             panel_w = int(568 / 1920 * W)
             panel_h = int(59 / 1080 * H)
