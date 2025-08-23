@@ -86,20 +86,20 @@ class TestHudAnchor(TestCase):
         self.assertEqual(result, expected)
 
         expected_boxes = [
-            {"left": 35, "top": 24, "width": 73, "height": 50},
-            {"left": 130, "top": 24, "width": 78, "height": 50},
-            {"left": 230, "top": 24, "width": 78, "height": 50},
-            {"left": 330, "top": 24, "width": 78, "height": 50},
-            {"left": 430, "top": 24, "width": 78, "height": 50},
-            {"left": 530, "top": 24, "width": 78, "height": 50},
+            {"left": 32, "top": 24, "width": 90, "height": 50},
+            {"left": 125, "top": 24, "width": 90, "height": 50},
+            {"left": 228, "top": 24, "width": 90, "height": 50},
+            {"left": 328, "top": 24, "width": 90, "height": 50},
+            {"left": 428, "top": 24, "width": 90, "height": 50},
+            {"left": 530, "top": 24, "width": 90, "height": 50},
         ]
         expected_shapes = [
-            (50, 73),
-            (50, 78),
-            (50, 78),
-            (50, 78),
-            (50, 78),
-            (50, 78),
+            (50, 90),
+            (50, 90),
+            (50, 90),
+            (50, 90),
+            (50, 90),
+            (50, 90),
         ]
         self.assertEqual(roi_shapes, expected_shapes)
         self.assertEqual(grab_calls, [None])
@@ -156,20 +156,20 @@ class TestHudAnchorTools(TestCase):
         self.assertEqual(result, expected)
 
         expected_boxes = [
-            {"left": 35, "top": 24, "width": 73, "height": 50},
-            {"left": 130, "top": 24, "width": 78, "height": 50},
-            {"left": 230, "top": 24, "width": 78, "height": 50},
-            {"left": 330, "top": 24, "width": 78, "height": 50},
-            {"left": 430, "top": 24, "width": 78, "height": 50},
-            {"left": 530, "top": 24, "width": 78, "height": 50},
+            {"left": 32, "top": 24, "width": 90, "height": 50},
+            {"left": 125, "top": 24, "width": 90, "height": 50},
+            {"left": 228, "top": 24, "width": 90, "height": 50},
+            {"left": 328, "top": 24, "width": 90, "height": 50},
+            {"left": 428, "top": 24, "width": 90, "height": 50},
+            {"left": 530, "top": 24, "width": 90, "height": 50},
         ]
         expected_shapes = [
-            (50, 73),
-            (50, 78),
-            (50, 78),
-            (50, 78),
-            (50, 78),
-            (50, 78),
+            (50, 90),
+            (50, 90),
+            (50, 90),
+            (50, 90),
+            (50, 90),
+            (50, 90),
         ]
         self.assertEqual(roi_shapes, expected_shapes)
         self.assertEqual(grab_calls, [None])
