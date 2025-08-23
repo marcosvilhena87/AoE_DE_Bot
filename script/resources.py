@@ -22,6 +22,14 @@ _LAST_ICON_BOUNDS = {}
 
 # Cache of last successfully read resource values
 _LAST_RESOURCE_VALUES = {}
+# Timestamp of last update for each cached resource value
+_LAST_RESOURCE_TS = {}
+
+# Icons fulfilled from cache on the most recent read
+_LAST_READ_FROM_CACHE = set()
+
+# Maximum age (in seconds) for cached resource values
+_RESOURCE_CACHE_TTL = 1.5
 
 # Track last set of regions returned to invalidate cached values
 _LAST_REGION_BOUNDS = None
@@ -130,10 +138,11 @@ def locate_resource_panel(frame):
             height_i = height
         regions[name] = (left, top_i, width, height_i)
 
-    global _LAST_REGION_BOUNDS, _LAST_RESOURCE_VALUES
+    global _LAST_REGION_BOUNDS, _LAST_RESOURCE_VALUES, _LAST_RESOURCE_TS
     if _LAST_REGION_BOUNDS != regions:
         _LAST_REGION_BOUNDS = regions.copy()
         _LAST_RESOURCE_VALUES.clear()
+        _LAST_RESOURCE_TS.clear()
 
     return regions
 
@@ -419,6 +428,7 @@ def read_resources_from_hud(
     regions = detect_resource_regions(frame, required_icons)
 
     results = {}
+    cache_hits = set()
     for name in icons_to_read:
         if name not in regions:
             continue
@@ -443,18 +453,27 @@ def read_resources_from_hud(
             cv2.imwrite(str(debug_dir / f"resource_{name}_roi_{ts}.png"), roi)
             if mask is not None:
                 cv2.imwrite(str(debug_dir / f"resource_{name}_thresh_{ts}.png"), mask)
-            if name not in required_set and name in _LAST_RESOURCE_VALUES:
+            ts_cache = _LAST_RESOURCE_TS.get(name)
+            if (
+                name in _LAST_RESOURCE_VALUES
+                and ts_cache is not None
+                and time.time() - ts_cache < _RESOURCE_CACHE_TTL
+            ):
                 logging.warning(
                     "Using cached value for %s after OCR failure", name
                 )
                 results[name] = _LAST_RESOURCE_VALUES[name]
+                cache_hits.add(name)
             else:
                 results[name] = None
         else:
             value = int(digits)
             results[name] = value
             _LAST_RESOURCE_VALUES[name] = value
+            _LAST_RESOURCE_TS[name] = time.time()
 
     filtered_regions = {n: regions[n] for n in icons_to_read if n in regions}
     handle_ocr_failure(frame, filtered_regions, results, required_icons)
+    global _LAST_READ_FROM_CACHE
+    _LAST_READ_FROM_CACHE = cache_hits
     return results
