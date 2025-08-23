@@ -111,13 +111,14 @@ def locate_resource_panel(frame):
     top = y + int(top_pct * h)
     height = int(height_pct * h)
     regions = {}
+    idle_extra = res_cfg.get("idle_roi_extra_width", 0)
     for idx, (name, xi, yi, wi, hi) in enumerate(detections):
         if name == "idle_villager":
             left = x + xi + pad_left
-            right = x + xi + wi - pad_right
+            right = x + xi + wi - pad_right + idle_extra
             top_i = y + yi
             height_i = hi
-            width = max(1, right - left)
+            width = max(min_width, right - left)
         else:
             left = x + xi + wi + pad_left
             if idx + 1 < len(detections):

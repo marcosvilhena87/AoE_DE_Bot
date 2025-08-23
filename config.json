@@ -27,6 +27,7 @@
       "roi_padding_left": 2,
       "roi_padding_right": 2,
       "min_width": 60,
+      "idle_roi_extra_width": 20,
       "top_pct": 0.08,
       "height_pct": 0.84,
       "icon_trim_pct": [0.25, 0.20, 0.20, 0.20, 0.20, 0.20],
