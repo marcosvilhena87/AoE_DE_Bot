@@ -29,7 +29,7 @@ sys.modules.setdefault("pyautogui", dummy_pg)
 sys.modules.setdefault("mss", types.SimpleNamespace(mss=lambda: DummyMSS()))
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-import script.common as common
+import script.config_utils as config_utils
 
 
 class TestValidateKeys(TestCase):
@@ -51,7 +51,7 @@ class TestValidateKeys(TestCase):
             },
         }
         with self.assertRaises(RuntimeError) as cm:
-            common.validate_config(cfg)
+            config_utils.validate_config(cfg)
         msg = str(cm.exception)
         self.assertIn("house", msg)
         self.assertIn("config.sample.json", msg)

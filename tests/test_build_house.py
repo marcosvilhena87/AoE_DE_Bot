@@ -29,6 +29,8 @@ class DummyMSS:
 sys.modules.setdefault("pyautogui", dummy_pg)
 sys.modules.setdefault("mss", types.SimpleNamespace(mss=lambda: DummyMSS()))
 
+os.environ.setdefault("TESSERACT_CMD", "/usr/bin/true")
+
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import script.common as common
 import script.villager as villager

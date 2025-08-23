@@ -20,6 +20,7 @@ from pathlib import Path
 
 import script.common as common
 from script.villager import econ_loop
+from script.config_utils import parse_scenario_info
 
 
 def main() -> None:
@@ -51,7 +52,7 @@ def main() -> None:
         logging.info("HUD detectada em %s usando '%s'. Rodando rotina econômica…", hud, asset)
 
     scenario_txt = Path(__file__).with_suffix(".txt")
-    info = common.parse_scenario_info(scenario_txt)
+    info = parse_scenario_info(scenario_txt)
 
     # Configuração inicial de população
     common.CURRENT_POP = info.starting_villagers
