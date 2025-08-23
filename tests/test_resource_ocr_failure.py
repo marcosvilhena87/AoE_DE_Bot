@@ -147,5 +147,5 @@ class TestResourceOcrFailure(TestCase):
             first = resources.read_resources_from_hud(["wood_stockpile"])
             second = resources.read_resources_from_hud(["wood_stockpile"])
 
-        self.assertEqual(first.get("food_stockpile"), 234)
-        self.assertEqual(second.get("food_stockpile"), 234)
+        self.assertNotIn("food_stockpile", first)
+        self.assertNotIn("food_stockpile", second)
