@@ -47,8 +47,11 @@ class TestResourceOcrFailure(TestCase):
             return "", {"text": [""]}, np.zeros((1, 1), dtype=np.uint8)
 
         with patch("script.common._grab_frame", side_effect=fake_grab_frame), \
-             patch("script.common.locate_resource_panel", return_value={"wood": (0, 0, 50, 50)}), \
+             patch(
+                 "script.common.locate_resource_panel",
+                 return_value={"wood_stockpile": (0, 0, 50, 50)},
+             ), \
              patch("script.common._ocr_digits_better", side_effect=fake_ocr), \
              patch("script.common.pytesseract.image_to_string", return_value="123"):
             result = common.read_resources_from_hud()
-            self.assertEqual(result["wood"], 123)
+            self.assertEqual(result["wood_stockpile"], 123)
