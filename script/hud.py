@@ -14,11 +14,13 @@ import cv2
 import pytesseract
 
 from .template_utils import find_template
-from .config_utils import CFG
+from .config_utils import load_config
 from . import screen_utils
 from . import common, resources, input_utils
 
 ROOT = Path(__file__).resolve().parent.parent
+
+CFG = load_config()
 
 
 def wait_hud(timeout=60):

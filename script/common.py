@@ -8,10 +8,12 @@ from pathlib import Path
 import os
 
 import pytesseract
-from .config_utils import CFG
+from .config_utils import load_config
 
 ROOT = Path(__file__).resolve().parent.parent
 ASSETS = ROOT / "assets"
+
+CFG = load_config()
 
 tesseract_cmd = os.environ.get("TESSERACT_CMD") or CFG.get("tesseract_path")
 if tesseract_cmd:

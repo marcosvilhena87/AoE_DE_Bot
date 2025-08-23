@@ -9,10 +9,12 @@ import cv2
 import pytesseract
 
 from .template_utils import find_template
-from .config_utils import CFG
+from .config_utils import load_config
 from . import screen_utils, common, input_utils
 
 ROOT = Path(__file__).resolve().parent.parent
+
+CFG = load_config()
 
 # Cache of last detected icon positions
 _LAST_ICON_BOUNDS = {}

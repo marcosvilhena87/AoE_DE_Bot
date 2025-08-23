@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parent.parent
+_CFG_CACHE: dict[str, Any] | None = None
 
 
 def validate_config(cfg: dict[str, Any]) -> None:
@@ -65,10 +66,42 @@ def validate_config(cfg: dict[str, Any]) -> None:
         )
 
 
-with open(ROOT / "config.json", encoding="utf-8") as cfg_file:
-    CFG = json.load(cfg_file)
+def load_config(path: str | Path | None = None) -> dict[str, Any]:
+    """Load ``config.json`` and validate its contents.
 
-validate_config(CFG)
+    Parameters
+    ----------
+    path:
+        Optional path to the configuration file. When ``None`` the project's
+        default ``config.json`` is used. The configuration is cached so repeated
+        calls return the same dictionary instance.
+
+    Raises
+    ------
+    RuntimeError
+        If the file is missing, contains invalid JSON or fails validation.
+    """
+
+    global _CFG_CACHE
+    cfg_path = Path(path) if path is not None else ROOT / "config.json"
+    if path is None and _CFG_CACHE is not None:
+        return _CFG_CACHE
+    try:
+        with open(cfg_path, encoding="utf-8") as cfg_file:
+            cfg = json.load(cfg_file)
+    except FileNotFoundError as exc:
+        raise RuntimeError(
+            f"Configuration file not found: {cfg_path}. "
+            "Copy config.sample.json and adjust it for your setup."
+        ) from exc
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(
+            f"Invalid JSON in {cfg_path}: {exc}"
+        ) from exc
+    validate_config(cfg)
+    if path is None:
+        _CFG_CACHE = cfg
+    return cfg
 
 
 @dataclass

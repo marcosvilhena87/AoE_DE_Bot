@@ -7,10 +7,12 @@ import numpy as np
 import cv2
 from mss import mss
 
-from .config_utils import CFG
+from .config_utils import load_config
 
 ROOT = Path(__file__).resolve().parent.parent
 ASSETS = ROOT / "assets"
+
+CFG = load_config()
 
 SCT = mss()
 MONITOR = SCT.monitors[1]
