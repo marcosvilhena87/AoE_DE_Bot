@@ -456,7 +456,18 @@ def read_resources_from_hud():
     frame = _grab_frame()
     regions = locate_resource_panel(frame)
 
-    if not regions and HUD_ANCHOR:
+    required_icons = [
+        "wood_stockpile",
+        "food_stockpile",
+        "gold",
+        "stone",
+        "population",
+        "idle_villager",
+    ]
+
+    missing = [name for name in required_icons if name not in regions]
+
+    if missing and HUD_ANCHOR:
         if HUD_ANCHOR.get("asset") == "assets/resources.png":
             x = HUD_ANCHOR["left"]
             y = HUD_ANCHOR["top"]
@@ -482,16 +493,8 @@ def read_resources_from_hud():
 
             top = y + int(top_pct * h)
             height = int(height_pct * h)
-            names = [
-                "wood_stockpile",
-                "food_stockpile",
-                "gold",
-                "stone",
-                "population",
-                "idle_villager",
-            ]
             regions = {}
-            for idx, name in enumerate(names):
+            for idx, name in enumerate(required_icons):
                 icon_trim = icon_trims[idx] if idx < len(icon_trims) else icon_trims[-1]
                 left = x + int(idx * slice_w + icon_trim * slice_w)
                 right_limit = x + int((idx + 1) * slice_w - right_trim * slice_w)
@@ -538,24 +541,20 @@ def read_resources_from_hud():
             slice_w = panel_w / 6
             top = y + int(top_pct * panel_h)
             height = int(height_pct * panel_h)
-            names = [
-                "wood_stockpile",
-                "food_stockpile",
-                "gold",
-                "stone",
-                "population",
-                "idle_villager",
-            ]
             regions = {}
-            for idx, name in enumerate(names):
+            for idx, name in enumerate(required_icons):
                 icon_trim = icon_trims[idx] if idx < len(icon_trims) else icon_trims[-1]
                 left = x + int(idx * slice_w + icon_trim * slice_w)
                 right_limit = x + int((idx + 1) * slice_w - right_trim * slice_w)
                 width = max(10, right_limit - left)
                 regions[name] = (left, top, width, height)
 
-    if not regions:
-        raise ResourceReadError("Resource bar not located on HUD")
+        missing = [name for name in required_icons if name not in regions]
+
+    if missing:
+        raise ResourceReadError(
+            "Resource icon(s) not located on HUD: " + ", ".join(missing)
+        )
 
     results = {}
     rois = {}
