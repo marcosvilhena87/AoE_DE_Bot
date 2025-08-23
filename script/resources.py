@@ -90,7 +90,7 @@ def locate_resource_panel(frame):
     scales = res_cfg.get("scales", CFG.get("scales", [1.0]))
     pad_left = res_cfg.get("roi_padding_left", 2)
     pad_right = res_cfg.get("roi_padding_right", 2)
-    min_width = res_cfg.get("min_width", 60)
+    min_width = res_cfg.get("min_width", 110)
     top_pct = profile_res.get("top_pct", res_cfg.get("top_pct", 0.08))
     height_pct = profile_res.get("height_pct", res_cfg.get("height_pct", 0.84))
     screen_utils._load_icon_templates()
