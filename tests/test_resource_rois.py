@@ -51,6 +51,8 @@ class TestResourceROIs(TestCase):
         ]
 
         positions = [0, 30, 60, 90, 120]
+        pad_left = 2
+        pad_right = 2
         loc_iter = iter([(x, 0) for x in positions])
 
         def fake_minmax(res):
@@ -66,8 +68,8 @@ class TestResourceROIs(TestCase):
             patch.dict(screen_utils.HUD_TEMPLATES, {"assets/resources.png": np.zeros((1, 1), dtype=np.uint8)}, clear=True), \
             patch.dict(screen_utils.ICON_TEMPLATES, {name: np.zeros((5, 5), dtype=np.uint8) for name in icons}, clear=True), \
             patch.dict(common.CFG["resource_panel"], {
-                "roi_padding_left": 0,
-                "roi_padding_right": 0,
+                "roi_padding_left": pad_left,
+                "roi_padding_right": pad_right,
                 "scales": [1.0],
                 "match_threshold": 0.5,
                 "min_width": 0,
@@ -75,15 +77,34 @@ class TestResourceROIs(TestCase):
                 "height_pct": 1.0,
             }):
                 regions = resources.locate_resource_panel(frame)
+                icon_width = screen_utils.ICON_TEMPLATES[icons[0]].shape[1]
 
         for i, name in enumerate(icons):
             roi = regions[name]
             left = roi[0]
             right = roi[0] + roi[2]
+            xi = positions[i]
+            icon_right = panel_box[0] + xi + icon_width
+
+            # Ensure ROI starts after the icon with padding
+            self.assertGreaterEqual(
+                left,
+                icon_right + pad_left,
+                f"{name} left not ≥ icon_right + padding",
+            )
+
             if i > 0:
                 prev = regions[icons[i - 1]]
                 prev_right = prev[0] + prev[2]
                 self.assertGreater(left, prev_right, f"{name} left not > previous right")
+
             if i < len(icons) - 1:
                 next_left = regions[icons[i + 1]][0]
+                next_icon_left = panel_box[0] + positions[i + 1]
+                # Ensure ROI ends before the next icon with padding
+                self.assertLessEqual(
+                    right,
+                    next_icon_left - pad_right,
+                    f"{name} right not ≤ next_icon_left - padding",
+                )
                 self.assertLess(right, next_left, f"{name} right not < next left")
