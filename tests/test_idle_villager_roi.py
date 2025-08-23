@@ -34,6 +34,7 @@ sys.modules.setdefault("mss", types.SimpleNamespace(mss=lambda: DummyMSS()))
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import script.common as common
+import script.resources as resources
 
 
 class TestIdleVillagerROI(TestCase):
@@ -65,12 +66,12 @@ class TestIdleVillagerROI(TestCase):
         def fake_cvtColor(src, code):
             return np.zeros(src.shape[:2], dtype=np.uint8)
 
-        with patch("script.common.find_template", return_value=(panel_box, 0.9, None)), \
-            patch("script.common.cv2.cvtColor", side_effect=fake_cvtColor), \
-            patch("script.common.cv2.resize", side_effect=lambda img, *a, **k: img), \
-            patch("script.common.cv2.matchTemplate", side_effect=fake_match), \
-            patch("script.common.cv2.minMaxLoc", side_effect=fake_minmax), \
-            patch("script.common.cv2.imread", side_effect=fake_imread), \
+        with patch("script.resources.find_template", return_value=(panel_box, 0.9, None)), \
+            patch("script.resources.cv2.cvtColor", side_effect=fake_cvtColor), \
+            patch("script.resources.cv2.resize", side_effect=lambda img, *a, **k: img), \
+            patch("script.resources.cv2.matchTemplate", side_effect=fake_match), \
+            patch("script.resources.cv2.minMaxLoc", side_effect=fake_minmax), \
+            patch("script.resources.cv2.imread", side_effect=fake_imread), \
             patch.dict(
                 common.CFG["resource_panel"],
                 {
@@ -80,7 +81,7 @@ class TestIdleVillagerROI(TestCase):
                     "match_threshold": 0.5,
                 },
             ):
-            regions = common.locate_resource_panel(frame)
+            regions = resources.locate_resource_panel(frame)
 
         self.assertIn("idle_villager", regions)
         roi = regions["idle_villager"]
