@@ -63,6 +63,22 @@ def validate_config(cfg: dict) -> None:
             + ". Copy them from config.sample.json or run the calibration tools."
         )
 
+    if "keys" not in cfg:
+        raise RuntimeError(
+            "Missing mandatory 'keys' section in config.json. "
+            "Copy values from config.sample.json."
+        )
+
+    required_keys = ["idle_vill", "build_menu", "house", "select_tc", "train_vill"]
+    keys = cfg.get("keys", {})
+    missing_keys = [k for k in required_keys if not keys.get(k)]
+    if missing_keys:
+        raise RuntimeError(
+            "Missing required hotkey(s) in 'keys': "
+            + ", ".join(missing_keys)
+            + ". Copy them from config.sample.json."
+        )
+
 with open(ROOT / "config.json", encoding="utf-8") as cfg_file:
     CFG = json.load(cfg_file)
     
