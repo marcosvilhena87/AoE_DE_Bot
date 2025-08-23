@@ -599,8 +599,7 @@ def read_resources_from_hud():
 
     results = {}
     for name, (x, y, w, h) in regions.items():
-        roi_bbox = {"left": x, "top": y, "width": w, "height": h}
-        roi = _grab_frame(roi_bbox)
+        roi = frame[y:y + h, x:x + w]
         gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
         gray = cv2.medianBlur(gray, 3)
 

@@ -55,15 +55,14 @@ class TestHudAnchor(TestCase):
 
         digits_iter = iter(["100", "200", "300", "400", "500", "600"])
         grab_calls = []
+        roi_shapes = []
 
         def fake_grab_frame(bbox=None):
-            if bbox:
-                grab_calls.append(bbox.copy())
-                h, w = bbox["height"], bbox["width"]
-                return np.zeros((h, w, 3), dtype=np.uint8)
-            return np.zeros((200, 200, 3), dtype=np.uint8)
+            grab_calls.append(bbox)
+            return np.zeros((200, 800, 3), dtype=np.uint8)
 
         def fake_ocr(gray):
+            roi_shapes.append(gray.shape[:2])
             d = next(digits_iter)
             return d, {"text": [d]}, np.zeros((1, 1), dtype=np.uint8)
 
@@ -90,7 +89,16 @@ class TestHudAnchor(TestCase):
             {"left": 428, "top": 24, "width": 80, "height": 50},
             {"left": 528, "top": 24, "width": 80, "height": 50},
         ]
-        self.assertEqual(grab_calls, expected_boxes)
+        expected_shapes = [
+            (50, 76),
+            (50, 80),
+            (50, 80),
+            (50, 80),
+            (50, 80),
+            (50, 80),
+        ]
+        self.assertEqual(roi_shapes, expected_shapes)
+        self.assertEqual(grab_calls, [None])
 
 
 class TestHudAnchorTools(TestCase):
@@ -110,15 +118,14 @@ class TestHudAnchorTools(TestCase):
 
         digits_iter = iter(["100", "200", "300", "400", "500", "600"])
         grab_calls = []
+        roi_shapes = []
 
         def fake_grab_frame(bbox=None):
-            if bbox:
-                grab_calls.append(bbox.copy())
-                h, w = bbox["height"], bbox["width"]
-                return np.zeros((h, w, 3), dtype=np.uint8)
-            return np.zeros((200, 200, 3), dtype=np.uint8)
+            grab_calls.append(bbox)
+            return np.zeros((200, 800, 3), dtype=np.uint8)
 
         def fake_ocr(gray):
+            roi_shapes.append(gray.shape[:2])
             d = next(digits_iter)
             return d, {"text": [d]}
 
@@ -145,4 +152,13 @@ class TestHudAnchorTools(TestCase):
             {"left": 428, "top": 24, "width": 80, "height": 50},
             {"left": 528, "top": 24, "width": 80, "height": 50},
         ]
-        self.assertEqual(grab_calls, expected_boxes)
+        expected_shapes = [
+            (50, 76),
+            (50, 80),
+            (50, 80),
+            (50, 80),
+            (50, 80),
+            (50, 80),
+        ]
+        self.assertEqual(roi_shapes, expected_shapes)
+        self.assertEqual(grab_calls, [None])
