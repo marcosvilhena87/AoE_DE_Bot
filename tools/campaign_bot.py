@@ -17,6 +17,7 @@ HUD_TEMPLATES = {"assets/ui_minimap.png": np.zeros((1, 1), dtype=np.uint8)}
 _grab_frame = screen_utils._grab_frame
 find_template = hud.find_template
 locate_resource_panel = resources.locate_resource_panel
+_read_population_from_roi = resources._read_population_from_roi
 
 def wait_hud(timeout=60):
     """Delegate to :func:`script.hud.wait_hud` using patched helpers."""
@@ -63,3 +64,31 @@ def read_resources_from_hud(required_icons=None):
         resources.locate_resource_panel = original_locate
         screen_utils._grab_frame = original_grab
         resources._ocr_digits_better = original_ocr
+
+
+def gather_hud_stats():
+    """Delegate to :func:`script.resources.gather_hud_stats` using patched helpers."""
+    common.HUD_ANCHOR = HUD_ANCHOR
+    original_locate = resources.locate_resource_panel
+    original_grab = screen_utils._grab_frame
+    original_ocr = resources._ocr_digits_better
+    original_pop = resources._read_population_from_roi
+
+    def wrapper(gray):
+        res = _ocr_digits_better(gray)
+        if isinstance(res, tuple) and len(res) == 2:
+            digits, data = res
+            return digits, data, None
+        return res
+
+    resources.locate_resource_panel = locate_resource_panel
+    screen_utils._grab_frame = _grab_frame
+    resources._ocr_digits_better = wrapper
+    resources._read_population_from_roi = _read_population_from_roi
+    try:
+        return resources.gather_hud_stats()
+    finally:
+        resources.locate_resource_panel = original_locate
+        screen_utils._grab_frame = original_grab
+        resources._ocr_digits_better = original_ocr
+        resources._read_population_from_roi = original_pop

@@ -527,3 +527,136 @@ def read_resources_from_hud(
     global _LAST_READ_FROM_CACHE
     _LAST_READ_FROM_CACHE = cache_hits
     return results
+
+
+def _read_population_from_roi(roi, conf_threshold=None):
+    """Read current and capacity population values from a ROI.
+
+    Parameters
+    ----------
+    roi : np.ndarray
+        Image region containing the population text.
+    conf_threshold : int | None, optional
+        Minimum confidence value accepted for OCR characters. When ``None``
+        the value from configuration is used.
+    """
+
+    if conf_threshold is None:
+        conf_threshold = CFG.get("ocr_conf_threshold", 60)
+
+    if roi.size == 0:
+        raise common.PopulationReadError("Population ROI has zero size")
+
+    gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+    gray = cv2.resize(gray, None, fx=2, fy=2, interpolation=cv2.INTER_LINEAR)
+    _, thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    data = pytesseract.image_to_data(
+        thresh,
+        config="--psm 7 -c tessedit_char_whitelist=0123456789/",
+        output_type=pytesseract.Output.DICT,
+    )
+    text = "".join(data.get("text", [])).replace(" ", "")
+    confidences = [int(c) for c in data.get("conf", []) if c != "-1"]
+    parts = [p for p in text.split("/") if p]
+    if len(parts) >= 2 and (not confidences or min(confidences) >= conf_threshold):
+        cur = int("".join(filter(str.isdigit, parts[0])) or 0)
+        cap = int("".join(filter(str.isdigit, parts[1])) or 0)
+        return cur, cap
+
+    logger.warning(
+        "OCR failed for population; text='%s', conf=%s", text, confidences
+    )
+    debug_dir = ROOT / "debug"
+    debug_dir.mkdir(exist_ok=True)
+    ts = int(time.time() * 1000)
+    cv2.imwrite(str(debug_dir / f"population_roi_{ts}.png"), roi)
+    cv2.imwrite(str(debug_dir / f"population_thresh_{ts}.png"), thresh)
+    raise common.PopulationReadError(
+        f"Falha ao ler população da HUD: texto='{text}', confs={confidences}"
+    )
+
+
+def gather_hud_stats(force_delay=None):
+    """Capture a single frame and read resources and population.
+
+    Returns
+    -------
+    tuple
+        ``(resources, (current_pop, pop_cap))``
+    """
+
+    if force_delay is not None:
+        time.sleep(force_delay)
+
+    frame = screen_utils._grab_frame()
+
+    required_icons = [
+        "wood_stockpile",
+        "food_stockpile",
+        "gold",
+        "stone",
+        "population",
+        "idle_villager",
+    ]
+
+    regions = detect_resource_regions(frame, required_icons)
+
+    resource_icons = [name for name in required_icons if name != "population"]
+
+    results = {}
+    cache_hits = set()
+    for name in resource_icons:
+        if name not in regions:
+            continue
+        x, y, w, h = regions[name]
+        roi = frame[y : y + h, x : x + w]
+        gray = preprocess_roi(roi)
+        digits, data, mask = execute_ocr(gray)
+        if CFG.get("ocr_debug"):
+            debug_dir = ROOT / "debug"
+            debug_dir.mkdir(exist_ok=True)
+            ts = int(time.time() * 1000)
+            cv2.imwrite(str(debug_dir / f"resource_{name}_roi_{ts}.png"), roi)
+            if mask is not None:
+                cv2.imwrite(str(debug_dir / f"resource_{name}_thresh_{ts}.png"), mask)
+        if not digits:
+            logger.warning(
+                "OCR failed for %s; raw boxes=%s", name, data.get("text")
+            )
+            debug_dir = ROOT / "debug"
+            debug_dir.mkdir(exist_ok=True)
+            ts = int(time.time() * 1000)
+            cv2.imwrite(str(debug_dir / f"resource_{name}_roi_{ts}.png"), roi)
+            if mask is not None:
+                cv2.imwrite(str(debug_dir / f"resource_{name}_thresh_{ts}.png"), mask)
+            ts_cache = _LAST_RESOURCE_TS.get(name)
+            if (
+                name in _LAST_RESOURCE_VALUES
+                and ts_cache is not None
+                and time.time() - ts_cache < _RESOURCE_CACHE_TTL
+            ):
+                logger.warning(
+                    "Using cached value for %s after OCR failure", name
+                )
+                results[name] = _LAST_RESOURCE_VALUES[name]
+                cache_hits.add(name)
+            else:
+                results[name] = None
+        else:
+            value = int(digits)
+            results[name] = value
+            _LAST_RESOURCE_VALUES[name] = value
+            _LAST_RESOURCE_TS[name] = time.time()
+
+    filtered_regions = {n: regions[n] for n in resource_icons if n in regions}
+    handle_ocr_failure(frame, filtered_regions, results, resource_icons)
+
+    pop_x, pop_y, pop_w, pop_h = regions["population"]
+    pop_roi = frame[pop_y : pop_y + pop_h, pop_x : pop_x + pop_w]
+    cur_pop, pop_cap = _read_population_from_roi(pop_roi)
+    results["population"] = cur_pop
+
+    global _LAST_READ_FROM_CACHE
+    _LAST_READ_FROM_CACHE = cache_hits
+
+    return results, (cur_pop, pop_cap)
