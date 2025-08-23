@@ -221,7 +221,7 @@ def detect_resource_regions(frame, required_icons):
                 icon_trim = icon_trims[idx] if idx < len(icon_trims) else icon_trims[-1]
                 left = x + int(idx * slice_w + icon_trim * slice_w)
                 right_limit = x + int((idx + 1) * slice_w - right_trim * slice_w)
-                width = max(60, right_limit - left)
+                width = max(90, right_limit - left)
                 regions[name] = (left, top, width, height)
         else:
             # Fallback: estimate resource bar from HUD anchor
@@ -264,7 +264,7 @@ def detect_resource_regions(frame, required_icons):
                 icon_trim = icon_trims[idx] if idx < len(icon_trims) else icon_trims[-1]
                 left = x + int(idx * slice_w + icon_trim * slice_w)
                 right_limit = x + int((idx + 1) * slice_w - right_trim * slice_w)
-                width = max(60, right_limit - left)
+                width = max(90, right_limit - left)
                 regions[name] = (left, top, width, height)
 
         missing = [name for name in required_icons if name not in regions]
