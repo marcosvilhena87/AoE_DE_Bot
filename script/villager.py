@@ -12,6 +12,61 @@ def select_idle_villager():
     input_utils._press_key_safe(common.CFG["keys"]["idle_vill"], 0.10)
 
 
+def count_idle_villagers_via_hotkey(delay=0.1, return_selections=False):
+    """Conta quantos aldeões ociosos existem usando o atalho de seleção.
+
+    Lê ``idle_villager`` no HUD e pressiona o hotkey de seleção de
+    aldeão ocioso repetidamente até que a contagem não diminua mais ou
+    chegue a zero. Pequenas pausas são aplicadas entre as leituras para
+    permitir que a interface seja atualizada.
+
+    Parameters
+    ----------
+    delay : float, optional
+        Intervalo, em segundos, aguardado entre as leituras do HUD.
+        O padrão é ``0.1``.
+    return_selections : bool, optional
+        Se ``True``, também retorna o número de vezes que o hotkey foi
+        acionado.
+
+    Returns
+    -------
+    int or tuple
+        Contagem inicial de aldeões ociosos. Quando ``return_selections``
+        é ``True`` retorna ``(contagem_inicial, selecoes)``.
+    """
+
+    try:
+        res = resources.read_resources_from_hud(["idle_villager"])
+    except common.ResourceReadError as exc:  # pragma: no cover - falha de OCR
+        logging.error("Falha ao ler idle_villager: %s", exc)
+        initial = 0
+    else:
+        initial = res.get("idle_villager")
+        if not isinstance(initial, int):
+            initial = 0
+
+    current = initial
+    selections = 0
+    while isinstance(current, int) and current > 0:
+        select_idle_villager()
+        selections += 1
+        time.sleep(delay)
+        try:
+            res = resources.read_resources_from_hud(["idle_villager"])
+        except common.ResourceReadError as exc:  # pragma: no cover - falha de OCR
+            logging.error("Falha ao ler idle_villager: %s", exc)
+            break
+        new_val = res.get("idle_villager")
+        if not isinstance(new_val, int) or new_val >= current:
+            break
+        current = new_val
+
+    if return_selections:
+        return initial, selections
+    return initial
+
+
 def build_house():
     """Constrói uma casa no local predefinido.
 
