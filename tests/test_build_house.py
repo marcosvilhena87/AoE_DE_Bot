@@ -65,7 +65,7 @@ class TestBuildHouseResourceRetry(TestCase):
     def test_build_house_retries_before_stopping(self):
         side_effect = [
             common.ResourceReadError("fail1"),
-            {"wood_stockpile": None},
+            common.ResourceReadError("fail2"),
             common.ResourceReadError("fail3"),
         ]
         with patch(
