@@ -416,8 +416,11 @@ def locate_resource_panel(frame):
 
 def _ocr_digits_better(gray):
     gray = cv2.resize(gray, None, fx=2, fy=2, interpolation=cv2.INTER_LINEAR)
-    kernel = np.ones((2, 2), np.uint8)
-    psms = [6, 7, 8]
+
+    kernel_size = CFG.get("ocr_kernel_size", 2)
+    kernel = np.ones((kernel_size, kernel_size), np.uint8)
+    psms = CFG.get("ocr_psm_list", [6, 7, 8])
+
     debug = CFG.get("ocr_debug")
     debug_dir = ROOT / "debug" if debug else None
     ts = int(time.time() * 1000) if debug else None

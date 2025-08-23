@@ -20,6 +20,15 @@ HUD-related coordinates, such as `areas.pop_box`, use ``[x, y, width, height]``
 fractions of the entire screen. The default values in `config.json` are
 placeholders and should be calibrated for your setup.
 
+### OCR tuning
+
+Two fields in `config.json` allow adjusting how resource numbers are read:
+
+* `ocr_kernel_size` – size of the square kernel used for morphological dilation
+  before running OCR (default `2`).
+* `ocr_psm_list` – list of Tesseract [page segmentation modes](https://tesseract-ocr.github.io/tessdoc/ImproveQuality.html#page-segmentation-method)
+  tried in order when extracting digits (default `[6, 7, 8]`).
+
 ## Capturing `hud_resources.png`
 
 Some HUD layouts place the minimap and the resource bar at different positions.

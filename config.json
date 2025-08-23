@@ -9,6 +9,8 @@
   "ocr_debug": true,
   "verbose_logging": false,
   "ocr_conf_threshold": 60,
+  "ocr_kernel_size": 2,
+  "ocr_psm_list": [6, 7, 8],
   "tesseract_path": "C:\\Program Files\\Tesseract-OCR\\tesseract.exe",
   "keys": {
     "idle_vill": ".",
