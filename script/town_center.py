@@ -24,7 +24,7 @@ def train_villagers(target_pop: int):
                 "Attempt %s to read food from HUD while training villagers", attempt
             )
             try:
-                res_vals = resources.read_resources_from_hud()
+                res_vals = resources.read_resources_from_hud(["food_stockpile"])
             except common.ResourceReadError as exc:
                 logging.error(
                     "Resource read error while training villagers (attempt %s/3): %s",

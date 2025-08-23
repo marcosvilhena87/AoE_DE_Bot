@@ -3,6 +3,7 @@
 import logging
 import time
 from pathlib import Path
+from typing import Iterable
 
 import numpy as np
 import cv2
@@ -288,12 +289,28 @@ def execute_ocr(gray):
     return digits, data, mask
 
 
-def handle_ocr_failure(frame, regions, results):
-    """Handle OCR failures by saving debug images and raising an error."""
+def handle_ocr_failure(frame, regions, results, required_icons):
+    """Handle OCR failures by saving debug images.
+
+    Parameters
+    ----------
+    frame : np.ndarray
+        Screenshot frame used for OCR.
+    regions : dict
+        Mapping of icon names to bounding boxes.
+    results : dict
+        OCR results with ``None`` for failed icons.
+    required_icons : Iterable[str]
+        Icons that should trigger an exception if OCR fails.
+    """
 
     failed = [name for name, v in results.items() if v is None]
     if not failed:
         return
+
+    required_set = set(required_icons)
+    required_failed = [f for f in failed if f in required_set]
+    optional_failed = [f for f in failed if f not in required_set]
 
     h_full, w_full = frame.shape[:2]
     debug_dir = ROOT / "debug"
@@ -325,33 +342,43 @@ def handle_ocr_failure(frame, regions, results):
         roi_paths.append(str(roi_path))
         roi_logs.append(f"{name}:{regions[name]} -> {roi_path}")
 
-    logging.error(
-        "Resource panel OCR failed for %s; panel saved to %s; rois: %s",
-        ", ".join(failed),
-        panel_path,
-        ", ".join(roi_logs),
-    )
+    if required_failed:
+        logging.error(
+            "Resource panel OCR failed for %s; panel saved to %s; rois: %s",
+            ", ".join(required_failed),
+            panel_path,
+            ", ".join(roi_logs),
+        )
+        tess_path = pytesseract.pytesseract.tesseract_cmd
+        paths_str = ", ".join([str(panel_path)] + roi_paths)
+        failed_regions = {k: regions[k] for k in required_failed}
+        raise common.ResourceReadError(
+            "OCR failed to read resource values for "
+            + ", ".join(required_failed)
+            + f" (regions={failed_regions}, tesseract_cmd={tess_path}, debug_images={paths_str})",
+        )
 
-    tess_path = pytesseract.pytesseract.tesseract_cmd
-    paths_str = ", ".join([str(panel_path)] + roi_paths)
-    failed_regions = {k: regions[k] for k in failed}
-    raise common.ResourceReadError(
-        "OCR failed to read resource values for "
-        + ", ".join(failed)
-        + f" (regions={failed_regions}, tesseract_cmd={tess_path}, debug_images={paths_str})"
-    )
+    if optional_failed:
+        logging.warning(
+            "Resource panel OCR failed for optional %s; panel saved to %s; rois: %s",
+            ", ".join(optional_failed),
+            panel_path,
+            ", ".join(roi_logs),
+        )
 
-
-def read_resources_from_hud():
+def read_resources_from_hud(required_icons: Iterable[str] | None = None):
     frame = screen_utils._grab_frame()
-    required_icons = [
-        "wood_stockpile",
-        "food_stockpile",
-        "gold",
-        "stone",
-        "population",
-        "idle_villager",
-    ]
+    if required_icons is None:
+        required_icons = [
+            "wood_stockpile",
+            "food_stockpile",
+            "gold",
+            "stone",
+            "population",
+            "idle_villager",
+        ]
+    else:
+        required_icons = list(required_icons)
 
     regions = detect_resource_regions(frame, required_icons)
 
@@ -381,5 +408,5 @@ def read_resources_from_hud():
         else:
             results[name] = int(digits)
 
-    handle_ocr_failure(frame, regions, results)
+    handle_ocr_failure(frame, regions, results, required_icons)
     return results

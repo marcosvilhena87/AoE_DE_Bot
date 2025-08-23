@@ -34,7 +34,7 @@ def build_house():
             "Attempt %s to read wood from HUD while building house", attempt
         )
         try:
-            res_vals = resources.read_resources_from_hud()
+            res_vals = resources.read_resources_from_hud(["wood_stockpile"])
         except common.ResourceReadError as exc:
             logging.error(
                 "Resource read error while building house (attempt %s/3): %s",
@@ -55,7 +55,7 @@ def build_house():
         logging.debug("Refreshing HUD anchor before final resource read")
         try:
             hud.wait_hud()
-            res_vals = resources.read_resources_from_hud()
+            res_vals = resources.read_resources_from_hud(["wood_stockpile"])
         except Exception as exc:
             logging.error(
                 "Failed to refresh HUD or read resources while building house: %s",
@@ -109,7 +109,7 @@ def build_house():
 
         logging.warning("Tentativa %s de construir casa falhou.", idx)
         try:
-            res_vals = resources.read_resources_from_hud()
+            res_vals = resources.read_resources_from_hud(["wood_stockpile"])
         except common.ResourceReadError as exc:
             logging.error(
                 "Resource read error while retrying house construction: %s", exc
@@ -213,7 +213,7 @@ def econ_loop(minutes=5):
                     "Attempt %s to read resources during economic loop", attempt
                 )
                 try:
-                    res_vals = resources.read_resources_from_hud()
+                    res_vals = resources.read_resources_from_hud(["idle_villager"])
                     break
                 except common.ResourceReadError as exc:
                     logging.error(
@@ -243,7 +243,7 @@ def econ_loop(minutes=5):
                         attempt,
                     )
                     try:
-                        idle_after_res = resources.read_resources_from_hud()
+                        idle_after_res = resources.read_resources_from_hud(["idle_villager"])
                         break
                     except common.ResourceReadError as exc:
                         logging.error(

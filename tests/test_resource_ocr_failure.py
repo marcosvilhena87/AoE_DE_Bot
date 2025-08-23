@@ -63,3 +63,32 @@ class TestResourceOcrFailure(TestCase):
              patch("script.resources.pytesseract.image_to_string", return_value="123"):
             result = resources.read_resources_from_hud()
             self.assertEqual(result["wood_stockpile"], 123)
+
+    def test_optional_icon_failure_does_not_raise(self):
+        def fake_grab_frame(bbox=None):
+            if bbox:
+                return np.zeros((bbox["height"], bbox["width"], 3), dtype=np.uint8)
+            return np.zeros((600, 600, 3), dtype=np.uint8)
+
+        def fake_detect(frame, required_icons):
+            return {
+                "wood_stockpile": (0, 0, 50, 50),
+                "food_stockpile": (50, 0, 50, 50),
+            }
+
+        ocr_seq = [
+            ("123", {"text": ["123"]}, np.zeros((1, 1), dtype=np.uint8)),
+            ("", {"text": [""]}, np.zeros((1, 1), dtype=np.uint8)),
+        ]
+
+        def fake_ocr(gray):
+            return ocr_seq.pop(0)
+
+        with patch("script.resources.detect_resource_regions", side_effect=fake_detect), \
+             patch("script.screen_utils._grab_frame", side_effect=fake_grab_frame), \
+             patch("script.resources._ocr_digits_better", side_effect=fake_ocr), \
+             patch("script.resources.pytesseract.image_to_string", return_value=""), \
+             patch("script.resources.cv2.imwrite"):
+            result = resources.read_resources_from_hud(["wood_stockpile"])
+        self.assertEqual(result.get("wood_stockpile"), 123)
+        self.assertIsNone(result.get("food_stockpile"))
