@@ -64,6 +64,24 @@ class TestExecuteOcr(TestCase):
         self.assertEqual(data["text"], ["456"])
         np.testing.assert_array_equal(mask, gray)
 
+    def test_execute_ocr_rejects_low_confidence(self):
+        gray = np.zeros((5, 5), dtype=np.uint8)
+        data = {"text": ["123"], "conf": ["10", "20", "30"]}
+        with patch("script.resources._ocr_digits_better", return_value=("123", data, None)), \
+             patch("script.resources.pytesseract.image_to_string") as img2str_mock:
+            digits, _, _ = resources.execute_ocr(gray, conf_threshold=60)
+        self.assertEqual(digits, "")
+        img2str_mock.assert_not_called()
+
+    def test_execute_ocr_rejects_low_mean_confidence(self):
+        gray = np.zeros((5, 5), dtype=np.uint8)
+        data = {"text": ["12"], "conf": ["80", "20"]}
+        with patch("script.resources._ocr_digits_better", return_value=("12", data, None)), \
+             patch("script.resources.pytesseract.image_to_string") as img2str_mock:
+            digits, _, _ = resources.execute_ocr(gray, conf_threshold=60)
+        self.assertEqual(digits, "")
+        img2str_mock.assert_not_called()
+
 
 class TestHandleOcrFailure(TestCase):
     def test_handle_ocr_failure_raises(self):

@@ -272,11 +272,24 @@ def preprocess_roi(roi):
     return cv2.medianBlur(gray, 3)
 
 
-def execute_ocr(gray):
+def execute_ocr(gray, conf_threshold=None):
     """Run OCR on a preprocessed grayscale image."""
 
+    if conf_threshold is None:
+        conf_threshold = CFG.get("ocr_conf_threshold", 60)
+
     digits, data, mask = _ocr_digits_better(gray)
-    if not digits:
+
+    confidences = [int(c) for c in data.get("conf", []) if c != "-1"]
+    low_conf = False
+    if digits and confidences:
+        mean_conf = sum(confidences) / len(confidences)
+        max_conf = max(confidences)
+        if mean_conf < conf_threshold or max_conf < conf_threshold:
+            digits = ""
+            low_conf = True
+
+    if not digits and not low_conf:
         text = pytesseract.image_to_string(
             gray,
             config="--psm 6 --oem 3 -c tessedit_char_whitelist=0123456789",
@@ -284,7 +297,7 @@ def execute_ocr(gray):
         fallback = "".join(filter(str.isdigit, text))
         if fallback:
             digits = fallback
-            data = {"text": [text.strip()]}
+            data = {"text": [text.strip()], "conf": []}
             mask = gray
     return digits, data, mask
 
