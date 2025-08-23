@@ -38,7 +38,7 @@ class TestPopulationROI(TestCase):
         with patch("script.common._screen_size", return_value=(200, 200)), \
             patch.dict(common.CFG["areas"], {"pop_box": [2.0, 2.0, 0.1, 0.1]}), \
             patch("script.common.locate_resource_panel", return_value={}), \
-            patch("script.common._grab_frame", return_value=np.zeros((1, 1, 3))) as grab_mock, \
+            patch("script.screen_utils._grab_frame", return_value=np.zeros((1, 1, 3))) as grab_mock, \
             patch("script.common.pytesseract.image_to_data") as ocr_mock:
             with self.assertRaises(common.PopulationReadError) as ctx:
                 common.read_population_from_hud(
@@ -59,7 +59,7 @@ class TestPopulationROI(TestCase):
             h, w = bbox["height"], bbox["width"]
             return np.zeros((h, w, 3), dtype=np.uint8)
 
-        with patch("script.common._grab_frame", side_effect=fake_grab), \
+        with patch("script.screen_utils._grab_frame", side_effect=fake_grab), \
             patch("script.common.locate_resource_panel", return_value={}), \
             patch("script.common._screen_size", return_value=(200, 200)), \
             patch.dict(common.CFG["areas"], {"pop_box": [0.1, 0.1, 0.5, 0.5]}), \
@@ -97,7 +97,7 @@ class TestPopulationROI(TestCase):
             recorded["roi"] = src
             return src
 
-        with patch("script.common._grab_frame", side_effect=fake_grab), \
+        with patch("script.screen_utils._grab_frame", side_effect=fake_grab), \
             patch("script.common.locate_resource_panel", return_value={}), \
             patch("script.common._screen_size", return_value=(200, 200)), \
             patch.dict(common.CFG["areas"], {"pop_box": pop_box}), \
@@ -138,7 +138,7 @@ class TestPopulationROI(TestCase):
         with patch("script.common._screen_size", return_value=(200, 200)), \
             patch.dict(common.CFG["areas"], {"pop_box": [0.1, 0.1, -0.5, 0.2]}), \
             patch("script.common.locate_resource_panel", return_value={}), \
-            patch("script.common._grab_frame", return_value=np.zeros((1, 1, 3))) as grab_mock, \
+            patch("script.screen_utils._grab_frame", return_value=np.zeros((1, 1, 3))) as grab_mock, \
             patch("script.common.pytesseract.image_to_data") as ocr_mock, \
             patch("script.common.time.sleep") as sleep_mock:
             with self.assertRaises(common.PopulationReadError) as ctx:

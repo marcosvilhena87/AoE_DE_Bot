@@ -46,7 +46,7 @@ class TestResourceOcrFailure(TestCase):
         def fake_ocr(gray):
             return "", {"text": [""]}, np.zeros((1, 1), dtype=np.uint8)
 
-        with patch("script.common._grab_frame", side_effect=fake_grab_frame), \
+        with patch("script.screen_utils._grab_frame", side_effect=fake_grab_frame), \
              patch(
                  "script.common.locate_resource_panel",
                  return_value={

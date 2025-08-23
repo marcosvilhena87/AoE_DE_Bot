@@ -48,7 +48,7 @@ class TestResourceDebugImages(TestCase):
         def fake_ocr(gray):
             return "", {"text": [""]}, np.zeros((1, 1), dtype=np.uint8)
 
-        with patch("script.common._grab_frame", side_effect=fake_grab_frame), \
+        with patch("script.screen_utils._grab_frame", side_effect=fake_grab_frame), \
              patch(
                  "script.common.locate_resource_panel",
                  return_value={
@@ -91,7 +91,7 @@ class TestResourceDebugImages(TestCase):
                 return ocr_sequence.pop(0)
             return ("0", {"text": ["0"]}, np.zeros((1, 1), dtype=np.uint8))
 
-        with patch("script.common._grab_frame", side_effect=fake_grab_frame), \
+        with patch("script.screen_utils._grab_frame", side_effect=fake_grab_frame), \
              patch(
                  "script.common.locate_resource_panel",
                  return_value={

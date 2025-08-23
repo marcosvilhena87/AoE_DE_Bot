@@ -1,0 +1,61 @@
+"""Screen capture and template utilities."""
+
+import logging
+from pathlib import Path
+
+import numpy as np
+import cv2
+from mss import mss
+
+from .config_utils import CFG
+
+ROOT = Path(__file__).resolve().parent.parent
+ASSETS = ROOT / "assets"
+
+SCT = mss()
+MONITOR = SCT.monitors[1]
+
+
+def _grab_frame(bbox=None):
+    """Capture a frame from the screen."""
+    region = bbox or MONITOR
+    img = np.array(SCT.grab(region))[:, :, :3]
+    return img
+
+
+def _load_gray(path):
+    im = cv2.imread(str(path), cv2.IMREAD_GRAYSCALE)
+    if im is None:
+        logging.warning("Asset não encontrado: %s", path)
+        return None
+    return im
+
+
+HUD_TEMPLATES = {
+    name: tmpl
+    for name in CFG.get("look_for", [])
+    if (tmpl := _load_gray(ROOT / name)) is not None
+}
+
+ICON_NAMES = [
+    "wood_stockpile",
+    "food_stockpile",
+    "gold",
+    "stone",
+    "population",
+    "idle_villager",
+]
+ICON_TEMPLATES = {}
+
+
+def _load_icon_templates():
+    icons_dir = ASSETS / "icons"
+    for name in ICON_NAMES:
+        if name in ICON_TEMPLATES:
+            continue
+        path = icons_dir / f"{name}.png"
+        icon = cv2.imread(str(path), cv2.IMREAD_GRAYSCALE)
+        if icon is None:
+            logging.warning("Icon asset missing: %s", path)
+            continue
+        ICON_TEMPLATES[name] = icon

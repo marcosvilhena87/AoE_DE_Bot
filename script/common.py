@@ -13,11 +13,11 @@ import os
 
 import numpy as np
 import cv2
-from mss import mss
 import pyautogui as pg
 import pytesseract
 from .template_utils import find_template
 from .config_utils import CFG
+from . import screen_utils
 
 # =========================
 # CONFIGURAÇÃO
@@ -47,9 +47,6 @@ CURRENT_POP = 0
 POP_CAP = 0
 TARGET_POP = 0
 
-# Instância única do mss para reutilização
-SCT = mss()
-MONITOR = SCT.monitors[1]  # tela principal
 # Posição detectada do HUD usada apenas como referência
 HUD_ANCHOR = None
 # Últimas posições detectadas dos ícones de recurso
@@ -66,56 +63,14 @@ class ResourceReadError(RuntimeError):
 # CAPTURA & TEMPLATE MATCH
 # =========================
 
-def _grab_frame(bbox=None):
-    """Captura um frame da tela."""
-    region = bbox or MONITOR
-    img = np.array(SCT.grab(region))[:, :, :3]  # BGRA -> BGR
-    return img
-
-def _load_gray(path):
-    im = cv2.imread(str(path), cv2.IMREAD_GRAYSCALE)
-    if im is None:
-        logging.warning("Asset não encontrado: %s", path)
-        return None
-    return im
-
-HUD_TEMPLATES = {
-    name: tmpl
-    for name in CFG.get("look_for", [])
-    if (tmpl := _load_gray(ROOT / name)) is not None
-}
-
-# Ícones do painel de recursos carregados sob demanda
-ICON_NAMES = [
-    "wood_stockpile",
-    "food_stockpile",
-    "gold",
-    "stone",
-    "population",
-    "idle_villager",
-]
-ICON_TEMPLATES = {}
-
-
-def _load_icon_templates():
-    icons_dir = ASSETS / "icons"
-    for name in ICON_NAMES:
-        if name in ICON_TEMPLATES:
-            continue
-        path = icons_dir / f"{name}.png"
-        icon = cv2.imread(str(path), cv2.IMREAD_GRAYSCALE)
-        if icon is None:
-            logging.warning("Icon asset missing: %s", path)
-            continue
-        ICON_TEMPLATES[name] = icon
 
 def wait_hud(timeout=60):
     logging.info("Aguardando HUD por até %ss...", timeout)
     t0 = time.time()
     last_best = (-1, None)
     while time.time() - t0 < timeout:
-        frame = _grab_frame()
-        for name, tmpl in HUD_TEMPLATES.items():
+        frame = screen_utils._grab_frame()
+        for name, tmpl in screen_utils.HUD_TEMPLATES.items():
             if tmpl is None:
                 continue
             box, score, heat = find_template(
@@ -156,7 +111,7 @@ def read_population_from_hud(retries=3, conf_threshold=None, save_failed_roi=Fal
     if conf_threshold is None:
         conf_threshold = CFG.get("ocr_conf_threshold", 60)
 
-    frame_full = _grab_frame()
+    frame_full = screen_utils._grab_frame()
     regions = locate_resource_panel(frame_full)
     roi_bbox = None
     if "population" in regions:
@@ -196,7 +151,7 @@ def read_population_from_hud(retries=3, conf_threshold=None, save_failed_roi=Fal
     last_confidences = []
 
     for attempt in range(retries):
-        roi = _grab_frame(roi_bbox)
+        roi = screen_utils._grab_frame(roi_bbox)
         if roi.size == 0:
             logging.warning("Population ROI has zero size")
             continue
@@ -245,7 +200,7 @@ def read_population_from_hud(retries=3, conf_threshold=None, save_failed_roi=Fal
 def locate_resource_panel(frame):
     """Locate the resource panel and return bounding boxes for each value."""
 
-    tmpl = HUD_TEMPLATES.get("assets/resources.png")
+    tmpl = screen_utils.HUD_TEMPLATES.get("assets/resources.png")
     if tmpl is None:
         return {}
 
@@ -299,11 +254,11 @@ def locate_resource_panel(frame):
     min_width = res_cfg.get("min_width", 60)
     top_pct = profile_res.get("top_pct", res_cfg.get("top_pct", 0.08))
     height_pct = profile_res.get("height_pct", res_cfg.get("height_pct", 0.84))
-    _load_icon_templates()
+    screen_utils._load_icon_templates()
     detections = []
     global _LAST_ICON_BOUNDS
-    for name in ICON_NAMES:
-        icon = ICON_TEMPLATES.get(name)
+    for name in screen_utils.ICON_NAMES:
+        icon = screen_utils.ICON_TEMPLATES.get(name)
         if icon is None:
             continue
         best = (-1, None, None)  # score, loc, (w,h)
@@ -397,7 +352,7 @@ def _ocr_digits_better(gray):
     return _run_masks([adaptive, cv2.bitwise_not(adaptive)], 2)
 
 def read_resources_from_hud():
-    frame = _grab_frame()
+    frame = screen_utils._grab_frame()
     h_full, w_full = frame.shape[:2]
     regions = locate_resource_panel(frame)
 
@@ -601,7 +556,7 @@ def read_resources_from_hud():
 # =========================
 
 def _screen_size():
-    return MONITOR["width"], MONITOR["height"]
+    return screen_utils.MONITOR["width"], screen_utils.MONITOR["height"]
 
 def _to_px(nx, ny):
     W, H = _screen_size()
