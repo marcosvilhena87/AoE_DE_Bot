@@ -51,7 +51,14 @@ class TestResourceDebugImages(TestCase):
         with patch("script.common._grab_frame", side_effect=fake_grab_frame), \
              patch(
                  "script.common.locate_resource_panel",
-                 return_value={"wood_stockpile": (0, 0, 50, 50)},
+                 return_value={
+                     "wood_stockpile": (0, 0, 50, 50),
+                     "food_stockpile": (50, 0, 50, 50),
+                     "gold": (100, 0, 50, 50),
+                     "stone": (150, 0, 50, 50),
+                     "population": (200, 0, 50, 50),
+                     "idle_villager": (250, 0, 50, 50),
+                 },
              ), \
              patch("script.common._ocr_digits_better", side_effect=fake_ocr), \
              patch("script.common.pytesseract.image_to_string", return_value=""), \
@@ -74,10 +81,15 @@ class TestResourceDebugImages(TestCase):
                 return np.zeros((bbox["height"], bbox["width"], 3), dtype=np.uint8)
             return np.zeros((600, 600, 3), dtype=np.uint8)
 
-        ocr_results = [
+        ocr_sequence = [
             ("123", {"text": ["123"]}, np.zeros((1, 1), dtype=np.uint8)),
             ("", {"text": [""]}, np.zeros((1, 1), dtype=np.uint8)),
         ]
+
+        def fake_ocr(gray):
+            if ocr_sequence:
+                return ocr_sequence.pop(0)
+            return ("0", {"text": ["0"]}, np.zeros((1, 1), dtype=np.uint8))
 
         with patch("script.common._grab_frame", side_effect=fake_grab_frame), \
              patch(
@@ -85,9 +97,13 @@ class TestResourceDebugImages(TestCase):
                  return_value={
                      "wood_stockpile": (0, 0, 50, 50),
                      "food_stockpile": (50, 0, 50, 50),
+                     "gold": (100, 0, 50, 50),
+                     "stone": (150, 0, 50, 50),
+                     "population": (200, 0, 50, 50),
+                     "idle_villager": (250, 0, 50, 50),
                  },
              ), \
-             patch("script.common._ocr_digits_better", side_effect=ocr_results), \
+             patch("script.common._ocr_digits_better", side_effect=fake_ocr), \
              patch("script.common.pytesseract.image_to_string", return_value=""), \
              patch("script.common.cv2.imwrite") as imwrite_mock:
             result = common.read_resources_from_hud()
