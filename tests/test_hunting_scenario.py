@@ -60,7 +60,7 @@ class TestHuntingScenario(TestCase):
         )
 
         with patch(
-            "script.common.wait_hud", return_value=((0, 0, 0, 0), "asset")
+            "script.hud.wait_hud", return_value=((0, 0, 0, 0), "asset")
         ) as wait_mock, patch(
             "script.config_utils.parse_scenario_info", return_value=info
         ) as parse_mock, patch("script.villager.econ_loop") as econ_mock:

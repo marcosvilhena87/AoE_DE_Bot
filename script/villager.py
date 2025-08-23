@@ -2,6 +2,7 @@ import logging
 import time
 
 import script.common as common
+import script.hud as hud
 
 
 def select_idle_villager():
@@ -51,7 +52,7 @@ def build_house():
     if not isinstance(wood, int):
         logging.debug("Refreshing HUD anchor before final resource read")
         try:
-            common.wait_hud()
+            hud.wait_hud()
             resources = common.read_resources_from_hud()
         except Exception as exc:
             logging.error(
@@ -95,7 +96,7 @@ def build_house():
         time.sleep(0.5)
 
         try:
-            cur, limit = common.read_population_from_hud()
+            cur, limit = hud.read_population_from_hud()
         except Exception as exc:  # pragma: no cover - falha de OCR
             logging.warning("Falha ao ler população: %s", exc)
             limit = common.POP_CAP
