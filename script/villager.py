@@ -231,6 +231,10 @@ def econ_loop(minutes=5):
             if idle_before is None:
                 logging.error("Failed to read idle villager count; ending economic loop")
                 break
+            if "idle_villager" in resources._LAST_READ_FROM_CACHE:
+                logging.warning(
+                    "Using cached idle villager count; confidence degraded"
+                )
             took_from_wood = False
 
             if idle_before > 0:
@@ -258,6 +262,10 @@ def econ_loop(minutes=5):
                 if idle_after is None:
                     logging.error("Failed to read idle villager count after selection")
                     idle_after = 0
+                elif "idle_villager" in resources._LAST_READ_FROM_CACHE:
+                    logging.warning(
+                        "Using cached idle villager count; confidence degraded"
+                    )
                 if idle_after >= idle_before:
                     input_utils._click_norm(wood_x, wood_y)
                     took_from_wood = True
