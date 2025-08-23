@@ -41,7 +41,7 @@ class TestMissingResourceBar(TestCase):
         common.POP_CAP = 5
         with patch(
             "script.common.read_resources_from_hud",
-            return_value={"food_stockpile": None},
+            side_effect=common.ResourceReadError("missing"),
         ), \
              patch("script.town_center.select_idle_villager"), \
              patch("script.town_center.build_house"):
@@ -52,6 +52,6 @@ class TestMissingResourceBar(TestCase):
         common.POP_CAP = 4
         with patch(
             "script.common.read_resources_from_hud",
-            return_value={"wood_stockpile": None},
+            side_effect=common.ResourceReadError("missing"),
         ):
             self.assertFalse(villager.build_house())

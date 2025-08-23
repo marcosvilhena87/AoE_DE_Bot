@@ -106,10 +106,10 @@ class TestResourceDebugImages(TestCase):
              patch("script.common._ocr_digits_better", side_effect=fake_ocr), \
              patch("script.common.pytesseract.image_to_string", return_value=""), \
              patch("script.common.cv2.imwrite") as imwrite_mock:
-            result = common.read_resources_from_hud()
+            with self.assertRaises(common.ResourceReadError) as ctx:
+                common.read_resources_from_hud()
 
-        self.assertEqual(result["wood_stockpile"], 123)
-        self.assertIsNone(result["food_stockpile"])
+        self.assertIn("food_stockpile", str(ctx.exception))
 
         paths = [call.args[0] for call in imwrite_mock.call_args_list]
         debug_dir = common.ROOT / "debug"
