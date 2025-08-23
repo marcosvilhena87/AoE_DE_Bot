@@ -316,8 +316,30 @@ def execute_ocr(gray, conf_threshold=None):
             )
             digits = ""
             low_conf = True
+    if low_conf:
+        alt_gray = cv2.bitwise_not(gray)
+        digits2, data2, mask2 = _ocr_digits_better(alt_gray)
+        confidences2 = [int(c) for c in data2.get("conf", []) if c != "-1"]
+        low_conf2 = False
+        if digits2 and confidences2:
+            mean_conf2 = sum(confidences2) / len(confidences2)
+            max_conf2 = max(confidences2)
+            if mean_conf2 < conf_threshold or max_conf2 < conf_threshold:
+                logging.debug(
+                    "Clearing low-confidence OCR result (second attempt): "
+                    "mean=%.1f max=%.1f digits=%s",
+                    mean_conf2,
+                    max_conf2,
+                    digits2,
+                )
+                digits2 = ""
+                low_conf2 = True
+        if digits2:
+            return digits2, data2, mask2
+        digits, data, mask = digits2, data2, mask2
+        low_conf = low_conf2
 
-    if not digits and not low_conf:
+    if not digits:
         text = pytesseract.image_to_string(
             gray,
             config="--psm 6 --oem 3 -c tessedit_char_whitelist=0123456789",
