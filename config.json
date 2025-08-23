@@ -8,8 +8,8 @@
   "debug": false,
   "ocr_debug": true,
   "verbose_logging": false,
-  "ocr_conf_threshold": 60,
-  "ocr_kernel_size": 2,
+  "ocr_conf_threshold": 45,
+  "ocr_kernel_size": 3,
   "ocr_psm_list": [6, 7, 8, 10, 13],
   "tesseract_path": "C:\\Program Files\\Tesseract-OCR\\tesseract.exe",
   "keys": {
@@ -21,19 +21,19 @@
     "granary": "g",
     "storage_pit": "s"
   },
-    "resource_panel": {
-      "match_threshold": 0.8,
-      "scales": [0.9, 0.95, 1.0, 1.05, 1.1],
-      "roi_padding_left": 2,
-      "roi_padding_right": 2,
-      "min_width": 60,
-      "idle_roi_extra_width": 20,
-      "top_pct": 0.08,
-      "height_pct": 0.84,
-      "icon_trim_pct": [0.25, 0.20, 0.20, 0.20, 0.20, 0.20],
-      "right_trim_pct": 0.02,
-      "debug_failed_ocr": true
-    },
+  "resource_panel": {
+    "match_threshold": 0.8,
+    "scales": [0.9, 0.95, 1.0, 1.05, 1.1],
+    "roi_padding_left": 4,
+    "roi_padding_right": 2,
+    "min_width": 110,
+    "idle_roi_extra_width": 20,
+    "top_pct": 0.08,
+    "height_pct": 0.84,
+    "icon_trim_pct": [0.25, 0.20, 0.20, 0.20, 0.20, 0.20],
+    "right_trim_pct": 0.02,
+    "debug_failed_ocr": true
+  },
     "profiles": {
       "aoe1de": {
         "resource_panel": {
