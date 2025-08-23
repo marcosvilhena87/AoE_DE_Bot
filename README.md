@@ -1,5 +1,7 @@
 # AoE DE Bot
 
+> **Note:** This project is intended for **Age of Empires I: Definitive Edition**. It is not compatible with **Age of Empires II: Definitive Edition**. For example, it targets campaigns such as *Ascent of Egypt* from Age of Empires I.
+
 ## Setup
 
 1. Install [Tesseract OCR](https://github.com/tesseract-ocr/tesseract).
