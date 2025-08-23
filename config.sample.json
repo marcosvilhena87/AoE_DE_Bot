@@ -43,6 +43,13 @@
     "anchor_right_trim_pct": 0.02,
     "debug_failed_ocr": false
   },
+  "idle_villager_roi": {
+    "top_pct": 0.12,
+    "height_pct": 0.20,
+    "left_pct": 0.78,
+    "width_pct": 0.10
+  },
+  "//idle_villager_roi": "Valores como percentuais da resolução atual.",
     "profiles": {
       "aoe1de": {
         "resource_panel": {
