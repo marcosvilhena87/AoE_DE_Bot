@@ -114,11 +114,11 @@ class TestResourceOcrFailure(TestCase):
         with patch("script.resources.detect_resource_regions", side_effect=fake_detect), \
              patch("script.screen_utils._grab_frame", side_effect=fake_grab_frame), \
              patch("script.resources._ocr_digits_better", side_effect=fake_ocr), \
-             patch("script.resources.pytesseract.image_to_string") as img2str_mock, \
+             patch("script.resources.pytesseract.image_to_string", return_value="") as img2str_mock, \
              patch("script.resources.cv2.imwrite"), \
              self.assertRaises(common.ResourceReadError):
             resources.read_resources_from_hud(["wood_stockpile"])
-        img2str_mock.assert_not_called()
+        img2str_mock.assert_called_once()
 
     def test_cached_value_used_for_optional_failure(self):
         def fake_detect(frame, required_icons):

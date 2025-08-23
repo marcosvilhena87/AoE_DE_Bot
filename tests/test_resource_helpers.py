@@ -68,18 +68,30 @@ class TestExecuteOcr(TestCase):
         gray = np.zeros((5, 5), dtype=np.uint8)
         data = {"text": ["123"], "conf": ["10", "20", "30"]}
         with patch("script.resources._ocr_digits_better", return_value=("123", data, None)), \
-             patch("script.resources.pytesseract.image_to_string") as img2str_mock:
+             patch("script.resources.pytesseract.image_to_string", return_value="") as img2str_mock:
             digits, _, _ = resources.execute_ocr(gray, conf_threshold=60)
         self.assertEqual(digits, "")
-        img2str_mock.assert_not_called()
+        img2str_mock.assert_called_once()
 
     def test_execute_ocr_rejects_low_mean_confidence(self):
         gray = np.zeros((5, 5), dtype=np.uint8)
         data = {"text": ["12"], "conf": ["80", "20"]}
         with patch("script.resources._ocr_digits_better", return_value=("12", data, None)), \
-             patch("script.resources.pytesseract.image_to_string") as img2str_mock:
+             patch("script.resources.pytesseract.image_to_string", return_value="") as img2str_mock:
             digits, _, _ = resources.execute_ocr(gray, conf_threshold=60)
         self.assertEqual(digits, "")
+        img2str_mock.assert_called_once()
+
+    def test_execute_ocr_second_attempt_success(self):
+        gray = np.zeros((5, 5), dtype=np.uint8)
+        data1 = {"text": ["123"], "conf": ["10", "20", "30"]}
+        data2 = {"text": ["789"], "conf": ["80", "90", "100"]}
+        with patch(
+            "script.resources._ocr_digits_better",
+            side_effect=[("123", data1, None), ("789", data2, None)],
+        ), patch("script.resources.pytesseract.image_to_string") as img2str_mock:
+            digits, _, _ = resources.execute_ocr(gray, conf_threshold=60)
+        self.assertEqual(digits, "789")
         img2str_mock.assert_not_called()
 
 
