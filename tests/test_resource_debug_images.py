@@ -85,6 +85,7 @@ class TestResourceDebugImages(TestCase):
         ocr_sequence = [
             ("123", {"text": ["123"]}, np.zeros((1, 1), dtype=np.uint8)),
             ("", {"text": [""]}, np.zeros((1, 1), dtype=np.uint8)),
+            ("", {"text": [""]}, np.zeros((1, 1), dtype=np.uint8)),
         ]
 
         def fake_ocr(gray):
