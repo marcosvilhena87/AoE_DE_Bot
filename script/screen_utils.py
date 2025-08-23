@@ -1,6 +1,7 @@
 """Screen capture and template utilities."""
 
 import logging
+from contextlib import contextmanager
 from pathlib import Path
 
 import numpy as np
@@ -14,13 +15,52 @@ ASSETS = ROOT / "assets"
 
 CFG = load_config()
 
-SCT = mss()
-MONITOR = SCT.monitors[1]
+SCT = None
+MONITOR = None
+
+
+@contextmanager
+def mss_session():
+    """Provide an ``mss`` instance and ensure it is closed."""
+    sct = mss()
+    try:
+        yield sct
+    finally:
+        close = getattr(sct, "close", None)
+        if close:
+            close()
+
+
+def init_sct():
+    """Initialise global screen capture resources."""
+    global SCT, MONITOR
+    if SCT is None:
+        SCT = mss()
+        MONITOR = SCT.monitors[1]
+
+
+def teardown_sct():
+    """Release global screen capture resources."""
+    global SCT, MONITOR
+    if SCT is not None:
+        close = getattr(SCT, "close", None)
+        if close:
+            close()
+        SCT = None
+        MONITOR = None
+
+
+def get_monitor():
+    """Return the active monitor, initialising resources if needed."""
+    if MONITOR is None:
+        init_sct()
+    return MONITOR
 
 
 def _grab_frame(bbox=None):
     """Capture a frame from the screen."""
-    region = bbox or MONITOR
+    init_sct()
+    region = bbox or get_monitor()
     img = np.array(SCT.grab(region))[:, :, :3]
     return img
 

@@ -7,9 +7,14 @@ then the digit area within the first resource slot. It outputs ``top_pct``,
 reference.
 """
 
-from mss import mss
+import os
+import sys
+
 import cv2
 import numpy as np
+
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+import script.screen_utils as screen_utils
 
 
 def _select_roi(image, window_name):
@@ -20,7 +25,7 @@ def _select_roi(image, window_name):
 
 
 def main():
-    with mss() as sct:
+    with screen_utils.mss_session() as sct:
         monitor = sct.monitors[1]
         screenshot = np.array(sct.grab(monitor))[:, :, :3]
 

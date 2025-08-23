@@ -21,7 +21,8 @@ def _screen_size() -> tuple[int, int]:
         1920 1080
     """
 
-    return screen_utils.MONITOR["width"], screen_utils.MONITOR["height"]
+    monitor = screen_utils.get_monitor()
+    return monitor["width"], monitor["height"]
 
 
 def _to_px(nx: float, ny: float) -> tuple[int, int]:
