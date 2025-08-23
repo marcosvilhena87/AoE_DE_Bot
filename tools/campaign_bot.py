@@ -40,7 +40,7 @@ def _ocr_digits_better(gray):
     """Delegate to resource helper; patched in tests."""
     return resources._ocr_digits_better(gray)
 
-def read_resources_from_hud():
+def read_resources_from_hud(required_icons=None):
     """Delegate to :func:`script.resources.read_resources_from_hud` using patched helpers."""
     common.HUD_ANCHOR = HUD_ANCHOR
     original_locate = resources.locate_resource_panel
@@ -58,7 +58,7 @@ def read_resources_from_hud():
     screen_utils._grab_frame = _grab_frame
     resources._ocr_digits_better = wrapper
     try:
-        return resources.read_resources_from_hud()
+        return resources.read_resources_from_hud(required_icons)
     finally:
         resources.locate_resource_panel = original_locate
         screen_utils._grab_frame = original_grab

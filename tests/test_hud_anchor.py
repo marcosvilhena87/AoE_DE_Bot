@@ -136,7 +136,14 @@ class TestHudAnchorTools(TestCase):
         with patch("tools.campaign_bot.locate_resource_panel", return_value={}), \
              patch("tools.campaign_bot._grab_frame", side_effect=fake_grab_frame), \
              patch("tools.campaign_bot._ocr_digits_better", side_effect=fake_ocr):
-            result = cb.read_resources_from_hud()
+            result = cb.read_resources_from_hud([
+                "wood_stockpile",
+                "food_stockpile",
+                "gold",
+                "stone",
+                "population",
+                "idle_villager",
+            ])
 
         expected = {
             "wood_stockpile": 100,
