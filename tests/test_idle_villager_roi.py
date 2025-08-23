@@ -38,11 +38,12 @@ import script.resources as resources
 
 
 class TestIdleVillagerROI(TestCase):
-    def test_idle_villager_roi_matches_icon_bounds(self):
+    def test_idle_villager_roi_expands_for_digits(self):
         frame = np.zeros((50, 100, 3), dtype=np.uint8)
         panel_box = (10, 15, 80, 20)  # x, y, w, h
         xi, yi = 5, 4
         icon_h, icon_w = 5, 5
+        extra = 10
 
         def fake_imread(path, flags=0):
             name = os.path.splitext(os.path.basename(path))[0]
@@ -79,13 +80,15 @@ class TestIdleVillagerROI(TestCase):
                     "roi_padding_right": 0,
                     "scales": [1.0],
                     "match_threshold": 0.5,
+                    "idle_roi_extra_width": extra,
+                    "min_width": 0,
                 },
             ):
             regions = resources.locate_resource_panel(frame)
 
         self.assertIn("idle_villager", regions)
         roi = regions["idle_villager"]
-        expected = (panel_box[0] + xi, panel_box[1] + yi, icon_w, icon_h)
+        expected = (panel_box[0] + xi, panel_box[1] + yi, icon_w + extra, icon_h)
         self.assertEqual(roi, expected)
-        self.assertGreater(roi[2], 0)
+        self.assertGreater(roi[2], icon_w)
         self.assertGreater(roi[3], 0)
