@@ -20,6 +20,21 @@ def main():
         logging.error(str(e))
         logging.info("Dando mais 25s para você ajustar a câmera/HUD (fallback)…")
         time.sleep(25)
+        try:
+            hud, asset = common.wait_hud(timeout=90)
+            logging.info(
+                "HUD detectada em %s usando '%s'. Rodando rotina econômica…",
+                hud,
+                asset,
+            )
+        except RuntimeError as e2:
+            logging.error(str(e2))
+            logging.warning(
+                "HUD não detectada após tentativa extra; rotina continuará sem HUD ancorada."
+            )
+            raise SystemExit(
+                "HUD não detectada após duas tentativas; encerrando script."
+            )
 
     info = common.parse_scenario_info("campaigns/Ascent_of_Egypt/1.Hunting.txt")
     common.CURRENT_POP = info.starting_villagers
