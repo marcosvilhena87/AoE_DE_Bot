@@ -28,6 +28,13 @@
     "height_pct": 0.84,
     "debug_failed_ocr": true
   },
+    "profiles": {
+    "aoe1de": {
+      "resource_panel": {
+        "match_threshold": 0.82
+      }
+    }
+  },
   "areas": {
     "food_spot": [0.46, 0.7],
     "wood_spot": [0.62, 0.55],
