@@ -346,8 +346,8 @@ def locate_resource_panel(frame):
     pad_left = res_cfg.get("roi_padding_left", 0)
     pad_right = res_cfg.get("roi_padding_right", 0)
     min_width = res_cfg.get("min_width", 18)
-    top_pct = res_cfg.get("top_pct", 0.08)
-    height_pct = res_cfg.get("height_pct", 0.84)
+    top_pct = profile_res.get("top_pct", res_cfg.get("top_pct", 0.08))
+    height_pct = profile_res.get("height_pct", res_cfg.get("height_pct", 0.84))
 
     icons_dir = ASSETS / "icons"
     names = [
@@ -465,12 +465,20 @@ def read_resources_from_hud():
 
             slice_w = w / 6
             res_cfg = CFG.get("resource_panel", {})
-            top_pct = res_cfg.get("top_pct", 0.08)
-            height_pct = res_cfg.get("height_pct", 0.84)
-            icon_trims = res_cfg.get("icon_trim_pct", 0.18)
+            profile = CFG.get("profile")
+            profile_res = CFG.get("profiles", {}).get(profile, {}).get(
+                "resource_panel", {}
+            )
+            top_pct = profile_res.get("top_pct", res_cfg.get("top_pct", 0.08))
+            height_pct = profile_res.get("height_pct", res_cfg.get("height_pct", 0.84))
+            icon_trims = profile_res.get(
+                "icon_trim_pct", res_cfg.get("icon_trim_pct", 0.18)
+            )
             if not isinstance(icon_trims, (list, tuple)):
                 icon_trims = [icon_trims] * 6
-            right_trim = res_cfg.get("right_trim_pct", 0.02)
+            right_trim = profile_res.get(
+                "right_trim_pct", res_cfg.get("right_trim_pct", 0.02)
+            )
 
             top = y + int(top_pct * h)
             height = int(height_pct * h)
@@ -504,14 +512,28 @@ def read_resources_from_hud():
             y = HUD_ANCHOR["top"]
 
             res_cfg = CFG.get("resource_panel", {})
-            top_pct = res_cfg.get("anchor_top_pct", 0.15)
-            height_pct = res_cfg.get("anchor_height_pct", 0.70)
-            icon_trims = res_cfg.get(
-                "anchor_icon_trim_pct", [0.42, 0.42, 0.35, 0.35, 0.35, 0.35]
+            profile = CFG.get("profile")
+            profile_res = CFG.get("profiles", {}).get(profile, {}).get(
+                "resource_panel", {}
+            )
+            top_pct = profile_res.get(
+                "anchor_top_pct", res_cfg.get("anchor_top_pct", 0.15)
+            )
+            height_pct = profile_res.get(
+                "anchor_height_pct", res_cfg.get("anchor_height_pct", 0.70)
+            )
+            icon_trims = profile_res.get(
+                "anchor_icon_trim_pct",
+                res_cfg.get(
+                    "anchor_icon_trim_pct",
+                    [0.42, 0.42, 0.35, 0.35, 0.35, 0.35],
+                ),
             )
             if not isinstance(icon_trims, (list, tuple)):
                 icon_trims = [icon_trims] * 6
-            right_trim = res_cfg.get("anchor_right_trim_pct", 0.02)
+            right_trim = profile_res.get(
+                "anchor_right_trim_pct", res_cfg.get("anchor_right_trim_pct", 0.02)
+            )
 
             slice_w = panel_w / 6
             top = y + int(top_pct * panel_h)
