@@ -391,7 +391,10 @@ def handle_ocr_failure(frame, regions, results, required_icons):
             ", ".join(roi_logs),
         )
 
-def read_resources_from_hud(required_icons: Iterable[str] | None = None):
+def read_resources_from_hud(
+    required_icons: Iterable[str] | None = None,
+    icons_to_read: Iterable[str] | None = None,
+):
     frame = screen_utils._grab_frame()
     if required_icons is None:
         required_icons = [
@@ -405,12 +408,20 @@ def read_resources_from_hud(required_icons: Iterable[str] | None = None):
     else:
         required_icons = list(required_icons)
 
+    if icons_to_read is None:
+        icons_to_read = list(required_icons)
+    else:
+        icons_to_read = list(set(required_icons).union(icons_to_read))
+
     required_set = set(required_icons)
 
     regions = detect_resource_regions(frame, required_icons)
 
     results = {}
-    for name, (x, y, w, h) in regions.items():
+    for name in icons_to_read:
+        if name not in regions:
+            continue
+        x, y, w, h = regions[name]
         roi = frame[y : y + h, x : x + w]
         gray = preprocess_roi(roi)
         digits, data, mask = execute_ocr(gray)
@@ -443,5 +454,6 @@ def read_resources_from_hud(required_icons: Iterable[str] | None = None):
             results[name] = value
             _LAST_RESOURCE_VALUES[name] = value
 
-    handle_ocr_failure(frame, regions, results, required_icons)
+    filtered_regions = {n: regions[n] for n in icons_to_read if n in regions}
+    handle_ocr_failure(frame, filtered_regions, results, required_icons)
     return results
