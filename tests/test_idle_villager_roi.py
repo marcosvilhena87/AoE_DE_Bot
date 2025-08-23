@@ -96,6 +96,23 @@ class TestIdleVillagerROI(TestCase):
         self.assertGreater(roi[2], icon_w)
         self.assertGreater(roi[3], 0)
 
+    def test_detect_resource_regions_uses_configured_idle_roi(self):
+        frame = np.zeros((50, 100, 3), dtype=np.uint8)
+        cfg = {
+            "left_pct": 0.5,
+            "top_pct": 0.25,
+            "width_pct": 0.05,
+            "height_pct": 0.05,
+        }
+        expected = (100, 50, 40, 20)
+        with patch("script.resources.locate_resource_panel", return_value={}), \
+            patch("script.resources.input_utils._screen_size", return_value=(200, 200)), \
+            patch.dict(resources.CFG, {"idle_villager_roi": cfg}, clear=False), \
+            patch.object(common, "HUD_ANCHOR", None):
+            regions = resources.detect_resource_regions(frame, ["idle_villager"])
+
+        self.assertEqual(regions["idle_villager"], expected)
+
     def test_count_idle_villagers_via_hotkey_stops_on_no_decrease(self):
         counts = iter([
             {"idle_villager": 3},

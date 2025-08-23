@@ -195,6 +195,22 @@ def detect_resource_regions(frame, required_icons):
     """Detect resource value regions on the HUD."""
 
     regions = locate_resource_panel(frame)
+    idle_cfg = CFG.get("idle_villager_roi")
+    if idle_cfg:
+        W, H = input_utils._screen_size()
+        left = int(idle_cfg.get("left_pct", 0) * W)
+        top = int(idle_cfg.get("top_pct", 0) * H)
+        width = int(idle_cfg.get("width_pct", 0) * W)
+        height = int(idle_cfg.get("height_pct", 0) * H)
+        regions["idle_villager"] = (
+            left,
+            top,
+            max(40, width),
+            max(20, height),
+        )
+        logger.debug(
+            "Custom ROI aplicada para idle_villager: %s", regions["idle_villager"]
+        )
     missing = [name for name in required_icons if name not in regions]
 
     if missing and common.HUD_ANCHOR:
