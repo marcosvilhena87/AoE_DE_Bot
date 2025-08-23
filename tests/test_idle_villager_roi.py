@@ -41,7 +41,7 @@ import script.villager as villager
 
 
 class TestIdleVillagerROI(TestCase):
-    def test_idle_villager_roi_matches_icon_width(self):
+    def test_idle_villager_roi_expands_for_digits(self):
         frame = np.zeros((50, 100, 3), dtype=np.uint8)
         panel_box = (10, 15, 80, 20)  # x, y, w, h
         xi, yi = 5, 4
