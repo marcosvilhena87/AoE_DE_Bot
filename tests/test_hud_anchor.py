@@ -44,7 +44,7 @@ class TestHudAnchor(TestCase):
     def test_wait_hud_sets_asset(self):
         common.HUD_ANCHOR = None
         fake_frame = np.zeros((100, 100, 3), dtype=np.uint8)
-        with patch("script.common._grab_frame", return_value=fake_frame), \
+        with patch("script.screen_utils._grab_frame", return_value=fake_frame), \
              patch("script.common.find_template", return_value=((10, 20, 30, 40), 0.9, None)):
             anchor, asset = common.wait_hud(timeout=1)
         self.assertEqual(asset, "assets/resources.png")
@@ -69,7 +69,7 @@ class TestHudAnchor(TestCase):
             return d, {"text": [d]}, np.zeros((1, 1), dtype=np.uint8)
 
         with patch("script.common.locate_resource_panel", return_value={}), \
-             patch("script.common._grab_frame", side_effect=fake_grab_frame), \
+             patch("script.screen_utils._grab_frame", side_effect=fake_grab_frame), \
              patch("script.common._ocr_digits_better", side_effect=fake_ocr):
             result = common.read_resources_from_hud()
 
