@@ -141,3 +141,25 @@ class TestIdleVillagerROI(TestCase):
         self.assertEqual(selections, 2)
         self.assertEqual(delays[0], None)
         self.assertTrue(all(d == 0.1 for d in delays[1:]))
+
+    def test_count_idle_villagers_via_hotkey_stops_on_threshold(self):
+        counts = iter([
+            {"idle_villager": 4},
+            {"idle_villager": 3},
+            {"idle_villager": 2},
+            {"idle_villager": 1},
+        ])
+
+        def fake_read(keys, force_delay=None):
+            return next(counts)
+
+        with patch("script.villager.select_idle_villager") as mock_sel, patch(
+            "script.resources.read_resources_from_hud", side_effect=fake_read
+        ):
+            initial, selections = villager.count_idle_villagers_via_hotkey(
+                delay=0, stop_threshold=2, return_selections=True
+            )
+
+        self.assertEqual(initial, 4)
+        self.assertEqual(selections, 2)
+        self.assertEqual(mock_sel.call_count, 2)
