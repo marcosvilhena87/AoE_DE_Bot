@@ -390,9 +390,9 @@ def locate_resource_panel(frame):
         "match_threshold", res_cfg.get("match_threshold", 0.8)
     )
     scales = res_cfg.get("scales", CFG.get("scales", [1.0]))
-    pad_left = res_cfg.get("roi_padding_left", 0)
-    pad_right = res_cfg.get("roi_padding_right", 0)
-    min_width = res_cfg.get("min_width", 18)
+    pad_left = res_cfg.get("roi_padding_left", 2)
+    pad_right = res_cfg.get("roi_padding_right", 2)
+    min_width = res_cfg.get("min_width", 60)
     top_pct = profile_res.get("top_pct", res_cfg.get("top_pct", 0.08))
     height_pct = profile_res.get("height_pct", res_cfg.get("height_pct", 0.84))
     _load_icon_templates()
@@ -524,7 +524,11 @@ def read_resources_from_hud():
             top_pct = profile_res.get("top_pct", res_cfg.get("top_pct", 0.08))
             height_pct = profile_res.get("height_pct", res_cfg.get("height_pct", 0.84))
             icon_trims = profile_res.get(
-                "icon_trim_pct", res_cfg.get("icon_trim_pct", 0.18)
+                "icon_trim_pct",
+                res_cfg.get(
+                    "icon_trim_pct",
+                    [0.25, 0.20, 0.20, 0.20, 0.20, 0.20],
+                ),
             )
             if not isinstance(icon_trims, (list, tuple)):
                 icon_trims = [icon_trims] * 6
@@ -539,7 +543,7 @@ def read_resources_from_hud():
                 icon_trim = icon_trims[idx] if idx < len(icon_trims) else icon_trims[-1]
                 left = x + int(idx * slice_w + icon_trim * slice_w)
                 right_limit = x + int((idx + 1) * slice_w - right_trim * slice_w)
-                width = max(18, right_limit - left)
+                width = max(60, right_limit - left)
                 regions[name] = (left, top, width, height)
         else:
             # Fallback: estimate the resource bar position from the previously
@@ -587,7 +591,7 @@ def read_resources_from_hud():
                 icon_trim = icon_trims[idx] if idx < len(icon_trims) else icon_trims[-1]
                 left = x + int(idx * slice_w + icon_trim * slice_w)
                 right_limit = x + int((idx + 1) * slice_w - right_trim * slice_w)
-                width = max(10, right_limit - left)
+                width = max(60, right_limit - left)
                 regions[name] = (left, top, width, height)
 
         missing = [name for name in required_icons if name not in regions]
