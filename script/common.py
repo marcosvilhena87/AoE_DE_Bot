@@ -590,10 +590,17 @@ def read_resources_from_hud():
         )
 
     results = {}
-    rois = {}
+    h_full, w_full = frame.shape[:2]
     for name, (x, y, w, h) in regions.items():
-        roi = _grab_frame({"left": x, "top": y, "width": w, "height": h})
-        rois[name] = roi
+        x1, y1 = max(x, 0), max(y, 0)
+        x2, y2 = min(x + w, w_full), min(y + h, h_full)
+        roi = frame[y1:y2, x1:x2]
+        if roi.shape[0] != h or roi.shape[1] != w:
+            padded = np.zeros((h, w, 3), dtype=frame.dtype)
+            pad_y = y1 - y
+            pad_x = x1 - x
+            padded[pad_y:pad_y + roi.shape[0], pad_x:pad_x + roi.shape[1]] = roi
+            roi = padded
         gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
         gray = cv2.medianBlur(gray, 3)
 
@@ -648,7 +655,16 @@ def read_resources_from_hud():
         roi_paths = []
         roi_logs = []
         for name in failed:
-            roi = rois[name]
+            x, y, w, h = regions[name]
+            x1, y1 = max(x, 0), max(y, 0)
+            x2, y2 = min(x + w, w_full), min(y + h, h_full)
+            roi = frame[y1:y2, x1:x2]
+            if roi.shape[0] != h or roi.shape[1] != w:
+                padded = np.zeros((h, w, 3), dtype=frame.dtype)
+                pad_y = y1 - y
+                pad_x = x1 - x
+                padded[pad_y:pad_y + roi.shape[0], pad_x:pad_x + roi.shape[1]] = roi
+                roi = padded
             roi_path = debug_dir / f"resource_{name}_roi_{ts}.png"
             cv2.imwrite(str(roi_path), roi)
             roi_paths.append(str(roi_path))
