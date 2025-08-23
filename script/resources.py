@@ -404,7 +404,28 @@ def handle_ocr_failure(frame, regions, results, required_icons):
 def read_resources_from_hud(
     required_icons: Iterable[str] | None = None,
     icons_to_read: Iterable[str] | None = None,
+    force_delay: float | None = None,
 ):
+    """Read resource values displayed on the HUD.
+
+    Parameters
+    ----------
+    required_icons : Iterable[str] | None, optional
+        Icons that must be successfully read or a
+        :class:`common.ResourceReadError` is raised. When ``None`` the
+        default set of resource icons is used.
+    icons_to_read : Iterable[str] | None, optional
+        Additional icons to attempt reading beyond those required. If
+        ``None`` only ``required_icons`` are read.
+    force_delay : float | None, optional
+        When provided, sleep for the given amount of seconds before
+        grabbing a frame from the screen. This is useful when a hotkey has
+        just been pressed and the HUD may need a short time to update.
+    """
+
+    if force_delay is not None:
+        time.sleep(force_delay)
+
     frame = screen_utils._grab_frame()
     if required_icons is None:
         required_icons = [
