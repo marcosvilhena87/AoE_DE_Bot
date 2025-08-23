@@ -21,32 +21,38 @@ def main():
     )
     args = parser.parse_args()
 
+    logging.basicConfig(
+        level=logging.DEBUG if common.CFG.get("verbose_logging") else logging.INFO,
+        format="%(asctime)s - %(levelname)s - %(message)s",
+    )
+    logger = logging.getLogger("campaign_bot")
+
     screen_utils.init_sct()
     try:
-        logging.info(
+        logger.info(
             "Entre na missão da campanha (Hunting). O script inicia quando detectar a HUD…",
         )
         try:
             anchor, asset = hud.wait_hud(timeout=90)
-            logging.info(
+            logger.info(
                 "HUD detectada em %s usando '%s'. Rodando rotina econômica…",
                 anchor,
                 asset,
             )
         except RuntimeError as e:
-            logging.error(str(e))
-            logging.info("Dando mais 25s para você ajustar a câmera/HUD (fallback)…")
+            logger.error(str(e))
+            logger.info("Dando mais 25s para você ajustar a câmera/HUD (fallback)…")
             time.sleep(25)
             try:
                 anchor, asset = hud.wait_hud(timeout=90)
-                logging.info(
+                logger.info(
                     "HUD detectada em %s usando '%s'. Rodando rotina econômica…",
                     anchor,
                     asset,
                 )
             except RuntimeError as e2:
-                logging.error(str(e2))
-                logging.warning(
+                logger.error(str(e2))
+                logger.warning(
                     "HUD não detectada após tentativa extra; rotina continuará sem HUD ancorada."
                 )
                 raise SystemExit(
@@ -59,7 +65,7 @@ def main():
         common.TARGET_POP = info.objective_villagers
 
         econ_loop(minutes=common.CFG["loop_minutes"])
-        logging.info("Rotina concluída.")
+        logger.info("Rotina concluída.")
     finally:
         screen_utils.teardown_sct()
 

@@ -23,6 +23,8 @@ import script.hud as hud
 from script.villager import econ_loop
 from script.config_utils import parse_scenario_info
 
+logger = logging.getLogger(__name__)
+
 
 def main() -> None:
     """Run the automation routine for the *Hunting* mission.
@@ -40,17 +42,17 @@ def main() -> None:
         ``config.json``.
     """
 
-    logging.info("Entre na missão da campanha (Hunting). O script inicia quando detectar a HUD…")
+    logger.info("Entre na missão da campanha (Hunting). O script inicia quando detectar a HUD…")
 
     try:
         anchor, asset = hud.wait_hud(timeout=90)
-        logging.info("HUD detectada em %s usando '%s'. Rodando rotina econômica…", anchor, asset)
+        logger.info("HUD detectada em %s usando '%s'. Rodando rotina econômica…", anchor, asset)
     except RuntimeError as exc:  # pragma: no cover - retry branch is defensive
-        logging.error(str(exc))
-        logging.info("Dando mais 25s para você ajustar a câmera/HUD (fallback)…")
+        logger.error(str(exc))
+        logger.info("Dando mais 25s para você ajustar a câmera/HUD (fallback)…")
         time.sleep(25)
         anchor, asset = hud.wait_hud(timeout=90)
-        logging.info("HUD detectada em %s usando '%s'. Rodando rotina econômica…", anchor, asset)
+        logger.info("HUD detectada em %s usando '%s'. Rodando rotina econômica…", anchor, asset)
 
     scenario_txt = Path(__file__).with_suffix(".txt")
     info = parse_scenario_info(scenario_txt)
@@ -61,7 +63,7 @@ def main() -> None:
     common.TARGET_POP = info.objective_villagers
 
     econ_loop(minutes=common.CFG["loop_minutes"])
-    logging.info("Rotina concluída.")
+    logger.info("Rotina concluída.")
 
 
 if __name__ == "__main__":  # pragma: no cover - manual execution entry point

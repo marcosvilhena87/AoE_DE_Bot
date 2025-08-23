@@ -3,7 +3,6 @@
 This module bundles screen-capture helpers, HUD detection and OCR routines.
 """
 
-import logging
 from pathlib import Path
 import os
 
@@ -24,10 +23,6 @@ if tesseract_cmd:
         )
     pytesseract.pytesseract.tesseract_cmd = str(tesseract_path)
 
-logging.basicConfig(
-    level=logging.DEBUG if CFG.get("verbose_logging") else logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-)
 
 # Contadores internos de população
 CURRENT_POP = 0

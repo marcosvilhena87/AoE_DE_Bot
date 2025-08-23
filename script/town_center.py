@@ -6,6 +6,8 @@ import script.resources as resources
 import script.input_utils as input_utils
 from script.villager import build_house, select_idle_villager
 
+logger = logging.getLogger(__name__)
+
 
 def train_villagers(target_pop: int):
     """Fila aldeões na Town Center até atingir ``target_pop``."""
@@ -20,13 +22,13 @@ def train_villagers(target_pop: int):
         res_vals = None
         food = None
         for attempt in range(1, 4):
-            logging.debug(
+            logger.debug(
                 "Attempt %s to read food from HUD while training villagers", attempt
             )
             try:
                 res_vals = resources.read_resources_from_hud(["food_stockpile"])
             except common.ResourceReadError as exc:
-                logging.error(
+                logger.error(
                     "Resource read error while training villagers (attempt %s/3): %s",
                     attempt,
                     exc,
@@ -35,19 +37,19 @@ def train_villagers(target_pop: int):
                 food = res_vals.get("food_stockpile")
                 if isinstance(food, int):
                     break
-                logging.warning(
+                logger.warning(
                     "food_stockpile not detected (attempt %s/3); HUD may not be updated",
                     attempt,
                 )
             if attempt < 3:
                 time.sleep(0.2)
         if not isinstance(food, int):
-            logging.error(
+            logger.error(
                 "Failed to obtain food stockpile after 3 attempts; stopping villager training"
             )
             break
         if food < 50:
-            logging.info(
+            logger.info(
                 "Comida insuficiente (%s) para treinar aldeões.",
                 food,
             )
@@ -57,11 +59,11 @@ def train_villagers(target_pop: int):
         if common.CURRENT_POP == common.POP_CAP:
             if select_idle_villager():
                 if build_house():
-                    logging.info("Casa construída para expandir população")
+                    logger.info("Casa construída para expandir população")
                 else:
-                    logging.warning("Falha ao construir casa para expandir população")
+                    logger.warning("Falha ao construir casa para expandir população")
             else:
-                logging.warning("Nenhum aldeão ocioso para construir casa")
+                logger.warning("Nenhum aldeão ocioso para construir casa")
             # Reselect the Town Center after attempting to build a house so
             # that further villager training continues from the correct
             # building.

@@ -21,10 +21,11 @@ from . import common, resources, input_utils
 ROOT = Path(__file__).resolve().parent.parent
 
 CFG = load_config()
+logger = logging.getLogger(__name__)
 
 
 def wait_hud(timeout=60):
-    logging.info("Aguardando HUD por até %ss...", timeout)
+    logger.info("Aguardando HUD por até %ss...", timeout)
     t0 = time.time()
     last_best = (-1, None)
     while time.time() - t0 < timeout:
@@ -41,7 +42,7 @@ def wait_hud(timeout=60):
                 if CFG["debug"]:
                     cv2.imwrite(f"debug_hud_{name}.png", frame)
                 x, y, w, h = box
-                logging.info("HUD detectada com template '%s'", name)
+                logger.info("HUD detectada com template '%s'", name)
                 common.HUD_ANCHOR = {
                     "left": x,
                     "top": y,
@@ -51,7 +52,7 @@ def wait_hud(timeout=60):
                 }
                 return common.HUD_ANCHOR, name
         time.sleep(0.25)
-    logging.error(
+    logger.error(
         "HUD não encontrada. Melhor score=%.3f no template '%s'. Re-capture o asset e verifique ESCALA 100%%.",
         last_best[0],
         last_best[1],
@@ -108,7 +109,7 @@ def read_population_from_hud(retries=3, conf_threshold=None, save_failed_roi=Fal
     for attempt in range(retries):
         roi = screen_utils._grab_frame(roi_bbox)
         if roi.size == 0:
-            logging.warning("Population ROI has zero size")
+            logger.warning("Population ROI has zero size")
             continue
         gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
         gray = cv2.resize(gray, None, fx=2, fy=2, interpolation=cv2.INTER_LINEAR)
@@ -129,7 +130,7 @@ def read_population_from_hud(retries=3, conf_threshold=None, save_failed_roi=Fal
             cur = int("".join(filter(str.isdigit, parts[0])) or 0)
             limit = int("".join(filter(str.isdigit, parts[1])) or 0)
             return cur, limit
-        logging.debug(
+        logger.debug(
             "OCR attempt %s failed: text='%s', conf=%s",
             attempt + 1,
             text,
@@ -137,7 +138,7 @@ def read_population_from_hud(retries=3, conf_threshold=None, save_failed_roi=Fal
         )
         time.sleep(0.1)
 
-    logging.warning(
+    logger.warning(
         "Falha ao ler população da HUD após %s tentativas; último texto='%s', conf=%s",
         retries,
         last_text,
@@ -147,7 +148,7 @@ def read_population_from_hud(retries=3, conf_threshold=None, save_failed_roi=Fal
         ts = int(time.time() * 1000)
         cv2.imwrite(str(ROOT / f"debug_pop_roi_{ts}.png"), last_roi)
         cv2.imwrite(str(ROOT / f"debug_pop_thresh_{ts}.png"), last_thresh)
-        logging.info(
+        logger.info(
             "ROI salva; texto extraído: '%s'; conf=%s",
             last_text,
             last_confidences,

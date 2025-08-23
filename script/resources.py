@@ -16,6 +16,7 @@ from . import screen_utils, common, input_utils
 ROOT = Path(__file__).resolve().parent.parent
 
 CFG = load_config()
+logger = logging.getLogger(__name__)
 
 # Cache of last detected icon positions
 _LAST_ICON_BOUNDS = {}
@@ -57,7 +58,7 @@ def locate_resource_panel(frame):
         frame, tmpl, threshold=CFG["threshold"], scales=CFG["scales"]
     )
     if not box:
-        logging.warning(
+        logger.warning(
             "Resource panel template not matched; score=%.3f", score
         )
         _save_debug(frame, heat)
@@ -67,7 +68,7 @@ def locate_resource_panel(frame):
                 frame, tmpl, threshold=fallback, scales=CFG["scales"]
             )
             if not box:
-                logging.warning(
+                logger.warning(
                     "Resource panel template not matched with fallback; score=%.3f",
                     score,
                 )
@@ -108,12 +109,12 @@ def locate_resource_panel(frame):
             detections.append((name, best[1][0], best[1][1], bw, bh))
             _LAST_ICON_BOUNDS[name] = (best[1][0], best[1][1], bw, bh)
         elif name in _LAST_ICON_BOUNDS:
-            logging.info(
+            logger.info(
                 "Using previous position for icon '%s'; score=%.3f", name, best[0]
             )
             detections.append((name, *_LAST_ICON_BOUNDS[name]))
         else:
-            logging.warning("Icon '%s' not matched; score=%.3f", name, best[0])
+            logger.warning("Icon '%s' not matched; score=%.3f", name, best[0])
 
     detections.sort(key=lambda d: d[1])  # sort by x position
     top = y + int(top_pct * h)
@@ -308,7 +309,7 @@ def execute_ocr(gray, conf_threshold=None):
         mean_conf = sum(confidences) / len(confidences)
         max_conf = max(confidences)
         if mean_conf < conf_threshold or max_conf < conf_threshold:
-            logging.debug(
+            logger.debug(
                 "Clearing low-confidence OCR result: mean=%.1f max=%.1f digits=%s",
                 mean_conf,
                 max_conf,
@@ -325,7 +326,7 @@ def execute_ocr(gray, conf_threshold=None):
             mean_conf2 = sum(confidences2) / len(confidences2)
             max_conf2 = max(confidences2)
             if mean_conf2 < conf_threshold or max_conf2 < conf_threshold:
-                logging.debug(
+                logger.debug(
                     "Clearing low-confidence OCR result (second attempt): "
                     "mean=%.1f max=%.1f digits=%s",
                     mean_conf2,
@@ -406,7 +407,7 @@ def handle_ocr_failure(frame, regions, results, required_icons):
         roi_logs.append(f"{name}:{regions[name]} -> {roi_path}")
 
     if required_failed:
-        logging.error(
+        logger.error(
             "Resource panel OCR failed for %s; panel saved to %s; rois: %s",
             ", ".join(required_failed),
             panel_path,
@@ -422,7 +423,7 @@ def handle_ocr_failure(frame, regions, results, required_icons):
         )
 
     if optional_failed:
-        logging.warning(
+        logger.warning(
             "Resource panel OCR failed for optional %s; panel saved to %s; rois: %s",
             ", ".join(optional_failed),
             panel_path,
@@ -493,7 +494,7 @@ def read_resources_from_hud(
             if mask is not None:
                 cv2.imwrite(str(debug_dir / f"resource_{name}_thresh_{ts}.png"), mask)
         if not digits:
-            logging.warning(
+            logger.warning(
                 "OCR failed for %s; raw boxes=%s", name, data.get("text")
             )
             debug_dir = ROOT / "debug"
@@ -508,7 +509,7 @@ def read_resources_from_hud(
                 and ts_cache is not None
                 and time.time() - ts_cache < _RESOURCE_CACHE_TTL
             ):
-                logging.warning(
+                logger.warning(
                     "Using cached value for %s after OCR failure", name
                 )
                 results[name] = _LAST_RESOURCE_VALUES[name]
