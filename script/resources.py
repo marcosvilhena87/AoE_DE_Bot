@@ -308,6 +308,12 @@ def execute_ocr(gray, conf_threshold=None):
         mean_conf = sum(confidences) / len(confidences)
         max_conf = max(confidences)
         if mean_conf < conf_threshold or max_conf < conf_threshold:
+            logging.debug(
+                "Clearing low-confidence OCR result: mean=%.1f max=%.1f digits=%s",
+                mean_conf,
+                max_conf,
+                digits,
+            )
             digits = ""
             low_conf = True
 
