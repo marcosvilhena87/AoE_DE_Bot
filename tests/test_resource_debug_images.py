@@ -93,6 +93,8 @@ class TestResourceDebugImages(TestCase):
                 return ocr_sequence.pop(0)
             return ("0", {"text": ["0"]}, np.zeros((1, 1), dtype=np.uint8))
 
+        resources._LAST_RESOURCE_VALUES.clear()
+        resources._LAST_RESOURCE_TS.clear()
         with patch("script.screen_utils._grab_frame", side_effect=fake_grab_frame), \
              patch(
                  "script.resources.locate_resource_panel",
@@ -106,7 +108,10 @@ class TestResourceDebugImages(TestCase):
                  },
              ), \
              patch("script.resources._ocr_digits_better", side_effect=fake_ocr), \
-             patch("script.resources.pytesseract.image_to_string", return_value=""), \
+             patch(
+                 "script.resources.pytesseract.image_to_string",
+                 side_effect=["", "", "0"],
+             ), \
              patch("script.resources.cv2.imwrite") as imwrite_mock:
             with self.assertRaises(common.ResourceReadError) as ctx:
                 resources.read_resources_from_hud()

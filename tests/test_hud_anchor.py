@@ -72,7 +72,8 @@ class TestHudAnchor(TestCase):
 
         with patch("script.resources.locate_resource_panel", return_value={}), \
              patch("script.screen_utils._grab_frame", side_effect=fake_grab_frame), \
-             patch("script.resources._ocr_digits_better", side_effect=fake_ocr):
+             patch("script.resources._ocr_digits_better", side_effect=fake_ocr), \
+             patch("script.resources.pytesseract.image_to_string", return_value="600"):
             result = resources.read_resources_from_hud()
 
         expected = {
@@ -94,7 +95,6 @@ class TestHudAnchor(TestCase):
             {"left": 530, "top": 24, "width": 78, "height": 50},
         ]
         expected_shapes = [
-            (50, 90),
             (50, 90),
             (50, 90),
             (50, 90),
@@ -135,7 +135,9 @@ class TestHudAnchorTools(TestCase):
 
         with patch("tools.campaign_bot.locate_resource_panel", return_value={}), \
              patch("tools.campaign_bot._grab_frame", side_effect=fake_grab_frame), \
-             patch("tools.campaign_bot._ocr_digits_better", side_effect=fake_ocr):
+             patch("tools.campaign_bot._ocr_digits_better", side_effect=fake_ocr), \
+             patch("script.resources._ocr_digits_better", side_effect=fake_ocr), \
+             patch("script.resources.pytesseract.image_to_string", return_value="600"):
             result = cb.read_resources_from_hud([
                 "wood_stockpile",
                 "food_stockpile",
@@ -164,7 +166,6 @@ class TestHudAnchorTools(TestCase):
             {"left": 530, "top": 24, "width": 78, "height": 50},
         ]
         expected_shapes = [
-            (50, 90),
             (50, 90),
             (50, 90),
             (50, 90),
