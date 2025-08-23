@@ -127,16 +127,21 @@ def locate_resource_panel(frame):
             right = x + xi + wi - pad_right + idle_extra
             top_i = y + yi
             height_i = hi
-            width = max(min_width, right - left)
         else:
             left = x + xi + wi + pad_left
             if idx + 1 < len(detections):
                 right = x + detections[idx + 1][1] - pad_right
             else:
                 right = x + w - pad_right
-            width = max(min_width, right - left)
             top_i = top
             height_i = height
+
+        width = right - left
+        if width < min_width:
+            width = min_width
+            if left + width > right:
+                width = right - left
+
         regions[name] = (left, top_i, width, height_i)
 
     global _LAST_REGION_BOUNDS, _LAST_RESOURCE_VALUES, _LAST_RESOURCE_TS
