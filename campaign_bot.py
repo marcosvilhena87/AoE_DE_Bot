@@ -3,6 +3,7 @@ import time
 
 import script.common as common
 from script.villager import econ_loop
+from script.config_utils import parse_scenario_info
 
 
 def main():
@@ -36,7 +37,7 @@ def main():
                 "HUD não detectada após duas tentativas; encerrando script."
             )
 
-    info = common.parse_scenario_info("campaigns/Ascent_of_Egypt/1.Hunting.txt")
+    info = parse_scenario_info("campaigns/Ascent_of_Egypt/1.Hunting.txt")
     common.CURRENT_POP = info.starting_villagers
     common.POP_CAP = 4  # 1 Town Center
     common.TARGET_POP = info.objective_villagers

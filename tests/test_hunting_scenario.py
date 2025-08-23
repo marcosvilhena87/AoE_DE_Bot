@@ -48,20 +48,21 @@ os.environ.setdefault("TESSERACT_CMD", "/usr/bin/true")
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import script.common as common
+import script.config_utils as config_utils
 
 
 class TestHuntingScenario(TestCase):
     """Ensure the Hunting scenario script wires up common routines correctly."""
 
     def test_main_runs_economic_loop(self):
-        info = common.ScenarioInfo(
+        info = config_utils.ScenarioInfo(
             starting_villagers=3, population_limit=50, objective_villagers=7
         )
 
         with patch(
             "script.common.wait_hud", return_value=((0, 0, 0, 0), "asset")
         ) as wait_mock, patch(
-            "script.common.parse_scenario_info", return_value=info
+            "script.config_utils.parse_scenario_info", return_value=info
         ) as parse_mock, patch("script.villager.econ_loop") as econ_mock:
             runpy.run_path(
                 os.path.join("campaigns", "Ascent_of_Egypt", "1.Hunting.py"),

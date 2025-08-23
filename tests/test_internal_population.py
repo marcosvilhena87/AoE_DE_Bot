@@ -33,11 +33,12 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import script.common as common
 import script.town_center as tc
 import script.villager as villager
+import script.config_utils as config_utils
 
 
 class TestInternalPopulation(TestCase):
     def test_parse_scenario_info(self):
-        info = common.parse_scenario_info("campaigns/Ascent_of_Egypt/1.Hunting.txt")
+        info = config_utils.parse_scenario_info("campaigns/Ascent_of_Egypt/1.Hunting.txt")
         self.assertEqual(info.starting_villagers, 3)
         self.assertEqual(info.population_limit, 50)
         self.assertEqual(info.objective_villagers, 7)
