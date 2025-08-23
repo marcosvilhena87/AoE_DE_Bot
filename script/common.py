@@ -176,6 +176,30 @@ def _load_gray(path):
 
 HUD_TEMPLATES = {name: _load_gray(ROOT / name) for name in CFG.get("look_for", [])}
 
+# Ícones do painel de recursos carregados sob demanda
+ICON_NAMES = [
+    "wood_stockpile",
+    "food_stockpile",
+    "gold",
+    "stone",
+    "population",
+    "idle_villager",
+]
+ICON_TEMPLATES = {}
+
+
+def _load_icon_templates():
+    icons_dir = ASSETS / "icons"
+    for name in ICON_NAMES:
+        if name in ICON_TEMPLATES:
+            continue
+        path = icons_dir / f"{name}.png"
+        icon = cv2.imread(str(path), cv2.IMREAD_GRAYSCALE)
+        if icon is None:
+            logging.warning("Icon asset missing: %s", path)
+            continue
+        ICON_TEMPLATES[name] = icon
+
 def wait_hud(timeout=60):
     logging.info("Aguardando HUD por até %ss...", timeout)
     t0 = time.time()
@@ -364,22 +388,12 @@ def locate_resource_panel(frame):
     min_width = res_cfg.get("min_width", 18)
     top_pct = profile_res.get("top_pct", res_cfg.get("top_pct", 0.08))
     height_pct = profile_res.get("height_pct", res_cfg.get("height_pct", 0.84))
-
-    icons_dir = ASSETS / "icons"
-    names = [
-        "wood_stockpile",
-        "food_stockpile",
-        "gold",
-        "stone",
-        "population",
-        "idle_villager",
-    ]
+    _load_icon_templates()
     detections = []
     global _LAST_ICON_BOUNDS
-    for name in names:
-        icon = cv2.imread(str(icons_dir / f"{name}.png"), cv2.IMREAD_GRAYSCALE)
+    for name in ICON_NAMES:
+        icon = ICON_TEMPLATES.get(name)
         if icon is None:
-            logging.warning("Icon asset missing: %s", name)
             continue
         best = (-1, None, None)  # score, loc, (w,h)
         for scale in scales:
