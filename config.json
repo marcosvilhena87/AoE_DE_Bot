@@ -35,10 +35,10 @@
     "debug_failed_ocr": true
   },
     "idle_villager_roi": {
-    "top_pct": 0.12,
-    "height_pct": 0.20,
-    "left_pct": 0.78,
-    "width_pct": 0.10
+    "top_pct": 0.10,
+    "height_pct": 0.06,
+    "left_pct": 0.84,
+    "width_pct": 0.05
   },
     "profiles": {
       "aoe1de": {
