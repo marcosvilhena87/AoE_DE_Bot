@@ -416,20 +416,41 @@ def locate_resource_panel(frame):
 
 def _ocr_digits_better(gray):
     gray = cv2.resize(gray, None, fx=2, fy=2, interpolation=cv2.INTER_LINEAR)
+    kernel = np.ones((2, 2), np.uint8)
+    psms = [6, 7, 8]
+    debug = CFG.get("ocr_debug")
+    debug_dir = ROOT / "debug" if debug else None
+    ts = int(time.time() * 1000) if debug else None
+
+    def _run_masks(masks, start_idx=0):
+        results = []
+        for idx, mask in enumerate(masks, start=start_idx):
+            if debug:
+                debug_dir.mkdir(exist_ok=True)
+                cv2.imwrite(str(debug_dir / f"ocr_mask_{ts}_{idx}.png"), mask)
+            for psm in psms:
+                data = pytesseract.image_to_data(
+                    mask,
+                    config=f"--psm {psm} --oem 3 -c tessedit_char_whitelist=0123456789",
+                    output_type=pytesseract.Output.DICT,
+                )
+                text = "".join(data.get("text", [])).strip()
+                digits = "".join(filter(str.isdigit, text))
+                results.append((digits, data, mask))
+        results.sort(key=lambda r: len(r[0]), reverse=True)
+        return results[0]
+
     _, thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-    masks = [thresh, cv2.bitwise_not(thresh)]
-    results = []
-    for mask in masks:
-        data = pytesseract.image_to_data(
-            mask,
-            config="--psm 6 --oem 3 -c tessedit_char_whitelist=0123456789",
-            output_type=pytesseract.Output.DICT,
-        )
-        text = "".join(data.get("text", [])).strip()
-        digits = "".join(filter(str.isdigit, text))
-        results.append((digits, data, mask))
-    results.sort(key=lambda r: len(r[0]), reverse=True)
-    return results[0]
+    thresh = cv2.dilate(thresh, kernel, iterations=1)
+    primary = _run_masks([thresh, cv2.bitwise_not(thresh)], 0)
+    if primary[0]:
+        return primary
+
+    adaptive = cv2.adaptiveThreshold(
+        gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 11, 2
+    )
+    adaptive = cv2.dilate(adaptive, kernel, iterations=1)
+    return _run_masks([adaptive, cv2.bitwise_not(adaptive)], 2)
 
 def read_resources_from_hud():
     frame = _grab_frame()
@@ -523,6 +544,12 @@ def read_resources_from_hud():
         gray = cv2.medianBlur(gray, 3)
 
         digits, data, mask = _ocr_digits_better(gray)
+        if CFG.get("ocr_debug"):
+            debug_dir = ROOT / "debug"
+            debug_dir.mkdir(exist_ok=True)
+            ts = int(time.time() * 1000)
+            cv2.imwrite(str(debug_dir / f"resource_{name}_roi_{ts}.png"), roi)
+            cv2.imwrite(str(debug_dir / f"resource_{name}_thresh_{ts}.png"), mask)
         if not digits:
             text = pytesseract.image_to_string(
                 gray,
@@ -536,7 +563,7 @@ def read_resources_from_hud():
         if not digits:
             logging.debug("OCR failed for %s; raw boxes=%s", name, data.get("text"))
             debug_cfg = CFG.get("resource_panel", {}).get("debug_failed_ocr")
-            if CFG.get("debug") or debug_cfg:
+            if CFG.get("debug") or debug_cfg or CFG.get("ocr_debug"):
                 debug_dir = ROOT / "debug"
                 debug_dir.mkdir(exist_ok=True)
                 ts = int(time.time() * 1000)
