@@ -599,13 +599,29 @@ def read_resources_from_hud():
         debug_dir = ROOT / "debug"
         debug_dir.mkdir(exist_ok=True)
         ts = int(time.time() * 1000)
+
+        # Annotate a copy of the full frame with the ROI bounding boxes
+        annotated = frame.copy()
+        for x, y, w, h in regions.values():
+            cv2.rectangle(annotated, (x, y), (x + w, y + h), (0, 0, 255), 1)
         panel_path = debug_dir / f"resource_panel_fail_{ts}.png"
-        cv2.imwrite(str(panel_path), frame)
+        cv2.imwrite(str(panel_path), annotated)
+
         roi_paths = []
+        roi_logs = []
         for name, roi in rois.items():
             roi_path = debug_dir / f"resource_{name}_roi_{ts}.png"
             cv2.imwrite(str(roi_path), roi)
             roi_paths.append(str(roi_path))
+            roi_logs.append(f"{name}:{regions[name]} -> {roi_path}")
+
+        # Log ROI coordinates alongside their debug image paths for easier inspection
+        logging.error(
+            "Resource panel OCR failed; panel saved to %s; rois: %s",
+            panel_path,
+            ", ".join(roi_logs),
+        )
+
         tess_path = pytesseract.pytesseract.tesseract_cmd
         paths_str = ", ".join([str(panel_path)] + roi_paths)
         raise ResourceReadError(
