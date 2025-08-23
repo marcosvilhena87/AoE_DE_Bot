@@ -167,20 +167,10 @@ def _ocr_digits_better(gray):
     return _run_masks([adaptive, cv2.bitwise_not(adaptive)], 2)
 
 
-def read_resources_from_hud():
-    frame = screen_utils._grab_frame()
-    h_full, w_full = frame.shape[:2]
+def detect_resource_regions(frame, required_icons):
+    """Detect resource value regions on the HUD."""
+
     regions = locate_resource_panel(frame)
-
-    required_icons = [
-        "wood_stockpile",
-        "food_stockpile",
-        "gold",
-        "stone",
-        "population",
-        "idle_villager",
-    ]
-
     missing = [name for name in required_icons if name not in regions]
 
     if missing and common.HUD_ANCHOR:
@@ -271,13 +261,105 @@ def read_resources_from_hud():
             "Resource icon(s) not located on HUD: " + ", ".join(missing)
         )
 
+    return regions
+
+
+def preprocess_roi(roi):
+    """Convert ROI to a blurred grayscale image."""
+
+    gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+    return cv2.medianBlur(gray, 3)
+
+
+def execute_ocr(gray):
+    """Run OCR on a preprocessed grayscale image."""
+
+    digits, data, mask = _ocr_digits_better(gray)
+    if not digits:
+        text = pytesseract.image_to_string(
+            gray,
+            config="--psm 6 --oem 3 -c tessedit_char_whitelist=0123456789",
+        )
+        fallback = "".join(filter(str.isdigit, text))
+        if fallback:
+            digits = fallback
+            data = {"text": [text.strip()]}
+            mask = gray
+    return digits, data, mask
+
+
+def handle_ocr_failure(frame, regions, results):
+    """Handle OCR failures by saving debug images and raising an error."""
+
+    failed = [name for name, v in results.items() if v is None]
+    if not failed:
+        return
+
+    h_full, w_full = frame.shape[:2]
+    debug_dir = ROOT / "debug"
+    debug_dir.mkdir(exist_ok=True)
+    ts = int(time.time() * 1000)
+
+    annotated = frame.copy()
+    for name, (x, y, w, h) in regions.items():
+        if name in failed:
+            cv2.rectangle(annotated, (x, y), (x + w, y + h), (0, 0, 255), 1)
+    panel_path = debug_dir / f"resource_panel_fail_{ts}.png"
+    cv2.imwrite(str(panel_path), annotated)
+
+    roi_paths = []
+    roi_logs = []
+    for name in failed:
+        x, y, w, h = regions[name]
+        x1, y1 = max(x, 0), max(y, 0)
+        x2, y2 = min(x + w, w_full), min(y + h, h_full)
+        roi = frame[y1:y2, x1:x2]
+        if roi.shape[0] != h or roi.shape[1] != w:
+            padded = np.zeros((h, w, 3), dtype=frame.dtype)
+            pad_y = y1 - y
+            pad_x = x1 - x
+            padded[pad_y:pad_y + roi.shape[0], pad_x:pad_x + roi.shape[1]] = roi
+            roi = padded
+        roi_path = debug_dir / f"resource_{name}_roi_{ts}.png"
+        cv2.imwrite(str(roi_path), roi)
+        roi_paths.append(str(roi_path))
+        roi_logs.append(f"{name}:{regions[name]} -> {roi_path}")
+
+    logging.error(
+        "Resource panel OCR failed for %s; panel saved to %s; rois: %s",
+        ", ".join(failed),
+        panel_path,
+        ", ".join(roi_logs),
+    )
+
+    tess_path = pytesseract.pytesseract.tesseract_cmd
+    paths_str = ", ".join([str(panel_path)] + roi_paths)
+    failed_regions = {k: regions[k] for k in failed}
+    raise common.ResourceReadError(
+        "OCR failed to read resource values for "
+        + ", ".join(failed)
+        + f" (regions={failed_regions}, tesseract_cmd={tess_path}, debug_images={paths_str})"
+    )
+
+
+def read_resources_from_hud():
+    frame = screen_utils._grab_frame()
+    required_icons = [
+        "wood_stockpile",
+        "food_stockpile",
+        "gold",
+        "stone",
+        "population",
+        "idle_villager",
+    ]
+
+    regions = detect_resource_regions(frame, required_icons)
+
     results = {}
     for name, (x, y, w, h) in regions.items():
-        roi = frame[y:y + h, x:x + w]
-        gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
-        gray = cv2.medianBlur(gray, 3)
-
-        digits, data, mask = _ocr_digits_better(gray)
+        roi = frame[y : y + h, x : x + w]
+        gray = preprocess_roi(roi)
+        digits, data, mask = execute_ocr(gray)
         if CFG.get("ocr_debug"):
             debug_dir = ROOT / "debug"
             debug_dir.mkdir(exist_ok=True)
@@ -285,16 +367,6 @@ def read_resources_from_hud():
             cv2.imwrite(str(debug_dir / f"resource_{name}_roi_{ts}.png"), roi)
             if mask is not None:
                 cv2.imwrite(str(debug_dir / f"resource_{name}_thresh_{ts}.png"), mask)
-        if not digits:
-            text = pytesseract.image_to_string(
-                gray,
-                config="--psm 6 --oem 3 -c tessedit_char_whitelist=0123456789",
-            )
-            fallback = "".join(filter(str.isdigit, text))
-            if fallback:
-                digits = fallback
-                data = {"text": [text.strip()]}
-                mask = gray
         if not digits:
             logging.warning(
                 "OCR failed for %s; raw boxes=%s", name, data.get("text")
@@ -304,58 +376,10 @@ def read_resources_from_hud():
             ts = int(time.time() * 1000)
             cv2.imwrite(str(debug_dir / f"resource_{name}_roi_{ts}.png"), roi)
             if mask is not None:
-                cv2.imwrite(
-                    str(debug_dir / f"resource_{name}_thresh_{ts}.png"), mask
-                )
+                cv2.imwrite(str(debug_dir / f"resource_{name}_thresh_{ts}.png"), mask)
             results[name] = None
         else:
             results[name] = int(digits)
 
-    failed = [name for name, v in results.items() if v is None]
-    if failed:
-        debug_dir = ROOT / "debug"
-        debug_dir.mkdir(exist_ok=True)
-        ts = int(time.time() * 1000)
-
-        annotated = frame.copy()
-        for name, (x, y, w, h) in regions.items():
-            if name in failed:
-                cv2.rectangle(annotated, (x, y), (x + w, y + h), (0, 0, 255), 1)
-        panel_path = debug_dir / f"resource_panel_fail_{ts}.png"
-        cv2.imwrite(str(panel_path), annotated)
-
-        roi_paths = []
-        roi_logs = []
-        for name in failed:
-            x, y, w, h = regions[name]
-            x1, y1 = max(x, 0), max(y, 0)
-            x2, y2 = min(x + w, w_full), min(y + h, h_full)
-            roi = frame[y1:y2, x1:x2]
-            if roi.shape[0] != h or roi.shape[1] != w:
-                padded = np.zeros((h, w, 3), dtype=frame.dtype)
-                pad_y = y1 - y
-                pad_x = x1 - x
-                padded[pad_y:pad_y + roi.shape[0], pad_x:pad_x + roi.shape[1]] = roi
-                roi = padded
-            roi_path = debug_dir / f"resource_{name}_roi_{ts}.png"
-            cv2.imwrite(str(roi_path), roi)
-            roi_paths.append(str(roi_path))
-            roi_logs.append(f"{name}:{regions[name]} -> {roi_path}")
-
-        logging.error(
-            "Resource panel OCR failed for %s; panel saved to %s; rois: %s",
-            ", ".join(failed),
-            panel_path,
-            ", ".join(roi_logs),
-        )
-
-        tess_path = pytesseract.pytesseract.tesseract_cmd
-        paths_str = ", ".join([str(panel_path)] + roi_paths)
-        failed_regions = {k: regions[k] for k in failed}
-        raise common.ResourceReadError(
-            "OCR failed to read resource values for "
-            + ", ".join(failed)
-            + f" (regions={failed_regions}, tesseract_cmd={tess_path}, debug_images={paths_str})"
-        )
-
+    handle_ocr_failure(frame, regions, results)
     return results

@@ -1,0 +1,85 @@
+import os
+import sys
+import types
+from unittest import TestCase
+from unittest.mock import patch
+
+import numpy as np
+
+# Stub modules that require a GUI/display before importing the bot modules
+
+dummy_pg = types.SimpleNamespace(
+    PAUSE=0,
+    FAILSAFE=False,
+    size=lambda: (200, 200),
+    click=lambda *a, **k: None,
+    moveTo=lambda *a, **k: None,
+    press=lambda *a, **k: None,
+)
+
+
+class DummyMSS:
+    monitors = [{}, {"left": 0, "top": 0, "width": 200, "height": 200}]
+
+    def grab(self, region):
+        h, w = region["height"], region["width"]
+        return np.zeros((h, w, 4), dtype=np.uint8)
+
+
+sys.modules.setdefault("pyautogui", dummy_pg)
+sys.modules.setdefault("mss", types.SimpleNamespace(mss=lambda: DummyMSS()))
+
+os.environ.setdefault("TESSERACT_CMD", "/usr/bin/true")
+
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+import script.common as common
+import script.resources as resources
+
+
+class TestDetectResourceRegions(TestCase):
+    def test_missing_icons_raises_error(self):
+        frame = np.zeros((100, 100, 3), dtype=np.uint8)
+        required = ["wood_stockpile", "food_stockpile"]
+        with patch("script.resources.locate_resource_panel", return_value={"wood_stockpile": (0, 0, 10, 10)}), \
+             patch.object(common, "HUD_ANCHOR", None):
+            with self.assertRaises(common.ResourceReadError):
+                resources.detect_resource_regions(frame, required)
+
+
+class TestPreprocessRoi(TestCase):
+    def test_preprocess_returns_grayscale(self):
+        roi = np.zeros((5, 5, 3), dtype=np.uint8)
+        gray = resources.preprocess_roi(roi)
+        self.assertEqual(gray.shape, (5, 5))
+        self.assertEqual(gray.dtype, np.uint8)
+
+
+class TestExecuteOcr(TestCase):
+    def test_execute_ocr_fallback(self):
+        gray = np.zeros((5, 5), dtype=np.uint8)
+        with patch("script.resources._ocr_digits_better", return_value=("", {}, None)), \
+             patch("script.resources.pytesseract.image_to_string", return_value="456"):
+            digits, data, mask = resources.execute_ocr(gray)
+        self.assertEqual(digits, "456")
+        self.assertEqual(data["text"], ["456"])
+        np.testing.assert_array_equal(mask, gray)
+
+
+class TestHandleOcrFailure(TestCase):
+    def test_handle_ocr_failure_raises(self):
+        frame = np.zeros((20, 20, 3), dtype=np.uint8)
+        regions = {"wood_stockpile": (0, 0, 10, 10)}
+        results = {"wood_stockpile": None}
+        with patch("script.resources.cv2.imwrite"), \
+             patch("script.resources.logging.error"), \
+             patch("script.resources.pytesseract.pytesseract.tesseract_cmd", "/usr/bin/true"):
+            with self.assertRaises(common.ResourceReadError):
+                resources.handle_ocr_failure(frame, regions, results)
+
+    def test_handle_ocr_failure_noop_when_success(self):
+        frame = np.zeros((20, 20, 3), dtype=np.uint8)
+        regions = {"wood_stockpile": (0, 0, 10, 10)}
+        results = {"wood_stockpile": 1}
+        with patch("script.resources.cv2.imwrite") as imwrite_mock:
+            resources.handle_ocr_failure(frame, regions, results)
+        imwrite_mock.assert_not_called()
