@@ -344,7 +344,14 @@ def locate_resource_panel(frame):
     height_pct = res_cfg.get("height_pct", 0.84)
 
     icons_dir = ASSETS / "icons"
-    names = ["wood", "food", "gold", "stone", "population", "idle_villager"]
+    names = [
+        "wood_stockpile",
+        "food_stockpile",
+        "gold",
+        "stone",
+        "population",
+        "idle_villager",
+    ]
     detections = []
     for name in names:
         icon = cv2.imread(str(icons_dir / f"{name}.png"), cv2.IMREAD_GRAYSCALE)
@@ -434,8 +441,8 @@ def read_resources_from_hud():
             top = y + int(top_pct * h)
             height = int(height_pct * h)
             names = [
-                "wood",
-                "food",
+                "wood_stockpile",
+                "food_stockpile",
                 "gold",
                 "stone",
                 "population",
@@ -476,8 +483,8 @@ def read_resources_from_hud():
             top = y + int(top_pct * panel_h)
             height = int(height_pct * panel_h)
             names = [
-                "wood",
-                "food",
+                "wood_stockpile",
+                "food_stockpile",
                 "gold",
                 "stone",
                 "population",
