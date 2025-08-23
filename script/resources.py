@@ -139,6 +139,7 @@ def locate_resource_panel(frame):
 
 def _ocr_digits_better(gray):
     gray = cv2.resize(gray, None, fx=2, fy=2, interpolation=cv2.INTER_LINEAR)
+    gray = cv2.bilateralFilter(gray, 7, 60, 60)
 
     kernel_size = CFG.get("ocr_kernel_size", 2)
     kernel = np.ones((kernel_size, kernel_size), np.uint8)
