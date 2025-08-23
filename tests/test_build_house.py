@@ -59,3 +59,42 @@ class TestClickAndBuildHouse(TestCase):
         self.assertEqual(click_mock.call_args_list[1].args, expected_coords)
         self.assertEqual(click_mock.call_args_list[1].kwargs["button"], "right")
         read_pop_mock.assert_called_once()
+
+
+class TestBuildHouseResourceRetry(TestCase):
+    def test_build_house_retries_before_stopping(self):
+        side_effect = [
+            common.ResourceReadError("fail1"),
+            {"wood_stockpile": None},
+            common.ResourceReadError("fail3"),
+        ]
+        with patch(
+            "script.common.read_resources_from_hud",
+            side_effect=side_effect,
+        ) as read_mock, patch("script.common._press_key_safe") as press_mock, patch(
+            "script.common._click_norm"
+        ) as click_mock, patch("script.villager.time.sleep"):
+            result = villager.build_house()
+        self.assertFalse(result)
+        self.assertEqual(read_mock.call_count, 3)
+        press_mock.assert_not_called()
+        click_mock.assert_not_called()
+
+    def test_build_house_recovers_from_transient_failure(self):
+        common.POP_CAP = 4
+        side_effect = [
+            common.ResourceReadError("fail1"),
+            {"wood_stockpile": 100},
+        ]
+        with patch(
+            "script.common.read_resources_from_hud",
+            side_effect=side_effect,
+        ) as read_mock, patch("script.common._press_key_safe"), patch(
+            "script.common._click_norm"
+        ), patch(
+            "script.common.read_population_from_hud", return_value=(0, 8)
+        ), patch("script.villager.time.sleep"):
+            result = villager.build_house()
+        self.assertTrue(result)
+        self.assertEqual(read_mock.call_count, 2)
+        self.assertEqual(common.POP_CAP, 8)
