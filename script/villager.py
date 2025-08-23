@@ -24,14 +24,34 @@ def build_house():
     """
 
     wood_needed = 30
-    try:
-        resources = common.read_resources_from_hud()
-    except common.ResourceReadError as exc:
-        logging.error("Resource read error while building house: %s", exc)
-        return False
-    wood = resources.get("wood_stockpile")
-    if wood is None:
-        logging.error("Failed to read wood; cannot build house")
+    resources = None
+    wood = None
+    for attempt in range(1, 4):
+        logging.debug(
+            "Attempt %s to read wood from HUD while building house", attempt
+        )
+        try:
+            resources = common.read_resources_from_hud()
+        except common.ResourceReadError as exc:
+            logging.error(
+                "Resource read error while building house (attempt %s/3): %s",
+                attempt,
+                exc,
+            )
+        else:
+            wood = resources.get("wood_stockpile")
+            if isinstance(wood, int):
+                break
+            logging.warning(
+                "wood_stockpile not detected (attempt %s/3); HUD may not be updated",
+                attempt,
+            )
+        if attempt < 3:
+            time.sleep(0.2)
+    if not isinstance(wood, int):
+        logging.error(
+            "Failed to obtain wood stockpile after 3 attempts; cannot build house"
+        )
         return False
     if wood < wood_needed:
         logging.warning(
