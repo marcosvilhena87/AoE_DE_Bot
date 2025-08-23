@@ -53,6 +53,7 @@ class TestResourceReadRetry(TestCase):
         ocr_seq = [
             ("123", {"text": ["123"]}, np.zeros((1, 1), dtype=np.uint8)),
             ("", {"text": [""]}, np.zeros((1, 1), dtype=np.uint8)),
+            ("", {"text": [""]}, np.zeros((1, 1), dtype=np.uint8)),
         ]
 
         def fake_ocr(gray):
@@ -71,6 +72,30 @@ class TestResourceReadRetry(TestCase):
         self.assertEqual(first["wood_stockpile"], 123)
         self.assertEqual(second["wood_stockpile"], 123)
         self.assertIn("wood_stockpile", resources._LAST_READ_FROM_CACHE)
+
+    def test_retry_succeeds_after_expansion(self):
+        def fake_detect(frame, required_icons):
+            return {"wood_stockpile": (0, 0, 50, 50)}
+
+        ocr_seq = [
+            ("", {"text": [""]}, np.zeros((1, 1), dtype=np.uint8)),
+            ("456", {"text": ["456"]}, np.zeros((1, 1), dtype=np.uint8)),
+        ]
+
+        def fake_ocr(gray):
+            return ocr_seq.pop(0)
+
+        frame = np.zeros((600, 600, 3), dtype=np.uint8)
+
+        with patch("script.resources.detect_resource_regions", side_effect=fake_detect), \
+             patch("script.screen_utils._grab_frame", return_value=frame), \
+             patch("script.resources._ocr_digits_better", side_effect=fake_ocr) as ocr_mock, \
+             patch("script.resources.pytesseract.image_to_string", return_value=""), \
+             patch("script.resources.cv2.imwrite"):
+            result = resources.read_resources_from_hud(["wood_stockpile"])
+
+        self.assertEqual(result["wood_stockpile"], 456)
+        self.assertEqual(ocr_mock.call_count, 2)
 
     def test_econ_loop_uses_cached_value(self):
         common.CURRENT_POP = 8

@@ -118,7 +118,7 @@ class TestResourceOcrFailure(TestCase):
              patch("script.resources.cv2.imwrite"), \
              self.assertRaises(common.ResourceReadError):
             resources.read_resources_from_hud(["wood_stockpile"])
-        img2str_mock.assert_called_once()
+        self.assertEqual(img2str_mock.call_count, 2)
 
     def test_cached_value_used_for_optional_failure(self):
         def fake_detect(frame, required_icons):

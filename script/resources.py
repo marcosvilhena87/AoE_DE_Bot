@@ -486,6 +486,16 @@ def read_resources_from_hud(
         roi = frame[y : y + h, x : x + w]
         gray = preprocess_roi(roi)
         digits, data, mask = execute_ocr(gray)
+        if not digits:
+            expand = 24
+            x1 = max(0, x - expand)
+            x2 = min(frame.shape[1], x + w + expand)
+            roi_retry = frame[y : y + h, x1:x2]
+            gray_retry = preprocess_roi(roi_retry)
+            digits_retry, data_retry, mask_retry = execute_ocr(gray_retry)
+            if digits_retry:
+                digits, data, mask = digits_retry, data_retry, mask_retry
+                roi, gray = roi_retry, gray_retry
         if CFG.get("ocr_debug"):
             debug_dir = ROOT / "debug"
             debug_dir.mkdir(exist_ok=True)
@@ -612,6 +622,16 @@ def gather_hud_stats(force_delay=None):
         roi = frame[y : y + h, x : x + w]
         gray = preprocess_roi(roi)
         digits, data, mask = execute_ocr(gray)
+        if not digits:
+            expand = 24
+            x1 = max(0, x - expand)
+            x2 = min(frame.shape[1], x + w + expand)
+            roi_retry = frame[y : y + h, x1:x2]
+            gray_retry = preprocess_roi(roi_retry)
+            digits_retry, data_retry, mask_retry = execute_ocr(gray_retry)
+            if digits_retry:
+                digits, data, mask = digits_retry, data_retry, mask_retry
+                roi, gray = roi_retry, gray_retry
         if CFG.get("ocr_debug"):
             debug_dir = ROOT / "debug"
             debug_dir.mkdir(exist_ok=True)
