@@ -485,7 +485,16 @@ def read_resources_from_hud(
         x, y, w, h = regions[name]
         roi = frame[y : y + h, x : x + w]
         gray = preprocess_roi(roi)
-        digits, data, mask = execute_ocr(gray)
+        if name == "idle_villager":
+            text = pytesseract.image_to_string(
+                gray,
+                config="--psm 7 -c tessedit_char_whitelist=0123456789",
+            )
+            digits = "".join(filter(str.isdigit, text))
+            data = {"text": [text.strip()], "conf": []}
+            mask = gray
+        else:
+            digits, data, mask = execute_ocr(gray)
         if not digits:
             expand = 24
             x1 = max(0, x - expand)
