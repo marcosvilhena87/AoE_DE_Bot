@@ -37,6 +37,7 @@ os.environ.setdefault("TESSERACT_CMD", "/usr/bin/true")
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import script.common as common
+import script.hud as hud
 import tools.campaign_bot as cb
 
 
@@ -45,8 +46,8 @@ class TestHudAnchor(TestCase):
         common.HUD_ANCHOR = None
         fake_frame = np.zeros((100, 100, 3), dtype=np.uint8)
         with patch("script.screen_utils._grab_frame", return_value=fake_frame), \
-             patch("script.common.find_template", return_value=((10, 20, 30, 40), 0.9, None)):
-            anchor, asset = common.wait_hud(timeout=1)
+             patch("script.hud.find_template", return_value=((10, 20, 30, 40), 0.9, None)):
+            anchor, asset = hud.wait_hud(timeout=1)
         self.assertEqual(asset, "assets/resources.png")
         self.assertEqual(anchor["asset"], "assets/resources.png")
         self.assertEqual(common.HUD_ANCHOR["asset"], "assets/resources.png")

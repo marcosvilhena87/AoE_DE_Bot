@@ -19,6 +19,7 @@ import time
 from pathlib import Path
 
 import script.common as common
+import script.hud as hud
 from script.villager import econ_loop
 from script.config_utils import parse_scenario_info
 
@@ -42,14 +43,14 @@ def main() -> None:
     logging.info("Entre na missão da campanha (Hunting). O script inicia quando detectar a HUD…")
 
     try:
-        hud, asset = common.wait_hud(timeout=90)
-        logging.info("HUD detectada em %s usando '%s'. Rodando rotina econômica…", hud, asset)
+        anchor, asset = hud.wait_hud(timeout=90)
+        logging.info("HUD detectada em %s usando '%s'. Rodando rotina econômica…", anchor, asset)
     except RuntimeError as exc:  # pragma: no cover - retry branch is defensive
         logging.error(str(exc))
         logging.info("Dando mais 25s para você ajustar a câmera/HUD (fallback)…")
         time.sleep(25)
-        hud, asset = common.wait_hud(timeout=90)
-        logging.info("HUD detectada em %s usando '%s'. Rodando rotina econômica…", hud, asset)
+        anchor, asset = hud.wait_hud(timeout=90)
+        logging.info("HUD detectada em %s usando '%s'. Rodando rotina econômica…", anchor, asset)
 
     scenario_txt = Path(__file__).with_suffix(".txt")
     info = parse_scenario_info(scenario_txt)

@@ -2,6 +2,7 @@ import logging
 import time
 
 import script.common as common
+import script.hud as hud
 from script.villager import econ_loop
 from script.config_utils import parse_scenario_info
 
@@ -11,10 +12,10 @@ def main():
         "Entre na missão da campanha (Hunting). O script inicia quando detectar a HUD…"
     )
     try:
-        hud, asset = common.wait_hud(timeout=90)
+        anchor, asset = hud.wait_hud(timeout=90)
         logging.info(
             "HUD detectada em %s usando '%s'. Rodando rotina econômica…",
-            hud,
+            anchor,
             asset,
         )
     except RuntimeError as e:
@@ -22,10 +23,10 @@ def main():
         logging.info("Dando mais 25s para você ajustar a câmera/HUD (fallback)…")
         time.sleep(25)
         try:
-            hud, asset = common.wait_hud(timeout=90)
+            anchor, asset = hud.wait_hud(timeout=90)
             logging.info(
                 "HUD detectada em %s usando '%s'. Rodando rotina econômica…",
-                hud,
+                anchor,
                 asset,
             )
         except RuntimeError as e2:
