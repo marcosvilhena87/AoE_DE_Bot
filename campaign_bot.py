@@ -1,3 +1,4 @@
+import argparse
 import logging
 import time
 
@@ -8,8 +9,18 @@ from script.config_utils import parse_scenario_info
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--scenario",
+        default=common.CFG.get(
+            "scenario_path", "campaigns/Ascent_of_Egypt/1.Hunting.txt"
+        ),
+        help="Path to scenario text file",
+    )
+    args = parser.parse_args()
+
     logging.info(
-        "Entre na missão da campanha (Hunting). O script inicia quando detectar a HUD…"
+        "Entre na missão da campanha (Hunting). O script inicia quando detectar a HUD…",
     )
     try:
         anchor, asset = hud.wait_hud(timeout=90)
@@ -38,7 +49,7 @@ def main():
                 "HUD não detectada após duas tentativas; encerrando script."
             )
 
-    info = parse_scenario_info("campaigns/Ascent_of_Egypt/1.Hunting.txt")
+    info = parse_scenario_info(args.scenario)
     common.CURRENT_POP = info.starting_villagers
     common.POP_CAP = 4  # 1 Town Center
     common.TARGET_POP = info.objective_villagers
@@ -49,3 +60,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
