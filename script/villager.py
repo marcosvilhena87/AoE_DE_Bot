@@ -51,9 +51,10 @@ def count_idle_villagers_via_hotkey(delay=0.1, return_selections=False):
     while isinstance(current, int) and current > 0:
         select_idle_villager()
         selections += 1
-        time.sleep(delay)
         try:
-            res = resources.read_resources_from_hud(["idle_villager"])
+            res = resources.read_resources_from_hud(
+                ["idle_villager"], force_delay=delay
+            )
         except common.ResourceReadError as exc:  # pragma: no cover - falha de OCR
             logging.error("Falha ao ler idle_villager: %s", exc)
             break
@@ -294,7 +295,6 @@ def econ_loop(minutes=5):
 
             if idle_before > 0:
                 select_idle_villager()
-                time.sleep(0.1)
                 idle_after_res = None
                 for attempt in range(1, 4):
                     logging.debug(
@@ -302,7 +302,9 @@ def econ_loop(minutes=5):
                         attempt,
                     )
                     try:
-                        idle_after_res = resources.read_resources_from_hud(["idle_villager"])
+                        idle_after_res = resources.read_resources_from_hud(
+                            ["idle_villager"], force_delay=0.1
+                        )
                         break
                     except common.ResourceReadError as exc:
                         logging.error(

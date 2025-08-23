@@ -78,7 +78,7 @@ class TestResourceReadRetry(TestCase):
         common.CFG.setdefault("areas", {}).update({"food_spot": (0, 0), "wood_spot": (0, 0)})
         common.CFG.setdefault("timers", {}).update({"idle_gap": 0, "loop_sleep": 0})
 
-        def fake_read(_):
+        def fake_read(_, force_delay=None):
             resources._LAST_READ_FROM_CACHE = {"idle_villager"}
             return {"idle_villager": 0}
 
