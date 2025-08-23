@@ -32,9 +32,12 @@ class DummyMSS:
 sys.modules.setdefault("pyautogui", dummy_pg)
 sys.modules.setdefault("mss", types.SimpleNamespace(mss=lambda: DummyMSS()))
 
+os.environ.setdefault("TESSERACT_CMD", "/usr/bin/true")
+
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import script.common as common
 import script.resources as resources
+import script.villager as villager
 
 
 class TestIdleVillagerROI(TestCase):
@@ -92,3 +95,24 @@ class TestIdleVillagerROI(TestCase):
         self.assertEqual(roi, expected)
         self.assertGreater(roi[2], icon_w)
         self.assertGreater(roi[3], 0)
+
+    def test_count_idle_villagers_via_hotkey_stops_on_no_decrease(self):
+        counts = iter([
+            {"idle_villager": 3},
+            {"idle_villager": 2},
+            {"idle_villager": 1},
+            {"idle_villager": 1},
+        ])
+
+        def fake_read(keys):
+            return next(counts)
+
+        with patch("script.villager.select_idle_villager") as mock_sel, \
+            patch("script.resources.read_resources_from_hud", side_effect=fake_read):
+            initial, selections = villager.count_idle_villagers_via_hotkey(
+                delay=0, return_selections=True
+            )
+
+        self.assertEqual(initial, 3)
+        self.assertEqual(selections, 3)
+        self.assertEqual(mock_sel.call_count, 3)
