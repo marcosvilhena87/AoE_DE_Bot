@@ -153,6 +153,18 @@ def read_population_from_hud(retries=3, conf_threshold=None, save_failed_roi=Fal
             last_text,
             last_confidences,
         )
+    logger.info(
+        "Acionando fallback para leitura de população via resources.read_resources_from_hud"
+    )
+    try:
+        _, (cur, limit) = resources.read_resources_from_hud(
+            ["population"], force_delay=0.1
+        )
+        if cur is not None and limit is not None:
+            logger.info("Fallback de população bem-sucedido: %s/%s", cur, limit)
+            return cur, limit
+    except Exception as exc:  # pragma: no cover - log but ignore any failure
+        logger.debug("Fallback falhou: %s", exc)
 
     raise common.PopulationReadError(
         f"Falha ao ler população da HUD após {retries} tentativas. Texto='{last_text}', confs={last_confidences}"
