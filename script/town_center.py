@@ -10,6 +10,11 @@ def train_villagers(target_pop: int):
     common._press_key_safe(common.CFG["keys"]["select_tc"], 0.10)
 
     while common.CURRENT_POP < target_pop:
+        # Always reselect the Town Center to ensure subsequent commands
+        # affect the correct building, especially after actions that may
+        # change the selection (e.g. building houses).
+        common._press_key_safe(common.CFG["keys"]["select_tc"], 0.10)
+
         resources = None
         for attempt in range(1, 4):
             logging.debug(
@@ -46,4 +51,8 @@ def train_villagers(target_pop: int):
                 logging.info("Casa construída para expandir população")
             else:
                 logging.warning("Falha ao construir casa para expandir população")
+            # Reselect the Town Center after attempting to build a house so
+            # that further villager training continues from the correct
+            # building.
+            common._press_key_safe(common.CFG["keys"]["select_tc"], 0.10)
         time.sleep(0.10)
