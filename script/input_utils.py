@@ -5,6 +5,8 @@ import pyautogui as pg
 
 from . import screen_utils
 
+logger = logging.getLogger(__name__)
+
 pg.PAUSE = 0.05
 pg.FAILSAFE = True  # mouse no canto sup-esq aborta instantaneamente
 
@@ -86,7 +88,7 @@ def _click_norm(nx: float, ny: float, button: str = "left") -> None:
     try:
         pg.click(x, y, button=button)
     except pg.FailSafeException:
-        logging.warning(
+        logger.warning(
             "Fail-safe triggered during click at (%s, %s). Moving cursor to center.",
             x,
             y,
@@ -113,7 +115,7 @@ def _press_key_safe(key: str, pause: float) -> None:
         pg.press(key)
         time.sleep(pause)
     except pg.FailSafeException:
-        logging.warning(
+        logger.warning(
             "Fail-safe triggered while pressing '%s'. Moving cursor to center.",
             key,
         )

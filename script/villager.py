@@ -6,6 +6,8 @@ import script.hud as hud
 import script.resources as resources
 import script.input_utils as input_utils
 
+logger = logging.getLogger(__name__)
+
 
 def select_idle_villager(delay: float = 0.1) -> bool:
     """Tenta selecionar um aldeão ocioso usando a tecla configurada.
@@ -20,7 +22,7 @@ def select_idle_villager(delay: float = 0.1) -> bool:
     try:
         res_before = resources.read_resources_from_hud(["idle_villager"])
     except common.ResourceReadError as exc:  # pragma: no cover - falha de OCR
-        logging.error("Falha ao ler idle_villager: %s", exc)
+        logger.error("Falha ao ler idle_villager: %s", exc)
     else:
         before = res_before.get("idle_villager")
 
@@ -32,7 +34,7 @@ def select_idle_villager(delay: float = 0.1) -> bool:
             ["idle_villager"], force_delay=delay
         )
     except common.ResourceReadError as exc:  # pragma: no cover - falha de OCR
-        logging.error("Falha ao ler idle_villager: %s", exc)
+        logger.error("Falha ao ler idle_villager: %s", exc)
     else:
         after = res_after.get("idle_villager")
 
@@ -68,7 +70,7 @@ def count_idle_villagers_via_hotkey(delay=0.1, return_selections=False):
     try:
         res = resources.read_resources_from_hud(["idle_villager"])
     except common.ResourceReadError as exc:  # pragma: no cover - falha de OCR
-        logging.error("Falha ao ler idle_villager: %s", exc)
+        logger.error("Falha ao ler idle_villager: %s", exc)
         initial = 0
     else:
         initial = res.get("idle_villager")
@@ -85,7 +87,7 @@ def count_idle_villagers_via_hotkey(delay=0.1, return_selections=False):
                 ["idle_villager"], force_delay=delay
             )
         except common.ResourceReadError as exc:  # pragma: no cover - falha de OCR
-            logging.error("Falha ao ler idle_villager: %s", exc)
+            logger.error("Falha ao ler idle_villager: %s", exc)
             break
         new_val = res.get("idle_villager")
         if not isinstance(new_val, int) or new_val >= current:
@@ -115,13 +117,13 @@ def build_house():
     res_vals = None
     wood = None
     for attempt in range(1, 4):
-        logging.debug(
+        logger.debug(
             "Attempt %s to read wood from HUD while building house", attempt
         )
         try:
             res_vals = resources.read_resources_from_hud(["wood_stockpile"])
         except common.ResourceReadError as exc:
-            logging.error(
+            logger.error(
                 "Resource read error while building house (attempt %s/3): %s",
                 attempt,
                 exc,
@@ -130,31 +132,31 @@ def build_house():
             wood = res_vals.get("wood_stockpile")
             if isinstance(wood, int):
                 break
-            logging.warning(
+            logger.warning(
                 "wood_stockpile not detected (attempt %s/3); HUD may not be updated",
                 attempt,
             )
         if attempt < 3:
             time.sleep(0.2)
     if not isinstance(wood, int):
-        logging.debug("Refreshing HUD anchor before final resource read")
+        logger.debug("Refreshing HUD anchor before final resource read")
         try:
             hud.wait_hud()
             res_vals = resources.read_resources_from_hud(["wood_stockpile"])
         except Exception as exc:
-            logging.error(
+            logger.error(
                 "Failed to refresh HUD or read resources while building house: %s",
                 exc,
             )
             return False
         wood = res_vals.get("wood_stockpile")
         if not isinstance(wood, int):
-            logging.error(
+            logger.error(
                 "Failed to obtain wood stockpile after HUD refresh; cannot build house"
             )
             return False
     if wood < wood_needed:
-        logging.warning(
+        logger.warning(
             "Madeira insuficiente (%s) para construir casa.",
             wood,
         )
@@ -162,13 +164,13 @@ def build_house():
 
     house_key = common.CFG["keys"].get("house")
     if not house_key:
-        logging.warning("Tecla de construção de casa não configurada.")
+        logger.warning("Tecla de construção de casa não configurada.")
         return False
 
     areas = common.CFG.get("areas", {})
     main_spot = areas.get("house_spot")
     if not main_spot:
-        logging.warning("House spot not configured.")
+        logger.warning("House spot not configured.")
         return False
     spots = [main_spot]
     alt_spot = areas.get("house_spot_alt")
@@ -185,27 +187,27 @@ def build_house():
         try:
             cur, limit = hud.read_population_from_hud()
         except Exception as exc:  # pragma: no cover - falha de OCR
-            logging.warning("Falha ao ler população: %s", exc)
+            logger.warning("Falha ao ler população: %s", exc)
             limit = common.POP_CAP
 
         if limit > common.POP_CAP:
             common.POP_CAP = limit
             return True
 
-        logging.warning("Tentativa %s de construir casa falhou.", idx)
+        logger.warning("Tentativa %s de construir casa falhou.", idx)
         try:
             res_vals = resources.read_resources_from_hud(["wood_stockpile"])
         except common.ResourceReadError as exc:
-            logging.error(
+            logger.error(
                 "Resource read error while retrying house construction: %s", exc
             )
             return False
         wood = res_vals.get("wood_stockpile")
         if wood is None:
-            logging.error("Failed to read wood; aborting house construction")
+            logger.error("Failed to read wood; aborting house construction")
             return False
         if wood < wood_needed:
-            logging.warning(
+            logger.warning(
                 "Madeira insuficiente após tentativa (%s).", wood
             )
             break
@@ -218,12 +220,12 @@ def build_granary():
     input_utils._press_key_safe(common.CFG["keys"]["build_menu"], 0.05)
     g_key = common.CFG["keys"].get("granary")
     if not g_key:
-        logging.warning("Tecla de construção de Granary não configurada.")
+        logger.warning("Tecla de construção de Granary não configurada.")
         return False
     areas = common.CFG.get("areas", {})
     spot = areas.get("granary_spot")
     if not spot:
-        logging.warning("Granary spot not configured.")
+        logger.warning("Granary spot not configured.")
         return False
     input_utils._press_key_safe(g_key, 0.15)
     gx, gy = spot
@@ -236,12 +238,12 @@ def build_storage_pit():
     input_utils._press_key_safe(common.CFG["keys"]["build_menu"], 0.05)
     s_key = common.CFG["keys"].get("storage_pit")
     if not s_key:
-        logging.warning("Tecla de construção de Storage Pit não configurada.")
+        logger.warning("Tecla de construção de Storage Pit não configurada.")
         return False
     areas = common.CFG.get("areas", {})
     spot = areas.get("storage_spot")
     if not spot:
-        logging.warning("Storage spot not configured.")
+        logger.warning("Storage spot not configured.")
         return False
     input_utils._press_key_safe(s_key, 0.15)
     sx, sy = spot
@@ -253,34 +255,34 @@ def econ_loop(minutes=5):
     """Rotina econômica básica para a missão Hunting."""
     import script.town_center as town_center
 
-    logging.info("Iniciando rotina econômica por %s minutos", minutes)
+    logger.info("Iniciando rotina econômica por %s minutos", minutes)
     town_center.train_villagers(common.TARGET_POP)
 
     if select_idle_villager():
         if build_granary():
-            logging.info("Granary posicionado")
+            logger.info("Granary posicionado")
         else:
-            logging.warning("Falha ao posicionar Granary")
+            logger.warning("Falha ao posicionar Granary")
     else:
-        logging.warning("Nenhum aldeão ocioso para construir Granary")
+        logger.warning("Nenhum aldeão ocioso para construir Granary")
     time.sleep(0.5)
     if select_idle_villager():
         if build_storage_pit():
-            logging.info("Storage Pit posicionado")
+            logger.info("Storage Pit posicionado")
         else:
-            logging.warning("Falha ao posicionar Storage Pit")
+            logger.warning("Falha ao posicionar Storage Pit")
     else:
-        logging.warning("Nenhum aldeão ocioso para construir Storage Pit")
+        logger.warning("Nenhum aldeão ocioso para construir Storage Pit")
     time.sleep(0.5)
 
     areas = common.CFG.get("areas", {})
     food_spot = areas.get("food_spot")
     if not food_spot:
-        logging.warning("Food spot not configured.")
+        logger.warning("Food spot not configured.")
         return False
     wood_spot = areas.get("wood_spot")
     if not wood_spot:
-        logging.warning("Wood spot not configured.")
+        logger.warning("Wood spot not configured.")
         return False
     food_x, food_y = food_spot
     wood_x, wood_y = wood_spot
@@ -298,30 +300,30 @@ def econ_loop(minutes=5):
         if common.CURRENT_POP >= common.POP_CAP - 2:
             res_vals = None
             for attempt in range(1, 4):
-                logging.debug(
+                logger.debug(
                     "Attempt %s to read resources during economic loop", attempt
                 )
                 try:
                     res_vals = resources.read_resources_from_hud(["idle_villager"])
                     break
                 except common.ResourceReadError as exc:
-                    logging.error(
+                    logger.error(
                         "Resource read error during economic loop (attempt %s/3): %s",
                         attempt,
                         exc,
                     )
                     time.sleep(0.1)
             if res_vals is None:
-                logging.error(
+                logger.error(
                     "Failed to read resources after 3 attempts; ending economic loop"
                 )
                 break
             idle_before = res_vals.get("idle_villager")
             if idle_before is None:
-                logging.error("Failed to read idle villager count; ending economic loop")
+                logger.error("Failed to read idle villager count; ending economic loop")
                 break
             if "idle_villager" in resources._LAST_READ_FROM_CACHE:
-                logging.warning(
+                logger.warning(
                     "Using cached idle villager count; confidence degraded"
                 )
             took_from_wood = False
@@ -329,7 +331,7 @@ def econ_loop(minutes=5):
             if idle_before > 0 and select_idle_villager():
                 idle_after_res = None
                 for attempt in range(1, 4):
-                    logging.debug(
+                    logger.debug(
                         "Attempt %s to read idle villager count during economic loop",
                         attempt,
                     )
@@ -339,7 +341,7 @@ def econ_loop(minutes=5):
                         )
                         break
                     except common.ResourceReadError as exc:
-                        logging.error(
+                        logger.error(
                             "Resource read error when checking idle villagers (attempt %s/3): %s",
                             attempt,
                             exc,
@@ -349,10 +351,10 @@ def econ_loop(minutes=5):
                     idle_after_res = {}
                 idle_after = idle_after_res.get("idle_villager") if idle_after_res else None
                 if idle_after is None:
-                    logging.error("Failed to read idle villager count after selection")
+                    logger.error("Failed to read idle villager count after selection")
                     idle_after = 0
                 elif "idle_villager" in resources._LAST_READ_FROM_CACHE:
-                    logging.warning(
+                    logger.warning(
                         "Using cached idle villager count; confidence degraded"
                     )
                 if idle_after >= idle_before:
@@ -363,9 +365,9 @@ def econ_loop(minutes=5):
                 took_from_wood = True
 
             if build_house():
-                logging.info("Casa construída para expandir população")
+                logger.info("Casa construída para expandir população")
             else:
-                logging.warning("Falha ao construir casa para expandir população")
+                logger.warning("Falha ao construir casa para expandir população")
 
             if took_from_wood:
                 input_utils._click_norm(wood_x, wood_y)
@@ -373,4 +375,4 @@ def econ_loop(minutes=5):
             time.sleep(0.5)
 
         time.sleep(common.CFG["timers"]["loop_sleep"])
-    logging.info("Rotina econômica finalizada")
+    logger.info("Rotina econômica finalizada")

@@ -101,7 +101,7 @@ class TestHandleOcrFailure(TestCase):
         regions = {"wood_stockpile": (0, 0, 10, 10)}
         results = {"wood_stockpile": None}
         with patch("script.resources.cv2.imwrite"), \
-             patch("script.resources.logging.error"), \
+             patch("script.resources.logger.error"), \
              patch("script.resources.pytesseract.pytesseract.tesseract_cmd", "/usr/bin/true"):
             with self.assertRaises(common.ResourceReadError):
                 resources.handle_ocr_failure(frame, regions, results, ["wood_stockpile"])

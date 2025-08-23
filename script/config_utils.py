@@ -16,6 +16,8 @@ from typing import Any
 ROOT = Path(__file__).resolve().parent.parent
 _CFG_CACHE: dict[str, Any] | None = None
 
+logger = logging.getLogger(__name__)
+
 
 def validate_config(cfg: dict[str, Any]) -> None:
     """Ensure mandatory config sections and coordinates are present.
@@ -140,5 +142,5 @@ def parse_scenario_info(path: str | Path) -> ScenarioInfo:
                         info.objective_villagers = int(m.group(1))
                         in_objectives = False
     except FileNotFoundError:
-        logging.error("Scenario file not found: %s", path)
+        logger.error("Scenario file not found: %s", path)
     return info

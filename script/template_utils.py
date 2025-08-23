@@ -2,6 +2,9 @@ import logging
 import cv2
 
 
+logger = logging.getLogger(__name__)
+
+
 def find_template(frame_bgr, tmpl_gray, threshold=0.82, scales=None):
     """Locate ``tmpl_gray`` within ``frame_bgr``.
 
@@ -32,7 +35,7 @@ def find_template(frame_bgr, tmpl_gray, threshold=0.82, scales=None):
         if th < 10 or tw < 10:
             continue
         if th > frame_gray.shape[0] or tw > frame_gray.shape[1]:
-            logging.debug(
+            logger.debug(
                 "Template %sx%s exceeds frame %sx%s at scale %.2f, skipping",
                 tw,
                 th,

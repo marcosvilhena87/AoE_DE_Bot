@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parent.parent
 ASSETS = ROOT / "assets"
 
 CFG = load_config()
+logger = logging.getLogger(__name__)
 
 SCT = None
 MONITOR = None
@@ -68,7 +69,7 @@ def _grab_frame(bbox=None):
 def _load_gray(path):
     im = cv2.imread(str(path), cv2.IMREAD_GRAYSCALE)
     if im is None:
-        logging.warning("Asset não encontrado: %s", path)
+        logger.warning("Asset não encontrado: %s", path)
         return None
     return im
 
@@ -98,6 +99,6 @@ def _load_icon_templates():
         path = icons_dir / f"{name}.png"
         icon = cv2.imread(str(path), cv2.IMREAD_GRAYSCALE)
         if icon is None:
-            logging.warning("Icon asset missing: %s", path)
+            logger.warning("Icon asset missing: %s", path)
             continue
         ICON_TEMPLATES[name] = icon
