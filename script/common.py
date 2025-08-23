@@ -171,10 +171,15 @@ def _grab_frame(bbox=None):
 def _load_gray(path):
     im = cv2.imread(str(path), cv2.IMREAD_GRAYSCALE)
     if im is None:
-        raise FileNotFoundError(f"Asset não encontrado: {path}")
+        logging.warning("Asset não encontrado: %s", path)
+        return None
     return im
 
-HUD_TEMPLATES = {name: _load_gray(ROOT / name) for name in CFG.get("look_for", [])}
+HUD_TEMPLATES = {
+    name: tmpl
+    for name in CFG.get("look_for", [])
+    if (tmpl := _load_gray(ROOT / name)) is not None
+}
 
 # Ícones do painel de recursos carregados sob demanda
 ICON_NAMES = [
@@ -207,6 +212,8 @@ def wait_hud(timeout=60):
     while time.time() - t0 < timeout:
         frame = _grab_frame()
         for name, tmpl in HUD_TEMPLATES.items():
+            if tmpl is None:
+                continue
             box, score, heat = find_template(
                 frame, tmpl, threshold=CFG["threshold"], scales=CFG["scales"]
             )
@@ -487,6 +494,7 @@ def _ocr_digits_better(gray):
 
 def read_resources_from_hud():
     frame = _grab_frame()
+    h_full, w_full = frame.shape[:2]
     regions = locate_resource_panel(frame)
 
     required_icons = [
@@ -590,17 +598,9 @@ def read_resources_from_hud():
         )
 
     results = {}
-    h_full, w_full = frame.shape[:2]
     for name, (x, y, w, h) in regions.items():
-        x1, y1 = max(x, 0), max(y, 0)
-        x2, y2 = min(x + w, w_full), min(y + h, h_full)
-        roi = frame[y1:y2, x1:x2]
-        if roi.shape[0] != h or roi.shape[1] != w:
-            padded = np.zeros((h, w, 3), dtype=frame.dtype)
-            pad_y = y1 - y
-            pad_x = x1 - x
-            padded[pad_y:pad_y + roi.shape[0], pad_x:pad_x + roi.shape[1]] = roi
-            roi = padded
+        roi_bbox = {"left": x, "top": y, "width": w, "height": h}
+        roi = _grab_frame(roi_bbox)
         gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
         gray = cv2.medianBlur(gray, 3)
 
