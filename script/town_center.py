@@ -16,26 +16,33 @@ def train_villagers(target_pop: int):
         common._press_key_safe(common.CFG["keys"]["select_tc"], 0.10)
 
         resources = None
+        food = None
         for attempt in range(1, 4):
             logging.debug(
-                "Attempt %s to read resources while training villagers", attempt
+                "Attempt %s to read food from HUD while training villagers", attempt
             )
             try:
                 resources = common.read_resources_from_hud()
-                break
             except common.ResourceReadError as exc:
                 logging.error(
                     "Resource read error while training villagers (attempt %s/3): %s",
                     attempt,
                     exc,
                 )
-                time.sleep(0.1)
-        if resources is None:
-            logging.error("Failed to read resources after 3 attempts; stopping villager training")
-            break
-        food = resources.get("food_stockpile")
-        if food is None:
-            logging.error("Failed to read food; stopping villager training")
+            else:
+                food = resources.get("food_stockpile")
+                if isinstance(food, int):
+                    break
+                logging.warning(
+                    "food_stockpile not detected (attempt %s/3); HUD may not be updated",
+                    attempt,
+                )
+            if attempt < 3:
+                time.sleep(0.2)
+        if not isinstance(food, int):
+            logging.error(
+                "Failed to obtain food stockpile after 3 attempts; stopping villager training"
+            )
             break
         if food < 50:
             logging.info(
