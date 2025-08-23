@@ -8,21 +8,79 @@ from . import screen_utils
 pg.PAUSE = 0.05
 pg.FAILSAFE = True  # mouse no canto sup-esq aborta instantaneamente
 
-def _screen_size():
+
+def _screen_size() -> tuple[int, int]:
+    """Return the current screen resolution.
+
+    Returns:
+        tuple[int, int]: Width and height of the active monitor in pixels.
+
+    Example:
+        >>> width, height = _screen_size()
+        >>> print(width, height)
+        1920 1080
+    """
+
     return screen_utils.MONITOR["width"], screen_utils.MONITOR["height"]
 
-def _to_px(nx, ny):
+
+def _to_px(nx: float, ny: float) -> tuple[int, int]:
+    """Convert normalized coordinates to pixel values.
+
+    Normalized coordinates are fractions of the screen size where ``0`` is the
+    minimum and ``1`` is the maximum. This helper is primarily used by
+    functions that work with screen regions.
+
+    Args:
+        nx (float): Normalized x coordinate.
+        ny (float): Normalized y coordinate.
+
+    Returns:
+        tuple[int, int]: Corresponding pixel coordinates ``(x, y)``.
+
+    Example:
+        >>> _to_px(0.5, 0.5)
+        (960, 540)
+    """
+
     W, H = _screen_size()
     return int(nx * W), int(ny * H)
 
-def _move_cursor_safe():
+
+def _move_cursor_safe() -> None:
+    """Move the cursor to the screen centre while temporarily disabling
+    PyAutoGUI's fail-safe.
+
+    This function ensures that subsequent automated mouse operations are not
+    interrupted by the user moving the cursor to the fail-safe corner.
+
+    Returns:
+        None
+    """
+
     W, H = _screen_size()
     failsafe_state = pg.FAILSAFE
     pg.FAILSAFE = False
     pg.moveTo(W // 2, H // 2)
     pg.FAILSAFE = failsafe_state
 
-def _click_norm(nx, ny, button="left"):
+
+def _click_norm(nx: float, ny: float, button: str = "left") -> None:
+    """Click on normalized screen coordinates.
+
+    Args:
+        nx (float): Normalized x coordinate.
+        ny (float): Normalized y coordinate.
+        button (str, optional): Mouse button to use (``"left"`` or
+            ``"right"``). Defaults to ``"left"``.
+
+    Returns:
+        None
+
+    Example:
+        >>> _click_norm(0.5, 0.5)  # Click the centre of the screen
+    """
+
     x, y = _to_px(nx, ny)
     try:
         pg.click(x, y, button=button)
@@ -35,7 +93,21 @@ def _click_norm(nx, ny, button="left"):
         _move_cursor_safe()
         pg.click(x, y, button=button)
 
-def _press_key_safe(key, pause):
+
+def _press_key_safe(key: str, pause: float) -> None:
+    """Press a key while recovering from fail-safe interruptions.
+
+    Args:
+        key (str): Key to press as recognised by PyAutoGUI.
+        pause (float): Time in seconds to pause after the key press.
+
+    Returns:
+        None
+
+    Example:
+        >>> _press_key_safe("enter", 0.1)
+    """
+
     try:
         pg.press(key)
         time.sleep(pause)
