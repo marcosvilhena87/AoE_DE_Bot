@@ -44,7 +44,7 @@ class TestResourceReadRetry(TestCase):
             {"food_stockpile": 100},
         ]
         with patch(
-            "script.common.read_resources_from_hud",
+            "script.resources.read_resources_from_hud",
             side_effect=side_effect,
         ) as read_mock, \
              patch("script.town_center.select_idle_villager"), \

@@ -3,6 +3,7 @@ import time
 
 import script.common as common
 import script.hud as hud
+import script.resources as resources
 
 
 def select_idle_villager():
@@ -25,14 +26,14 @@ def build_house():
     """
 
     wood_needed = 30
-    resources = None
+    res_vals = None
     wood = None
     for attempt in range(1, 4):
         logging.debug(
             "Attempt %s to read wood from HUD while building house", attempt
         )
         try:
-            resources = common.read_resources_from_hud()
+            res_vals = resources.read_resources_from_hud()
         except common.ResourceReadError as exc:
             logging.error(
                 "Resource read error while building house (attempt %s/3): %s",
@@ -40,7 +41,7 @@ def build_house():
                 exc,
             )
         else:
-            wood = resources.get("wood_stockpile")
+            wood = res_vals.get("wood_stockpile")
             if isinstance(wood, int):
                 break
             logging.warning(
@@ -53,14 +54,14 @@ def build_house():
         logging.debug("Refreshing HUD anchor before final resource read")
         try:
             hud.wait_hud()
-            resources = common.read_resources_from_hud()
+            res_vals = resources.read_resources_from_hud()
         except Exception as exc:
             logging.error(
                 "Failed to refresh HUD or read resources while building house: %s",
                 exc,
             )
             return False
-        wood = resources.get("wood_stockpile")
+        wood = res_vals.get("wood_stockpile")
         if not isinstance(wood, int):
             logging.error(
                 "Failed to obtain wood stockpile after HUD refresh; cannot build house"
@@ -107,13 +108,13 @@ def build_house():
 
         logging.warning("Tentativa %s de construir casa falhou.", idx)
         try:
-            resources = common.read_resources_from_hud()
+            res_vals = resources.read_resources_from_hud()
         except common.ResourceReadError as exc:
             logging.error(
                 "Resource read error while retrying house construction: %s", exc
             )
             return False
-        wood = resources.get("wood_stockpile")
+        wood = res_vals.get("wood_stockpile")
         if wood is None:
             logging.error("Failed to read wood; aborting house construction")
             return False
@@ -205,13 +206,13 @@ def econ_loop(minutes=5):
         time.sleep(common.CFG["timers"]["idle_gap"])
 
         if common.CURRENT_POP >= common.POP_CAP - 2:
-            resources = None
+            res_vals = None
             for attempt in range(1, 4):
                 logging.debug(
                     "Attempt %s to read resources during economic loop", attempt
                 )
                 try:
-                    resources = common.read_resources_from_hud()
+                    res_vals = resources.read_resources_from_hud()
                     break
                 except common.ResourceReadError as exc:
                     logging.error(
@@ -220,12 +221,12 @@ def econ_loop(minutes=5):
                         exc,
                     )
                     time.sleep(0.1)
-            if resources is None:
+            if res_vals is None:
                 logging.error(
                     "Failed to read resources after 3 attempts; ending economic loop"
                 )
                 break
-            idle_before = resources.get("idle_villager")
+            idle_before = res_vals.get("idle_villager")
             if idle_before is None:
                 logging.error("Failed to read idle villager count; ending economic loop")
                 break
@@ -241,7 +242,7 @@ def econ_loop(minutes=5):
                         attempt,
                     )
                     try:
-                        idle_after_res = common.read_resources_from_hud()
+                        idle_after_res = resources.read_resources_from_hud()
                         break
                     except common.ResourceReadError as exc:
                         logging.error(

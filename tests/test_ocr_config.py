@@ -33,6 +33,7 @@ os.environ.setdefault("TESSERACT_CMD", "/usr/bin/true")
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import script.common as common
+import script.resources as resources
 
 
 class TestOcrConfig(TestCase):
@@ -53,10 +54,10 @@ class TestOcrConfig(TestCase):
 
         custom_cfg = {**common.CFG, "ocr_kernel_size": 3, "ocr_psm_list": [4, 5]}
 
-        with patch.object(common, "CFG", custom_cfg), \
-             patch("script.common.cv2.dilate", side_effect=fake_dilate), \
-             patch("script.common.pytesseract.image_to_data", side_effect=fake_image_to_data):
-            common._ocr_digits_better(gray)
+        with patch.object(resources, "CFG", custom_cfg), \
+             patch("script.resources.cv2.dilate", side_effect=fake_dilate), \
+             patch("script.resources.pytesseract.image_to_data", side_effect=fake_image_to_data):
+            resources._ocr_digits_better(gray)
 
         self.assertIn((3, 3), kernels)
         self.assertEqual(sorted(set(psms)), [4, 5])

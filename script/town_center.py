@@ -2,6 +2,7 @@ import logging
 import time
 
 import script.common as common
+import script.resources as resources
 from script.villager import build_house, select_idle_villager
 
 
@@ -15,14 +16,14 @@ def train_villagers(target_pop: int):
         # change the selection (e.g. building houses).
         common._press_key_safe(common.CFG["keys"]["select_tc"], 0.10)
 
-        resources = None
+        res_vals = None
         food = None
         for attempt in range(1, 4):
             logging.debug(
                 "Attempt %s to read food from HUD while training villagers", attempt
             )
             try:
-                resources = common.read_resources_from_hud()
+                res_vals = resources.read_resources_from_hud()
             except common.ResourceReadError as exc:
                 logging.error(
                     "Resource read error while training villagers (attempt %s/3): %s",
@@ -30,7 +31,7 @@ def train_villagers(target_pop: int):
                     exc,
                 )
             else:
-                food = resources.get("food_stockpile")
+                food = res_vals.get("food_stockpile")
                 if isinstance(food, int):
                     break
                 logging.warning(

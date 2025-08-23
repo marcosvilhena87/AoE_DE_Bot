@@ -33,6 +33,7 @@ os.environ.setdefault("TESSERACT_CMD", "/usr/bin/true")
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import script.common as common
+import script.resources as resources
 
 
 class TestResourceDebugImages(TestCase):
@@ -50,7 +51,7 @@ class TestResourceDebugImages(TestCase):
 
         with patch("script.screen_utils._grab_frame", side_effect=fake_grab_frame), \
              patch(
-                 "script.common.locate_resource_panel",
+                 "script.resources.locate_resource_panel",
                  return_value={
                      "wood_stockpile": (0, 0, 50, 50),
                      "food_stockpile": (50, 0, 50, 50),
@@ -60,11 +61,11 @@ class TestResourceDebugImages(TestCase):
                      "idle_villager": (250, 0, 50, 50),
                  },
              ), \
-             patch("script.common._ocr_digits_better", side_effect=fake_ocr), \
-             patch("script.common.pytesseract.image_to_string", return_value=""), \
-             patch("script.common.cv2.imwrite") as imwrite_mock:
+             patch("script.resources._ocr_digits_better", side_effect=fake_ocr), \
+             patch("script.resources.pytesseract.image_to_string", return_value=""), \
+             patch("script.resources.cv2.imwrite") as imwrite_mock:
             with self.assertRaises(common.ResourceReadError):
-                common.read_resources_from_hud()
+                resources.read_resources_from_hud()
         paths = [call.args[0] for call in imwrite_mock.call_args_list]
         debug_dir = common.ROOT / "debug"
         self.assertGreaterEqual(imwrite_mock.call_count, 2)
@@ -93,7 +94,7 @@ class TestResourceDebugImages(TestCase):
 
         with patch("script.screen_utils._grab_frame", side_effect=fake_grab_frame), \
              patch(
-                 "script.common.locate_resource_panel",
+                 "script.resources.locate_resource_panel",
                  return_value={
                      "wood_stockpile": (0, 0, 50, 50),
                      "food_stockpile": (50, 0, 50, 50),
@@ -103,11 +104,11 @@ class TestResourceDebugImages(TestCase):
                      "idle_villager": (250, 0, 50, 50),
                  },
              ), \
-             patch("script.common._ocr_digits_better", side_effect=fake_ocr), \
-             patch("script.common.pytesseract.image_to_string", return_value=""), \
-             patch("script.common.cv2.imwrite") as imwrite_mock:
+             patch("script.resources._ocr_digits_better", side_effect=fake_ocr), \
+             patch("script.resources.pytesseract.image_to_string", return_value=""), \
+             patch("script.resources.cv2.imwrite") as imwrite_mock:
             with self.assertRaises(common.ResourceReadError) as ctx:
-                common.read_resources_from_hud()
+                resources.read_resources_from_hud()
 
         self.assertIn("food_stockpile", str(ctx.exception))
 

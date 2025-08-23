@@ -16,7 +16,7 @@ import pytesseract
 from .template_utils import find_template
 from .config_utils import CFG
 from . import screen_utils
-from . import common
+from . import common, resources
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -65,7 +65,7 @@ def read_population_from_hud(retries=3, conf_threshold=None, save_failed_roi=Fal
         conf_threshold = CFG.get("ocr_conf_threshold", 60)
 
     frame_full = screen_utils._grab_frame()
-    regions = common.locate_resource_panel(frame_full)
+    regions = resources.locate_resource_panel(frame_full)
     roi_bbox = None
     if "population" in regions:
         x, y, w, h = regions["population"]

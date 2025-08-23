@@ -51,7 +51,7 @@ class TestInternalPopulation(TestCase):
             return True
 
         with patch(
-            "script.common.read_resources_from_hud",
+            "script.resources.read_resources_from_hud",
             return_value={"food_stockpile": 500},
         ), \
              patch("script.town_center.build_house", side_effect=fake_build_house) as build_house_mock, \

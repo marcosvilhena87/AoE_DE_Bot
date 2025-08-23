@@ -34,6 +34,7 @@ os.environ.setdefault("TESSERACT_CMD", "/usr/bin/true")
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import script.common as common
+import script.resources as resources
 
 
 class TestResourceOcrFailure(TestCase):
@@ -48,7 +49,7 @@ class TestResourceOcrFailure(TestCase):
 
         with patch("script.screen_utils._grab_frame", side_effect=fake_grab_frame), \
              patch(
-                 "script.common.locate_resource_panel",
+                 "script.resources.locate_resource_panel",
                  return_value={
                      "wood_stockpile": (0, 0, 50, 50),
                      "food_stockpile": (50, 0, 50, 50),
@@ -58,7 +59,7 @@ class TestResourceOcrFailure(TestCase):
                      "idle_villager": (250, 0, 50, 50),
                  },
              ), \
-             patch("script.common._ocr_digits_better", side_effect=fake_ocr), \
-             patch("script.common.pytesseract.image_to_string", return_value="123"):
-            result = common.read_resources_from_hud()
+             patch("script.resources._ocr_digits_better", side_effect=fake_ocr), \
+             patch("script.resources.pytesseract.image_to_string", return_value="123"):
+            result = resources.read_resources_from_hud()
             self.assertEqual(result["wood_stockpile"], 123)

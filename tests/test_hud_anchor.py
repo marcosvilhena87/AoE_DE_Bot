@@ -38,6 +38,7 @@ os.environ.setdefault("TESSERACT_CMD", "/usr/bin/true")
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import script.common as common
 import script.hud as hud
+import script.resources as resources
 import tools.campaign_bot as cb
 
 
@@ -69,10 +70,10 @@ class TestHudAnchor(TestCase):
             d = next(digits_iter)
             return d, {"text": [d]}, np.zeros((1, 1), dtype=np.uint8)
 
-        with patch("script.common.locate_resource_panel", return_value={}), \
+        with patch("script.resources.locate_resource_panel", return_value={}), \
              patch("script.screen_utils._grab_frame", side_effect=fake_grab_frame), \
-             patch("script.common._ocr_digits_better", side_effect=fake_ocr):
-            result = common.read_resources_from_hud()
+             patch("script.resources._ocr_digits_better", side_effect=fake_ocr):
+            result = resources.read_resources_from_hud()
 
         expected = {
             "wood_stockpile": 100,
