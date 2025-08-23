@@ -1,27 +1,67 @@
-Starting Age:  Stone Age
-Starting resources: 140 food, 80 wood
-Population limit: 50
-Starting units: 3 Villagers
-Starting buildings: 1 Town Center
+"""Automation for the *Hunting* scenario of the Ascent of Egypt campaign.
 
-Objectives
-Grow your tribe to 7 villagers.
+This module orchestrates the very first tutorial mission of Age of Empires
+Definitive Edition.  The objective of the scenario is to grow the tribe to
+seven villagers.  The script uses the generic economic routines provided by
+``script.villager`` and ``script.town_center`` to train new villagers, place
+basic buildings and assign villagers to gather resources.
 
-Hints
-You must hunt gazelles and elephants to increase your stockpile of food in order to create new villagers.
-As your population grows, you must build new Houses to accommodate the new units or else you will not be able to create anymore new ones.
-Villagers can move around gazelles and herd them closer to the Town Center before hunting them. This decreases the distance the villagers must travel to carry the meat to the Town Center (where it is added to your stockpile).
-When you hunt elephants, you must use a different tactic than when you hunt gazelles. Elephants will attack the villagers that are hunting them so instead of moving around the elephants like you'd do with gazelles, you must select a villager, shoot the elephant, run away and then (when he's almost out of range) turn your villager around and shoot him again. If you repeat this process, you can lure the elephant to your drop off point where you can easily kill the elephant with multiple villagers, and you reduce the distance your villagers must walk.
-Food from dead animals deteriorates over time, so it is more efficient to assign more than one villager to gather the meat from a kill.
-Beware of Crocodiles—they tend to eat unwary villagers who wander near the shore. Crocodiles and other predators can be hunted and provide food like gazelles but at a much lower return rate.
+The heavy lifting (resource gathering, villager training and house building)
+is handled by :func:`script.villager.econ_loop`.  This file only performs the
+scenario specific setup such as reading the scenario information from the
+accompanying text file and initialising the population counters.
+"""
 
-Strategy
-This campaign is pretty straightforward, since no enemies are present. The only thing the player should look out for are Alligators lurking around near the coastal areas of the map. Contrary to the scenario instructions, the player only needs to create six Villagers, as one is already available. A total of 300 food is required, and a house needs to be built. Bring the Villager to the west and walk through the large herd of Gazelles. Try to judge how far the player wants the prey to be from the Town Center before hitting with a spear twice. Have the hunter collect the meat and create Villagers as the food comes in. As soon as the player has finished, build a House with one Villager while continuing to hunt. Create the required Villagers and the task will be complete.
+from __future__ import annotations
 
-Tutorial
-HUNTING
-To assign a villager to hunt, click the villager, and then right-click the animal to hunt. For example, to hunt a gazelle, right-click it. The villager hunts the animal, gathers food, and deposits it at the Town Center where it is added to your stockpile (as shown in the upper-left corner of the game screen).
-CREATING VILLAGERS
-Villagers cost 50 food. To create a villager, select a Town Center, and then click on the Create Villager button in the lower left corner of the game screen. After a brief training period, the villager appears beside the Town Center.
-BUILDING HOUSES
-Houses cost 30 wood and each House supports four villagers. The Town Center also supports four villagers. To build a House, select a villager, click the Build House button in the building panel in the lower-left corner of the game screen, and then click a location on the map. The House is shown in red if you cannot build in a particular location.
+import logging
+import time
+from pathlib import Path
+
+import script.common as common
+from script.villager import econ_loop
+
+
+def main() -> None:
+    """Run the automation routine for the *Hunting* mission.
+
+    The function performs the following high level steps:
+
+    1.  Wait for the game HUD to be detected on screen (with a fallback
+        attempt if the first detection fails).
+    2.  Parse the scenario information from ``1.Hunting.txt`` which lives
+        alongside this file.
+    3.  Initialise the internal population counters so that the economic loop
+        knows how many villagers are currently available and what the target
+        population is.
+    4.  Start the economic loop for the number of minutes configured in
+        ``config.json``.
+    """
+
+    logging.info("Entre na missão da campanha (Hunting). O script inicia quando detectar a HUD…")
+
+    try:
+        hud, asset = common.wait_hud(timeout=90)
+        logging.info("HUD detectada em %s usando '%s'. Rodando rotina econômica…", hud, asset)
+    except RuntimeError as exc:  # pragma: no cover - retry branch is defensive
+        logging.error(str(exc))
+        logging.info("Dando mais 25s para você ajustar a câmera/HUD (fallback)…")
+        time.sleep(25)
+        hud, asset = common.wait_hud(timeout=90)
+        logging.info("HUD detectada em %s usando '%s'. Rodando rotina econômica…", hud, asset)
+
+    scenario_txt = Path(__file__).with_suffix(".txt")
+    info = common.parse_scenario_info(scenario_txt)
+
+    # Configuração inicial de população
+    common.CURRENT_POP = info.starting_villagers
+    common.POP_CAP = 4  # População suportada pelo Town Center inicial
+    common.TARGET_POP = info.objective_villagers
+
+    econ_loop(minutes=common.CFG["loop_minutes"])
+    logging.info("Rotina concluída.")
+
+
+if __name__ == "__main__":  # pragma: no cover - manual execution entry point
+    main()
+
