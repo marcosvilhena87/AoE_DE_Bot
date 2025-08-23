@@ -584,17 +584,17 @@ def read_resources_from_hud():
                 data = {"text": [text.strip()]}
                 mask = gray
         if not digits:
-            logging.debug("OCR failed for %s; raw boxes=%s", name, data.get("text"))
-            debug_cfg = CFG.get("resource_panel", {}).get("debug_failed_ocr")
-            if CFG.get("debug") or debug_cfg or CFG.get("ocr_debug"):
-                debug_dir = ROOT / "debug"
-                debug_dir.mkdir(exist_ok=True)
-                ts = int(time.time() * 1000)
-                cv2.imwrite(str(debug_dir / f"resource_{name}_roi_{ts}.png"), roi)
-                if mask is not None:
-                    cv2.imwrite(
-                        str(debug_dir / f"resource_{name}_thresh_{ts}.png"), mask
-                    )
+            logging.warning(
+                "OCR failed for %s; raw boxes=%s", name, data.get("text")
+            )
+            debug_dir = ROOT / "debug"
+            debug_dir.mkdir(exist_ok=True)
+            ts = int(time.time() * 1000)
+            cv2.imwrite(str(debug_dir / f"resource_{name}_roi_{ts}.png"), roi)
+            if mask is not None:
+                cv2.imwrite(
+                    str(debug_dir / f"resource_{name}_thresh_{ts}.png"), mask
+                )
             results[name] = None
         else:
             results[name] = int(digits)
