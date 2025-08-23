@@ -20,6 +20,12 @@ CFG = load_config()
 # Cache of last detected icon positions
 _LAST_ICON_BOUNDS = {}
 
+# Cache of last successfully read resource values
+_LAST_RESOURCE_VALUES = {}
+
+# Track last set of regions returned to invalidate cached values
+_LAST_REGION_BOUNDS = None
+
 
 def locate_resource_panel(frame):
     """Locate the resource panel and return bounding boxes for each value."""
@@ -122,6 +128,11 @@ def locate_resource_panel(frame):
             top_i = top
             height_i = height
         regions[name] = (left, top_i, width, height_i)
+
+    global _LAST_REGION_BOUNDS, _LAST_RESOURCE_VALUES
+    if _LAST_REGION_BOUNDS != regions:
+        _LAST_REGION_BOUNDS = regions.copy()
+        _LAST_RESOURCE_VALUES.clear()
 
     return regions
 
@@ -393,6 +404,8 @@ def read_resources_from_hud(required_icons: Iterable[str] | None = None):
     else:
         required_icons = list(required_icons)
 
+    required_set = set(required_icons)
+
     regions = detect_resource_regions(frame, required_icons)
 
     results = {}
@@ -417,9 +430,17 @@ def read_resources_from_hud(required_icons: Iterable[str] | None = None):
             cv2.imwrite(str(debug_dir / f"resource_{name}_roi_{ts}.png"), roi)
             if mask is not None:
                 cv2.imwrite(str(debug_dir / f"resource_{name}_thresh_{ts}.png"), mask)
-            results[name] = None
+            if name not in required_set and name in _LAST_RESOURCE_VALUES:
+                logging.warning(
+                    "Using cached value for %s after OCR failure", name
+                )
+                results[name] = _LAST_RESOURCE_VALUES[name]
+            else:
+                results[name] = None
         else:
-            results[name] = int(digits)
+            value = int(digits)
+            results[name] = value
+            _LAST_RESOURCE_VALUES[name] = value
 
     handle_ocr_failure(frame, regions, results, required_icons)
     return results
