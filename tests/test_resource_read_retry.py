@@ -90,10 +90,10 @@ class TestResourceReadRetry(TestCase):
 
         fake_time.calls = 0
 
-        with patch("script.villager.select_idle_villager", lambda: None), \
-             patch("script.villager.build_granary", return_value=True), \
-             patch("script.villager.build_storage_pit", return_value=True), \
-             patch("script.villager.build_house", return_value=True), \
+        with patch("script.villager.select_idle_villager", lambda: True), \
+            patch("script.villager.build_granary", return_value=True), \
+            patch("script.villager.build_storage_pit", return_value=True), \
+            patch("script.villager.build_house", return_value=True), \
              patch("script.input_utils._click_norm", lambda *a, **k: None), \
              patch("script.villager.time.sleep", lambda s: None), \
              patch("script.resources.read_resources_from_hud", side_effect=fake_read), \

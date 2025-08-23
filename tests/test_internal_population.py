@@ -55,7 +55,7 @@ class TestInternalPopulation(TestCase):
             return_value={"food_stockpile": 500},
         ), \
              patch("script.town_center.build_house", side_effect=fake_build_house) as build_house_mock, \
-             patch("script.town_center.select_idle_villager"), \
+             patch("script.town_center.select_idle_villager", return_value=True), \
              patch("script.hud.read_population_from_hud") as read_pop_mock:
             tc.train_villagers(7)
             self.assertEqual(common.CURRENT_POP, 7)
