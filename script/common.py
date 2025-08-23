@@ -92,7 +92,8 @@ SCT = mss()
 MONITOR = SCT.monitors[1]  # tela principal
 # Posição detectada do HUD usada apenas como referência
 HUD_ANCHOR = None
-
+# Últimas posições detectadas dos ícones de recurso
+_LAST_ICON_BOUNDS = {}
 
 class PopulationReadError(RuntimeError):
     """Raised when population values cannot be extracted from the HUD."""
@@ -335,7 +336,12 @@ def locate_resource_panel(frame):
     panel_gray = cv2.cvtColor(frame[y : y + h, x : x + w], cv2.COLOR_BGR2GRAY)
 
     res_cfg = CFG.get("resource_panel", {})
-    match_threshold = res_cfg.get("match_threshold", 0.8)
+    profile = CFG.get("profile")
+    profile_cfg = CFG.get("profiles", {}).get(profile, {})
+    profile_res = profile_cfg.get("resource_panel", {})
+    match_threshold = profile_res.get(
+        "match_threshold", res_cfg.get("match_threshold", 0.8)
+    )
     scales = res_cfg.get("scales", CFG.get("scales", [1.0]))
     pad_left = res_cfg.get("roi_padding_left", 0)
     pad_right = res_cfg.get("roi_padding_right", 0)
@@ -353,6 +359,7 @@ def locate_resource_panel(frame):
         "idle_villager",
     ]
     detections = []
+    global _LAST_ICON_BOUNDS
     for name in names:
         icon = cv2.imread(str(icons_dir / f"{name}.png"), cv2.IMREAD_GRAYSCALE)
         if icon is None:
@@ -373,6 +380,12 @@ def locate_resource_panel(frame):
         if best[0] >= match_threshold and best[1] is not None:
             (bw, bh) = best[2]
             detections.append((name, best[1][0], best[1][1], bw, bh))
+            _LAST_ICON_BOUNDS[name] = (best[1][0], best[1][1], bw, bh)
+        elif name in _LAST_ICON_BOUNDS:
+            logging.info(
+                "Using previous position for icon '%s'; score=%.3f", name, best[0]
+            )
+            detections.append((name, *_LAST_ICON_BOUNDS[name]))
         else:
             logging.warning("Icon '%s' not matched; score=%.3f", name, best[0])
 
