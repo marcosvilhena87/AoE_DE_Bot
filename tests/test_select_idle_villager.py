@@ -1,0 +1,57 @@
+import os
+import sys
+import types
+from unittest import TestCase
+from unittest.mock import patch
+
+import numpy as np
+
+# Stub modules that require GUI
+
+dummy_pg = types.SimpleNamespace(
+    PAUSE=0,
+    FAILSAFE=False,
+    size=lambda: (200, 200),
+    click=lambda *a, **k: None,
+    moveTo=lambda *a, **k: None,
+    press=lambda *a, **k: None,
+)
+
+
+class DummyMSS:
+    monitors = [{}, {"left": 0, "top": 0, "width": 200, "height": 200}]
+
+    def grab(self, region):
+        h, w = region["height"], region["width"]
+        return np.zeros((h, w, 4), dtype=np.uint8)
+
+
+sys.modules.setdefault("pyautogui", dummy_pg)
+sys.modules.setdefault("mss", types.SimpleNamespace(mss=lambda: DummyMSS()))
+
+os.environ.setdefault("TESSERACT_CMD", "/usr/bin/true")
+
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+import script.villager as villager
+
+
+class TestSelectIdleVillager(TestCase):
+    def test_returns_true_when_count_decreases(self):
+        reads = iter([
+            {"idle_villager": 2},
+            {"idle_villager": 1},
+        ])
+
+        with patch("script.input_utils._press_key_safe"), \
+             patch("script.resources.read_resources_from_hud", side_effect=lambda *a, **k: next(reads)):
+            self.assertTrue(villager.select_idle_villager())
+
+    def test_returns_false_when_no_idle_villagers(self):
+        reads = iter([
+            {"idle_villager": 0},
+            {"idle_villager": 0},
+        ])
+
+        with patch("script.input_utils._press_key_safe"), \
+             patch("script.resources.read_resources_from_hud", side_effect=lambda *a, **k: next(reads)):
+            self.assertFalse(villager.select_idle_villager())

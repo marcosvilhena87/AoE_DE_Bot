@@ -7,9 +7,38 @@ import script.resources as resources
 import script.input_utils as input_utils
 
 
-def select_idle_villager():
-    """Selecione um aldeão ocioso usando a tecla configurada."""
+def select_idle_villager(delay: float = 0.1) -> bool:
+    """Tenta selecionar um aldeão ocioso usando a tecla configurada.
+
+    Lê o valor de ``idle_villager`` antes e depois de pressionar o hotkey.
+    O parâmetro ``delay`` é repassado para ``force_delay`` na segunda leitura
+    para dar tempo da interface atualizar. Retorna ``True`` se a contagem
+    diminuir (um aldeão foi selecionado) ou ``False`` caso contrário.
+    """
+
+    before = None
+    try:
+        res_before = resources.read_resources_from_hud(["idle_villager"])
+    except common.ResourceReadError as exc:  # pragma: no cover - falha de OCR
+        logging.error("Falha ao ler idle_villager: %s", exc)
+    else:
+        before = res_before.get("idle_villager")
+
     input_utils._press_key_safe(common.CFG["keys"]["idle_vill"], 0.10)
+
+    after = None
+    try:
+        res_after = resources.read_resources_from_hud(
+            ["idle_villager"], force_delay=delay
+        )
+    except common.ResourceReadError as exc:  # pragma: no cover - falha de OCR
+        logging.error("Falha ao ler idle_villager: %s", exc)
+    else:
+        after = res_after.get("idle_villager")
+
+    if isinstance(before, int) and isinstance(after, int) and after < before:
+        return True
+    return False
 
 
 def count_idle_villagers_via_hotkey(delay=0.1, return_selections=False):
@@ -227,17 +256,21 @@ def econ_loop(minutes=5):
     logging.info("Iniciando rotina econômica por %s minutos", minutes)
     town_center.train_villagers(common.TARGET_POP)
 
-    select_idle_villager()
-    if build_granary():
-        logging.info("Granary posicionado")
+    if select_idle_villager():
+        if build_granary():
+            logging.info("Granary posicionado")
+        else:
+            logging.warning("Falha ao posicionar Granary")
     else:
-        logging.warning("Falha ao posicionar Granary")
+        logging.warning("Nenhum aldeão ocioso para construir Granary")
     time.sleep(0.5)
-    select_idle_villager()
-    if build_storage_pit():
-        logging.info("Storage Pit posicionado")
+    if select_idle_villager():
+        if build_storage_pit():
+            logging.info("Storage Pit posicionado")
+        else:
+            logging.warning("Falha ao posicionar Storage Pit")
     else:
-        logging.warning("Falha ao posicionar Storage Pit")
+        logging.warning("Nenhum aldeão ocioso para construir Storage Pit")
     time.sleep(0.5)
 
     areas = common.CFG.get("areas", {})
@@ -254,12 +287,12 @@ def econ_loop(minutes=5):
 
     t0 = time.time()
     while time.time() - t0 < minutes * 60:
-        select_idle_villager()
-        input_utils._click_norm(food_x, food_y)
+        if select_idle_villager():
+            input_utils._click_norm(food_x, food_y)
         time.sleep(common.CFG["timers"]["idle_gap"])
 
-        select_idle_villager()
-        input_utils._click_norm(wood_x, wood_y)
+        if select_idle_villager():
+            input_utils._click_norm(wood_x, wood_y)
         time.sleep(common.CFG["timers"]["idle_gap"])
 
         if common.CURRENT_POP >= common.POP_CAP - 2:
@@ -293,8 +326,7 @@ def econ_loop(minutes=5):
                 )
             took_from_wood = False
 
-            if idle_before > 0:
-                select_idle_villager()
+            if idle_before > 0 and select_idle_villager():
                 idle_after_res = None
                 for attempt in range(1, 4):
                     logging.debug(

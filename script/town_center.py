@@ -55,11 +55,13 @@ def train_villagers(target_pop: int):
         input_utils._press_key_safe(common.CFG["keys"]["train_vill"], 0.0)
         common.CURRENT_POP += 1
         if common.CURRENT_POP == common.POP_CAP:
-            select_idle_villager()
-            if build_house():
-                logging.info("Casa construída para expandir população")
+            if select_idle_villager():
+                if build_house():
+                    logging.info("Casa construída para expandir população")
+                else:
+                    logging.warning("Falha ao construir casa para expandir população")
             else:
-                logging.warning("Falha ao construir casa para expandir população")
+                logging.warning("Nenhum aldeão ocioso para construir casa")
             # Reselect the Town Center after attempting to build a house so
             # that further villager training continues from the correct
             # building.

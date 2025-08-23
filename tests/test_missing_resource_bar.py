@@ -43,7 +43,7 @@ class TestMissingResourceBar(TestCase):
             "script.resources.read_resources_from_hud",
             side_effect=common.ResourceReadError("missing"),
         ), \
-             patch("script.town_center.select_idle_villager"), \
+             patch("script.town_center.select_idle_villager", return_value=True), \
              patch("script.town_center.build_house"):
             tc.train_villagers(5)
         self.assertEqual(common.CURRENT_POP, 3)
