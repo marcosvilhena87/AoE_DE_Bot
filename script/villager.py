@@ -43,19 +43,25 @@ def select_idle_villager(delay: float = 0.1) -> bool:
     return False
 
 
-def count_idle_villagers_via_hotkey(delay=0.1, return_selections=False):
+def count_idle_villagers_via_hotkey(
+    delay=0.1, stop_threshold: int | None = None, return_selections=False
+):
     """Conta quantos aldeões ociosos existem usando o atalho de seleção.
 
     Lê ``idle_villager`` no HUD e pressiona o hotkey de seleção de
-    aldeão ocioso repetidamente até que a contagem não diminua mais ou
-    chegue a zero. Pequenas pausas são aplicadas entre as leituras para
-    permitir que a interface seja atualizada.
+    aldeão ocioso repetidamente até que a contagem não diminua mais,
+    chegue a zero ou atinja ``stop_threshold``. Pequenas pausas são
+    aplicadas entre as leituras para permitir que a interface seja
+    atualizada.
 
     Parameters
     ----------
     delay : float, optional
         Intervalo, em segundos, aguardado entre as leituras do HUD.
         O padrão é ``0.1``.
+    stop_threshold : int or None, optional
+        Interrompe a contagem quando o valor lido for menor ou igual a
+        este limite. O padrão é ``None`` (não interrompe).
     return_selections : bool, optional
         Se ``True``, também retorna o número de vezes que o hotkey foi
         acionado.
@@ -79,7 +85,8 @@ def count_idle_villagers_via_hotkey(delay=0.1, return_selections=False):
 
     current = initial
     selections = 0
-    while isinstance(current, int) and current > 0:
+    threshold = stop_threshold if isinstance(stop_threshold, int) else 0
+    while isinstance(current, int) and current > threshold:
         select_idle_villager()
         selections += 1
         try:
@@ -90,7 +97,11 @@ def count_idle_villagers_via_hotkey(delay=0.1, return_selections=False):
             logger.error("Falha ao ler idle_villager: %s", exc)
             break
         new_val = res.get("idle_villager")
-        if not isinstance(new_val, int) or new_val >= current:
+        if (
+            not isinstance(new_val, int)
+            or new_val >= current
+            or new_val <= threshold
+        ):
             break
         current = new_val
 
