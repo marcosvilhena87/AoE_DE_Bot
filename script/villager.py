@@ -4,11 +4,12 @@ import time
 import script.common as common
 import script.hud as hud
 import script.resources as resources
+import script.input_utils as input_utils
 
 
 def select_idle_villager():
     """Selecione um aldeão ocioso usando a tecla configurada."""
-    common._press_key_safe(common.CFG["keys"]["idle_vill"], 0.10)
+    input_utils._press_key_safe(common.CFG["keys"]["idle_vill"], 0.10)
 
 
 def build_house():
@@ -90,10 +91,10 @@ def build_house():
         spots.append(alt_spot)
 
     for idx, (hx, hy) in enumerate(spots, start=1):
-        common._press_key_safe(common.CFG["keys"]["build_menu"], 0.05)
-        common._press_key_safe(house_key, 0.15)
-        common._click_norm(hx, hy)
-        common._click_norm(hx, hy, button="right")
+        input_utils._press_key_safe(common.CFG["keys"]["build_menu"], 0.05)
+        input_utils._press_key_safe(house_key, 0.15)
+        input_utils._click_norm(hx, hy)
+        input_utils._click_norm(hx, hy, button="right")
         time.sleep(0.5)
 
         try:
@@ -129,7 +130,7 @@ def build_house():
 
 def build_granary():
     """Posiciona um Granary no ponto configurado."""
-    common._press_key_safe(common.CFG["keys"]["build_menu"], 0.05)
+    input_utils._press_key_safe(common.CFG["keys"]["build_menu"], 0.05)
     g_key = common.CFG["keys"].get("granary")
     if not g_key:
         logging.warning("Tecla de construção de Granary não configurada.")
@@ -139,15 +140,15 @@ def build_granary():
     if not spot:
         logging.warning("Granary spot not configured.")
         return False
-    common._press_key_safe(g_key, 0.15)
+    input_utils._press_key_safe(g_key, 0.15)
     gx, gy = spot
-    common._click_norm(gx, gy)
+    input_utils._click_norm(gx, gy)
     return True
 
 
 def build_storage_pit():
     """Posiciona um Storage Pit no ponto configurado."""
-    common._press_key_safe(common.CFG["keys"]["build_menu"], 0.05)
+    input_utils._press_key_safe(common.CFG["keys"]["build_menu"], 0.05)
     s_key = common.CFG["keys"].get("storage_pit")
     if not s_key:
         logging.warning("Tecla de construção de Storage Pit não configurada.")
@@ -157,9 +158,9 @@ def build_storage_pit():
     if not spot:
         logging.warning("Storage spot not configured.")
         return False
-    common._press_key_safe(s_key, 0.15)
+    input_utils._press_key_safe(s_key, 0.15)
     sx, sy = spot
-    common._click_norm(sx, sy)
+    input_utils._click_norm(sx, sy)
     return True
 
 
@@ -198,11 +199,11 @@ def econ_loop(minutes=5):
     t0 = time.time()
     while time.time() - t0 < minutes * 60:
         select_idle_villager()
-        common._click_norm(food_x, food_y)
+        input_utils._click_norm(food_x, food_y)
         time.sleep(common.CFG["timers"]["idle_gap"])
 
         select_idle_villager()
-        common._click_norm(wood_x, wood_y)
+        input_utils._click_norm(wood_x, wood_y)
         time.sleep(common.CFG["timers"]["idle_gap"])
 
         if common.CURRENT_POP >= common.POP_CAP - 2:
@@ -258,10 +259,10 @@ def econ_loop(minutes=5):
                     logging.error("Failed to read idle villager count after selection")
                     idle_after = 0
                 if idle_after >= idle_before:
-                    common._click_norm(wood_x, wood_y)
+                    input_utils._click_norm(wood_x, wood_y)
                     took_from_wood = True
             else:
-                common._click_norm(wood_x, wood_y)
+                input_utils._click_norm(wood_x, wood_y)
                 took_from_wood = True
 
             if build_house():
@@ -270,7 +271,7 @@ def econ_loop(minutes=5):
                 logging.warning("Falha ao construir casa para expandir população")
 
             if took_from_wood:
-                common._click_norm(wood_x, wood_y)
+                input_utils._click_norm(wood_x, wood_y)
 
             time.sleep(0.5)
 

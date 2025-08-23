@@ -33,13 +33,14 @@ os.environ.setdefault("TESSERACT_CMD", "/usr/bin/true")
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import script.common as common
+import script.input_utils as input_utils
 import script.villager as villager
 
 
 class TestClickAndBuildHouse(TestCase):
     def test_click_norm_passes_button(self):
-        with patch("script.common.pg.click") as click_mock:
-            common._click_norm(0.5, 0.5, button="right")
+        with patch("script.input_utils.pg.click") as click_mock:
+            input_utils._click_norm(0.5, 0.5, button="right")
         click_mock.assert_called_once_with(100, 100, button="right")
 
     def test_build_house_uses_right_click_and_updates_population(self):
@@ -49,8 +50,8 @@ class TestClickAndBuildHouse(TestCase):
             "script.resources.read_resources_from_hud",
             return_value={"wood_stockpile": 100},
         ), \
-            patch("script.common._press_key_safe"), \
-            patch("script.common._click_norm") as click_mock, \
+            patch("script.input_utils._press_key_safe"), \
+            patch("script.input_utils._click_norm") as click_mock, \
             patch("script.hud.read_population_from_hud", return_value=(0, 8)) as read_pop_mock, \
             patch("script.villager.time.sleep"):
             result = villager.build_house()
@@ -73,8 +74,8 @@ class TestBuildHouseResourceRetry(TestCase):
         with patch(
             "script.resources.read_resources_from_hud",
             side_effect=side_effect,
-        ) as read_mock, patch("script.common._press_key_safe") as press_mock, patch(
-            "script.common._click_norm"
+        ) as read_mock, patch("script.input_utils._press_key_safe") as press_mock, patch(
+            "script.input_utils._click_norm"
         ) as click_mock, patch("script.villager.time.sleep"):
             result = villager.build_house()
         self.assertFalse(result)
@@ -91,8 +92,8 @@ class TestBuildHouseResourceRetry(TestCase):
         with patch(
             "script.resources.read_resources_from_hud",
             side_effect=side_effect,
-        ) as read_mock, patch("script.common._press_key_safe"), patch(
-            "script.common._click_norm"
+        ) as read_mock, patch("script.input_utils._press_key_safe"), patch(
+            "script.input_utils._click_norm"
         ), patch(
             "script.hud.read_population_from_hud", return_value=(0, 8)
         ), patch("script.villager.time.sleep"):

@@ -37,7 +37,7 @@ import script.villager as villager
 class TestMissingHotkeys(TestCase):
     def test_build_granary_missing_key(self):
         with patch.dict(common.CFG["keys"], {"granary": None}):
-            with patch("script.common._press_key_safe"), patch("script.common._click_norm"):
+            with patch("script.input_utils._press_key_safe"), patch("script.input_utils._click_norm"):
                 with self.assertLogs(level="WARNING") as log:
                     result = villager.build_granary()
         self.assertFalse(result)
@@ -45,7 +45,7 @@ class TestMissingHotkeys(TestCase):
 
     def test_build_storage_pit_missing_key(self):
         with patch.dict(common.CFG["keys"], {"storage_pit": None}):
-            with patch("script.common._press_key_safe"), patch("script.common._click_norm"):
+            with patch("script.input_utils._press_key_safe"), patch("script.input_utils._click_norm"):
                 with self.assertLogs(level="WARNING") as log:
                     result = villager.build_storage_pit()
         self.assertFalse(result)

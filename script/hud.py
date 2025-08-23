@@ -16,7 +16,7 @@ import pytesseract
 from .template_utils import find_template
 from .config_utils import CFG
 from . import screen_utils
-from . import common, resources
+from . import common, resources, input_utils
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -72,7 +72,7 @@ def read_population_from_hud(retries=3, conf_threshold=None, save_failed_roi=Fal
         roi_bbox = {"left": x, "top": y, "width": w, "height": h}
     else:
         x, y, w, h = CFG["areas"]["pop_box"]
-        screen_width, screen_height = common._screen_size()
+        screen_width, screen_height = input_utils._screen_size()
         abs_left = int(x * screen_width)
         abs_top = int(y * screen_height)
         pw = int(w * screen_width)

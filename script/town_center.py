@@ -3,18 +3,19 @@ import time
 
 import script.common as common
 import script.resources as resources
+import script.input_utils as input_utils
 from script.villager import build_house, select_idle_villager
 
 
 def train_villagers(target_pop: int):
     """Fila aldeões na Town Center até atingir ``target_pop``."""
-    common._press_key_safe(common.CFG["keys"]["select_tc"], 0.10)
+    input_utils._press_key_safe(common.CFG["keys"]["select_tc"], 0.10)
 
     while common.CURRENT_POP < target_pop:
         # Always reselect the Town Center to ensure subsequent commands
         # affect the correct building, especially after actions that may
         # change the selection (e.g. building houses).
-        common._press_key_safe(common.CFG["keys"]["select_tc"], 0.10)
+        input_utils._press_key_safe(common.CFG["keys"]["select_tc"], 0.10)
 
         res_vals = None
         food = None
@@ -51,7 +52,7 @@ def train_villagers(target_pop: int):
                 food,
             )
             break
-        common._press_key_safe(common.CFG["keys"]["train_vill"], 0.0)
+        input_utils._press_key_safe(common.CFG["keys"]["train_vill"], 0.0)
         common.CURRENT_POP += 1
         if common.CURRENT_POP == common.POP_CAP:
             select_idle_villager()
@@ -62,5 +63,5 @@ def train_villagers(target_pop: int):
             # Reselect the Town Center after attempting to build a house so
             # that further villager training continues from the correct
             # building.
-            common._press_key_safe(common.CFG["keys"]["select_tc"], 0.10)
+            input_utils._press_key_safe(common.CFG["keys"]["select_tc"], 0.10)
         time.sleep(0.10)
