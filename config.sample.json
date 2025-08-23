@@ -41,12 +41,16 @@
     "debug_failed_ocr": false
   },
     "profiles": {
-    "aoe1de": {
-      "resource_panel": {
-        "match_threshold": 0.82
+      "aoe1de": {
+        "resource_panel": {
+          "match_threshold": 0.82,
+          "top_pct": 0.08,
+          "height_pct": 0.84,
+          "icon_trim_pct": [0.18, 0.18, 0.18, 0.18, 0.18, 0.18],
+          "right_trim_pct": 0.02
+        }
       }
-    }
-  },
+    },
   "timers": {
     "house_interval": 45.0,
     "idle_gap": 0.35,
