@@ -571,7 +571,8 @@ def read_resources_from_hud():
             debug_dir.mkdir(exist_ok=True)
             ts = int(time.time() * 1000)
             cv2.imwrite(str(debug_dir / f"resource_{name}_roi_{ts}.png"), roi)
-            cv2.imwrite(str(debug_dir / f"resource_{name}_thresh_{ts}.png"), mask)
+            if mask is not None:
+                cv2.imwrite(str(debug_dir / f"resource_{name}_thresh_{ts}.png"), mask)
         if not digits:
             text = pytesseract.image_to_string(
                 gray,
@@ -590,7 +591,10 @@ def read_resources_from_hud():
                 debug_dir.mkdir(exist_ok=True)
                 ts = int(time.time() * 1000)
                 cv2.imwrite(str(debug_dir / f"resource_{name}_roi_{ts}.png"), roi)
-                cv2.imwrite(str(debug_dir / f"resource_{name}_thresh_{ts}.png"), mask)
+                if mask is not None:
+                    cv2.imwrite(
+                        str(debug_dir / f"resource_{name}_thresh_{ts}.png"), mask
+                    )
             results[name] = None
         else:
             results[name] = int(digits)
