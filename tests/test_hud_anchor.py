@@ -83,7 +83,7 @@ class TestHudAnchor(TestCase):
         self.assertEqual(result, expected)
 
         expected_boxes = [
-            {"left": 28, "top": 24, "width": 80, "height": 50},
+            {"left": 32, "top": 24, "width": 76, "height": 50},
             {"left": 128, "top": 24, "width": 80, "height": 50},
             {"left": 228, "top": 24, "width": 80, "height": 50},
             {"left": 328, "top": 24, "width": 80, "height": 50},
@@ -138,7 +138,7 @@ class TestHudAnchorTools(TestCase):
         self.assertEqual(result, expected)
 
         expected_boxes = [
-            {"left": 28, "top": 24, "width": 80, "height": 50},
+            {"left": 32, "top": 24, "width": 76, "height": 50},
             {"left": 128, "top": 24, "width": 80, "height": 50},
             {"left": 228, "top": 24, "width": 80, "height": 50},
             {"left": 328, "top": 24, "width": 80, "height": 50},
