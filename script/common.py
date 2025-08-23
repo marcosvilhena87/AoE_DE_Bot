@@ -502,8 +502,10 @@ def read_resources_from_hud():
         raise ResourceReadError("Resource bar not located on HUD")
 
     results = {}
+    rois = {}
     for name, (x, y, w, h) in regions.items():
         roi = _grab_frame({"left": x, "top": y, "width": w, "height": h})
+        rois[name] = roi
         gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
         gray = cv2.medianBlur(gray, 3)
 
@@ -532,16 +534,21 @@ def read_resources_from_hud():
             results[name] = int(digits)
 
     if all(v is None for v in results.values()):
-        debug_cfg = CFG.get("resource_panel", {}).get("debug_failed_ocr")
-        if CFG.get("debug") or debug_cfg:
-            debug_dir = ROOT / "debug"
-            debug_dir.mkdir(exist_ok=True)
-            ts = int(time.time() * 1000)
-            cv2.imwrite(str(debug_dir / f"resource_panel_fail_{ts}.png"), frame)
+        debug_dir = ROOT / "debug"
+        debug_dir.mkdir(exist_ok=True)
+        ts = int(time.time() * 1000)
+        panel_path = debug_dir / f"resource_panel_fail_{ts}.png"
+        cv2.imwrite(str(panel_path), frame)
+        roi_paths = []
+        for name, roi in rois.items():
+            roi_path = debug_dir / f"resource_{name}_roi_{ts}.png"
+            cv2.imwrite(str(roi_path), roi)
+            roi_paths.append(str(roi_path))
         tess_path = pytesseract.pytesseract.tesseract_cmd
+        paths_str = ", ".join([str(panel_path)] + roi_paths)
         raise ResourceReadError(
             "OCR failed to read resource values "
-            f"(regions={regions}, tesseract_cmd={tess_path})"
+            f"(regions={regions}, tesseract_cmd={tess_path}, debug_images={paths_str})"
         )
 
     return results
