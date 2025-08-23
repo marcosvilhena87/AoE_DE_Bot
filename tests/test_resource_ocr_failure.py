@@ -38,6 +38,11 @@ import script.resources as resources
 
 
 class TestResourceOcrFailure(TestCase):
+    def setUp(self):
+        resources._LAST_RESOURCE_VALUES.clear()
+
+    def tearDown(self):
+        resources._LAST_RESOURCE_VALUES.clear()
     def test_read_resources_fallback(self):
         def fake_grab_frame(bbox=None):
             if bbox:
@@ -114,3 +119,33 @@ class TestResourceOcrFailure(TestCase):
              self.assertRaises(common.ResourceReadError):
             resources.read_resources_from_hud(["wood_stockpile"])
         img2str_mock.assert_not_called()
+
+    def test_cached_value_used_for_optional_failure(self):
+        def fake_detect(frame, required_icons):
+            return {
+                "wood_stockpile": (0, 0, 50, 50),
+                "food_stockpile": (50, 0, 50, 50),
+            }
+
+        ocr_seq = [
+            ("123", {"text": ["123"]}, np.zeros((1, 1), dtype=np.uint8)),
+            ("234", {"text": ["234"]}, np.zeros((1, 1), dtype=np.uint8)),
+            ("345", {"text": ["345"]}, np.zeros((1, 1), dtype=np.uint8)),
+            ("", {"text": [""]}, np.zeros((1, 1), dtype=np.uint8)),
+        ]
+
+        def fake_ocr(gray):
+            return ocr_seq.pop(0)
+
+        frame = np.zeros((600, 600, 3), dtype=np.uint8)
+
+        with patch("script.resources.detect_resource_regions", side_effect=fake_detect), \
+             patch("script.screen_utils._grab_frame", return_value=frame), \
+             patch("script.resources._ocr_digits_better", side_effect=fake_ocr), \
+             patch("script.resources.pytesseract.image_to_string", return_value=""), \
+             patch("script.resources.cv2.imwrite"):
+            first = resources.read_resources_from_hud(["wood_stockpile"])
+            second = resources.read_resources_from_hud(["wood_stockpile"])
+
+        self.assertEqual(first.get("food_stockpile"), 234)
+        self.assertEqual(second.get("food_stockpile"), 234)
