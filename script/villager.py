@@ -49,10 +49,22 @@ def build_house():
         if attempt < 3:
             time.sleep(0.2)
     if not isinstance(wood, int):
-        logging.error(
-            "Failed to obtain wood stockpile after 3 attempts; cannot build house"
-        )
-        return False
+        logging.debug("Refreshing HUD anchor before final resource read")
+        try:
+            common.wait_hud()
+            resources = common.read_resources_from_hud()
+        except Exception as exc:
+            logging.error(
+                "Failed to refresh HUD or read resources while building house: %s",
+                exc,
+            )
+            return False
+        wood = resources.get("wood_stockpile")
+        if not isinstance(wood, int):
+            logging.error(
+                "Failed to obtain wood stockpile after HUD refresh; cannot build house"
+            )
+            return False
     if wood < wood_needed:
         logging.warning(
             "Madeira insuficiente (%s) para construir casa.",
