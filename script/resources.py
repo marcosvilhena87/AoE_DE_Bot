@@ -36,12 +36,12 @@ _RESOURCE_CACHE_TTL = 1.5
 _LAST_REGION_BOUNDS = None
 
 
-def locate_resource_panel(frame):
-    """Locate the resource panel and return bounding boxes for each value."""
+def detect_hud(frame):
+    """Locate the resource panel and return its bounding box."""
 
     tmpl = screen_utils.HUD_TEMPLATES.get("assets/resources.png")
     if tmpl is None:
-        return {}
+        return None
 
     def _save_debug(img, heatmap):
         debug_dir = ROOT / "debug"
@@ -73,9 +73,19 @@ def locate_resource_panel(frame):
                     score,
                 )
                 _save_debug(frame, heat)
-                return {}
+                return None
         else:
-            return {}
+            return None
+
+    return box
+
+
+def locate_resource_panel(frame):
+    """Locate the resource panel and return bounding boxes for each value."""
+
+    box = detect_hud(frame)
+    if not box:
+        return {}
 
     x, y, w, h = box
     panel_gray = cv2.cvtColor(frame[y : y + h, x : x + w], cv2.COLOR_BGR2GRAY)
