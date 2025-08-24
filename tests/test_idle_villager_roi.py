@@ -83,9 +83,10 @@ class TestIdleVillagerROI(TestCase):
                     "scales": [1.0],
                     "match_threshold": 0.5,
                     "min_width": 0,
+                    "max_width": 999,
                 },
             ):
-            regions = resources.locate_resource_panel(frame)
+                regions = resources.locate_resource_panel(frame)
 
         self.assertIn("idle_villager", regions)
         roi = regions["idle_villager"]

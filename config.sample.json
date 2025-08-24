@@ -37,6 +37,7 @@
     "height_pct": 0.84,
     "icon_trim_pct": [0.18, 0.18, 0.18, 0.18, 0.18, 0.18],
     "right_trim_pct": 0.02,
+    "max_width": 160,
     "idle_roi_extra_width": 0,
     "anchor_top_pct": 0.15,
     "anchor_height_pct": 0.70,

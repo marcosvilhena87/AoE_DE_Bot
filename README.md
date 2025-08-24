@@ -21,6 +21,8 @@ HUD-related coordinates, such as `areas.pop_box`, use ``[x, y, width, height]``
 fractions of the entire screen. The default values in `config.json` are
 placeholders and should be calibrated for your setup.
 
+The `resource_panel` section includes `max_width`, which caps the width of the region used to read each resource value. When extra space is available between icons, the ROI is centered and limited to this width (default `160`). This value must be at least as large as `min_width`.
+
 ### OCR tuning
 
 Two fields in `config.json` allow adjusting how resource numbers are read:
