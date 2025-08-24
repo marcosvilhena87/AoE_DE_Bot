@@ -114,8 +114,7 @@ def locate_resource_panel(frame):
     scales = res_cfg.get("scales", CFG.get("scales", [1.0]))
     pad_left = res_cfg.get("roi_padding_left", 2)
     pad_right = res_cfg.get("roi_padding_right", 2)
-    min_width = res_cfg.get("min_width", 110)
-    max_width = res_cfg.get("max_width", min_width)
+    max_width = res_cfg.get("max_width", 160)
     top_pct = profile_res.get("top_pct", res_cfg.get("top_pct", 0.08))
     height_pct = profile_res.get("height_pct", res_cfg.get("height_pct", 0.84))
     screen_utils._load_icon_templates()
@@ -190,60 +189,16 @@ def locate_resource_panel(frame):
                 )
                 continue
 
-            if available_width < min_width:
-                deficit = min_width - available_width
-                # expand evenly to both sides within panel bounds
-                expand_left = min(deficit // 2, available_left - panel_left)
-                expand_right = min(deficit // 2, panel_right - available_right)
-                available_left -= expand_left
-                available_right += expand_right
-                available_width = available_right - available_left
-
-                if available_width < min_width:
-                    remaining = min_width - available_width
-                    extra_left = min(remaining, available_left - panel_left)
-                    available_left -= extra_left
-                    remaining -= extra_left
-                    if remaining > 0:
-                        extra_right = min(remaining, panel_right - available_right)
-                        available_right += extra_right
-                    available_width = available_right - available_left
-
-                if available_width < min_width:
-                    slice_w = w / len(RESOURCE_ICON_ORDER)
-                    center = int(panel_left + (idx + 0.5) * slice_w)
-                    available_left = max(panel_left, center - min_width // 2)
-                    available_right = min(panel_right, available_left + min_width)
-                    available_width = available_right - available_left
-
             width = min(available_width, max_width)
             center = (available_left + available_right) // 2
-            left = max(panel_left, center - width // 2)
+            left = max(available_left, center - width // 2)
             right = left + width
-            if right > panel_right:
-                right = panel_right
-                left = max(panel_left, right - width)
+            if right > available_right:
+                right = available_right
+                left = right - width
+            left = max(panel_left, left)
+            right = min(panel_right, right)
             width = right - left
-
-            if width < min_width:
-                width = min_width
-                center = (available_left + available_right) // 2
-                left = max(panel_left, center - width // 2)
-                right = left + width
-                if right > panel_right:
-                    right = panel_right
-                    left = max(panel_left, right - width)
-                width = right - left
-
-            if width > max_width:
-                width = max_width
-                center = (available_left + available_right) // 2
-                left = max(panel_left, center - width // 2)
-                right = left + width
-                if right > panel_right:
-                    right = panel_right
-                    left = max(panel_left, right - width)
-                width = right - left
 
         logger.debug("ROI for '%s': left=%d width=%d", name, left, width)
         regions[name] = (left, top_i, width, height_i)
@@ -321,16 +276,6 @@ def detect_resource_regions(frame, required_icons):
             logger.debug(
                 "Custom ROI aplicada para idle_villager: %s", regions["idle_villager"]
             )
-    res_cfg = CFG.get("resource_panel", {})
-    min_width = res_cfg.get("min_width", 110)
-    narrow = any(
-        name in regions and regions[name][2] < min_width for name in required_icons
-    )
-    if narrow and common.HUD_ANCHOR:
-        logger.warning(
-            "Detected narrow resource region; falling back to HUD_ANCHOR slices"
-        )
-        regions = {}
     missing = [name for name in required_icons if name not in regions]
 
     if missing and common.HUD_ANCHOR:

@@ -89,7 +89,6 @@ class TestResourceROIs(TestCase):
                 "roi_padding_right": pad_right,
                 "scales": [1.0],
                 "match_threshold": 0.5,
-                "min_width": 0,
                 "max_width": 999,
                 "top_pct": 0.0,
                 "height_pct": 1.0,
@@ -129,7 +128,7 @@ class TestResourceROIs(TestCase):
                 )
                 self.assertLess(right, next_left, f"{name} right not < next left")
 
-    def test_rois_respect_min_width_with_close_icons(self):
+    def test_rois_use_available_width_with_close_icons(self):
         frame = np.zeros((50, 100, 3), dtype=np.uint8)
         panel_box = (0, 0, 100, 20)
 
@@ -137,7 +136,6 @@ class TestResourceROIs(TestCase):
         positions = [0, 20]
         pad_left = 2
         pad_right = 2
-        min_width = 40
         loc_iter = iter([(x, 0) for x in positions])
 
         def fake_minmax(res):
@@ -157,144 +155,24 @@ class TestResourceROIs(TestCase):
                 "roi_padding_right": pad_right,
                 "scales": [1.0],
                 "match_threshold": 0.5,
-                "min_width": min_width,
                 "max_width": 999,
                 "top_pct": 0.0,
                 "height_pct": 1.0,
             }):
                 regions = resources.locate_resource_panel(frame)
                 icon_width = screen_utils.ICON_TEMPLATES[icons[0]].shape[1]
-        for name in icons:
-            left, _, width, _ = regions[name]
-            right = left + width
-            self.assertGreaterEqual(width, min_width, f"{name} width < min_width")
-            self.assertGreaterEqual(left, panel_box[0], f"{name} left before panel")
-            self.assertLessEqual(right, panel_box[0] + panel_box[2], f"{name} right beyond panel")
 
-    def test_close_icons_min_width_stays_within_bounds(self):
-        frame = np.zeros((50, 400, 3), dtype=np.uint8)
-        panel_box = (0, 0, 400, 20)
-
-        icons = [
-            "wood_stockpile",
-            "food_stockpile",
-            "gold_stockpile",
-            "stone_stockpile",
-            "population_limit",
-            "idle_villager",
-        ]
-        base_positions = [0, 80, 160, 240, 320, 360]
-        pad_left = 2
-        pad_right = 2
-        min_width = 40
-
-        for i in range(len(icons) - 1):
-            with self.subTest(pair=f"{icons[i]}->{icons[i + 1]}"):
-                positions = base_positions.copy()
-                positions[i + 1] = positions[i] + 20
-                loc_iter = iter([(x, 0) for x in positions])
-
-                def fake_minmax(res):
-                    xi, yi = next(loc_iter)
-                    return 0.0, 0.95, (0, 0), (xi, yi)
-
-                with patch("script.resources.find_template", return_value=(panel_box, 0.9, None)), \
-                    patch(
-                        "script.resources.cv2.cvtColor",
-                        lambda src, code: np.zeros(src.shape[:2], dtype=np.uint8),
-                    ), \
-                    patch("script.resources.cv2.resize", lambda img, *a, **k: img), \
-                    patch(
-                        "script.resources.cv2.matchTemplate",
-                        lambda *a, **k: np.zeros((100, 200), dtype=np.float32),
-                    ), \
-                    patch("script.resources.cv2.minMaxLoc", side_effect=fake_minmax), \
-                    patch.object(screen_utils, "_load_icon_templates", lambda: None), \
-                    patch.object(
-                        screen_utils, "HUD_TEMPLATE", np.zeros((1, 1), dtype=np.uint8)
-                    ), \
-                    patch.dict(
-                        screen_utils.ICON_TEMPLATES,
-                        {name: np.zeros((5, 5), dtype=np.uint8) for name in icons},
-                        clear=True,
-                    ), \
-                    patch.dict(
-                        common.CFG["resource_panel"],
-                        {
-                            "roi_padding_left": pad_left,
-                            "roi_padding_right": pad_right,
-                            "scales": [1.0],
-                            "match_threshold": 0.5,
-                            "min_width": min_width,
-                            "max_width": 999,
-                            "top_pct": 0.0,
-                            "height_pct": 1.0,
-                        },
-                        clear=True,
-                    ):
-                        regions = resources.locate_resource_panel(frame)
-                        icon_width = screen_utils.ICON_TEMPLATES[icons[0]].shape[1]
-                name = icons[i]
-                next_name = icons[i + 1]
-                roi = regions[name]
-                next_roi = regions[next_name]
-
-                for roi_name, r in [(name, roi), (next_name, next_roi)]:
-                    if roi_name == "idle_villager":
-                        continue
-                    left = r[0]
-                    width = r[2]
-                    right = left + width
-                    self.assertGreaterEqual(width, min_width, f"{roi_name} width < min_width")
-                    self.assertGreaterEqual(left, panel_box[0], f"{roi_name} left before panel")
-                    self.assertLessEqual(
-                        right,
-                        panel_box[0] + panel_box[2],
-                        f"{roi_name} right beyond panel",
-                    )
-
-    def test_rois_respect_min_width_near_panel_edge(self):
-        frame = np.zeros((50, 200, 3), dtype=np.uint8)
-        panel_box = (0, 0, 200, 20)
-
-        icons = ["stone_stockpile"]
-        positions = [180]
-        pad_left = 2
-        pad_right = 2
-        min_width = 40
-        loc_iter = iter([(x, 0) for x in positions])
-
-        def fake_minmax(res):
-            xi, yi = next(loc_iter)
-            return 0.0, 0.95, (0, 0), (xi, yi)
-
-        with patch("script.resources.find_template", return_value=(panel_box, 0.9, None)), \
-            patch("script.resources.cv2.cvtColor", lambda src, code: np.zeros(src.shape[:2], dtype=np.uint8)), \
-            patch("script.resources.cv2.resize", lambda img, *a, **k: img), \
-            patch("script.resources.cv2.matchTemplate", lambda *a, **k: np.zeros((100, 200), dtype=np.float32)), \
-            patch("script.resources.cv2.minMaxLoc", side_effect=fake_minmax), \
-            patch.object(screen_utils, "_load_icon_templates", lambda: None), \
-            patch.object(screen_utils, "HUD_TEMPLATE", np.zeros((1, 1), dtype=np.uint8)), \
-            patch.dict(screen_utils.ICON_TEMPLATES, {name: np.zeros((5, 5), dtype=np.uint8) for name in icons}, clear=True), \
-            patch.dict(common.CFG["resource_panel"], {
-                "roi_padding_left": pad_left,
-                "roi_padding_right": pad_right,
-                "scales": [1.0],
-                "match_threshold": 0.5,
-                "min_width": min_width,
-                "max_width": 999,
-                "top_pct": 0.0,
-                "height_pct": 1.0,
-            }):
-                regions = resources.locate_resource_panel(frame)
-                icon_width = screen_utils.ICON_TEMPLATES[icons[0]].shape[1]
         roi = regions[icons[0]]
-        width = roi[2]
-        left = roi[0]
+        left, _, width, _ = roi
         right = left + width
-        self.assertGreaterEqual(width, min_width, "width below min_width")
-        self.assertGreaterEqual(left, panel_box[0], "ROI extends before panel")
-        self.assertLessEqual(right, panel_box[0] + panel_box[2], "ROI exceeds panel bounds")
+        icon_right = positions[0] + icon_width
+        next_icon_left = positions[1]
+        available_left = icon_right + pad_left
+        available_right = next_icon_left - pad_right
+        expected_width = available_right - available_left
+        self.assertEqual(width, expected_width)
+        self.assertGreaterEqual(left, available_left)
+        self.assertLessEqual(right, available_right)
 
     def test_roi_limited_by_max_width(self):
         frame = np.zeros((50, 200, 3), dtype=np.uint8)
@@ -304,7 +182,6 @@ class TestResourceROIs(TestCase):
         positions = [0, 120]
         pad_left = 2
         pad_right = 2
-        min_width = 40
         max_width = 50
         loc_iter = iter([(x, 0) for x in positions])
 
@@ -325,7 +202,6 @@ class TestResourceROIs(TestCase):
                 "roi_padding_right": pad_right,
                 "scales": [1.0],
                 "match_threshold": 0.5,
-                "min_width": min_width,
                 "max_width": max_width,
                 "top_pct": 0.0,
                 "height_pct": 1.0,
