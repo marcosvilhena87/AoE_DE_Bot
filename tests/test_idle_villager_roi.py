@@ -82,7 +82,6 @@ class TestIdleVillagerROI(TestCase):
                     "roi_padding_right": 0,
                     "scales": [1.0],
                     "match_threshold": 0.5,
-                    "min_width": 0,
                     "max_width": 999,
                 },
             ):
