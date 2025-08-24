@@ -584,9 +584,13 @@ def read_resources_from_hud(
             debug_dir = ROOT / "debug"
             debug_dir.mkdir(exist_ok=True)
             ts = int(time.time() * 1000)
-            cv2.imwrite(str(debug_dir / f"resource_{name}_roi_{ts}.png"), roi)
+            roi_path = debug_dir / f"resource_{name}_roi_{ts}.png"
+            cv2.imwrite(str(roi_path), roi)
+            logger.warning("Saved ROI image to %s", roi_path)
             if mask is not None:
-                cv2.imwrite(str(debug_dir / f"resource_{name}_thresh_{ts}.png"), mask)
+                thresh_path = debug_dir / f"resource_{name}_thresh_{ts}.png"
+                cv2.imwrite(str(thresh_path), mask)
+                logger.warning("Saved threshold image to %s", thresh_path)
             ts_cache = _LAST_RESOURCE_TS.get(name)
             if (
                 name in _LAST_RESOURCE_VALUES
