@@ -54,79 +54,108 @@ import script.screen_utils as screen_utils
 
 
 class TestResourceROIs(TestCase):
-    def test_resource_rois_do_not_overlap(self):
-        frame = np.zeros((50, 200, 3), dtype=np.uint8)
-        panel_box = (0, 0, 200, 20)
+    icons = [
+        "wood_stockpile",
+        "food_stockpile",
+        "gold_stockpile",
+        "stone_stockpile",
+        "population_limit",
+        "idle_villager",
+    ]
+    positions = [0, 30, 60, 90, 120, 150]
+    pad_left = 2
+    pad_right = 2
+    panel_box = (0, 0, 200, 20)
+    frame = np.zeros((50, 200, 3), dtype=np.uint8)
 
-        icons = [
-            "wood_stockpile",
-            "food_stockpile",
-            "gold_stockpile",
-            "stone_stockpile",
-            "population_limit",
-            "idle_villager",
-        ]
-
-        positions = [0, 30, 60, 90, 120, 150]
-        pad_left = 2
-        pad_right = 2
-        loc_iter = iter([(x, 0) for x in positions])
+    def _locate_regions(self):
+        loc_iter = iter([(x, 0) for x in self.positions])
 
         def fake_minmax(res):
             xi, yi = next(loc_iter)
             return 0.0, 0.95, (0, 0), (xi, yi)
 
-        with patch("script.resources.find_template", return_value=(panel_box, 0.9, None)), \
-            patch("script.resources.cv2.cvtColor", lambda src, code: np.zeros(src.shape[:2], dtype=np.uint8)), \
-            patch("script.resources.cv2.resize", lambda img, *a, **k: img), \
-            patch("script.resources.cv2.matchTemplate", lambda *a, **k: np.zeros((100, 200), dtype=np.float32)), \
-            patch("script.resources.cv2.minMaxLoc", side_effect=fake_minmax), \
-            patch.object(screen_utils, "_load_icon_templates", lambda: None), \
-            patch.object(screen_utils, "HUD_TEMPLATE", np.zeros((1, 1), dtype=np.uint8)), \
-            patch.dict(screen_utils.ICON_TEMPLATES, {name: np.zeros((5, 5), dtype=np.uint8) for name in icons}, clear=True), \
-            patch.dict(common.CFG["resource_panel"], {
-                "roi_padding_left": pad_left,
-                "roi_padding_right": pad_right,
+        with patch(
+            "script.resources.find_template", return_value=(self.panel_box, 0.9, None)
+        ), patch(
+            "script.resources.cv2.cvtColor",
+            lambda src, code: np.zeros(src.shape[:2], dtype=np.uint8),
+        ), patch(
+            "script.resources.cv2.resize", lambda img, *a, **k: img
+        ), patch(
+            "script.resources.cv2.matchTemplate",
+            lambda *a, **k: np.zeros((100, 200), dtype=np.float32),
+        ), patch(
+            "script.resources.cv2.minMaxLoc", side_effect=fake_minmax
+        ), patch.object(
+            screen_utils, "_load_icon_templates", lambda: None
+        ), patch.object(
+            screen_utils, "HUD_TEMPLATE", np.zeros((1, 1), dtype=np.uint8)
+        ), patch.dict(
+            screen_utils.ICON_TEMPLATES,
+            {name: np.zeros((5, 5), dtype=np.uint8) for name in self.icons},
+            clear=True,
+        ), patch.dict(
+            common.CFG["resource_panel"],
+            {
+                "roi_padding_left": self.pad_left,
+                "roi_padding_right": self.pad_right,
                 "scales": [1.0],
                 "match_threshold": 0.5,
                 "max_width": 999,
                 "top_pct": 0.0,
                 "height_pct": 1.0,
-            }):
-                regions = resources.locate_resource_panel(frame)
-                icon_width = screen_utils.ICON_TEMPLATES[icons[0]].shape[1]
+            },
+        ):
+            regions = resources.locate_resource_panel(self.frame)
+            icon_width = screen_utils.ICON_TEMPLATES[self.icons[0]].shape[1]
 
-        for i, name in enumerate(icons):
-            roi = regions[name]
-            left = roi[0]
-            right = roi[0] + roi[2]
-            xi = positions[i]
-            icon_left = panel_box[0] + xi
-            icon_right = icon_left + icon_width
+        return regions, icon_width
 
-            if name != "idle_villager":
-                # Ensure ROI starts after the icon with padding
-                self.assertGreaterEqual(
-                    left,
-                    icon_right + pad_left,
-                    f"{name} left not ≥ icon_right + padding",
-                )
+    def _assert_bounds(self, regions, icon_width, index):
+        name = self.icons[index]
+        roi = regions[name]
+        left = roi[0]
+        right = roi[0] + roi[2]
+        icon_left = self.panel_box[0] + self.positions[index]
+        icon_right = icon_left + icon_width
+        next_icon_left = self.panel_box[0] + self.positions[index + 1]
 
-            if i > 0:
-                prev = regions[icons[i - 1]]
-                prev_right = prev[0] + prev[2]
-                self.assertGreater(left, prev_right, f"{name} left not > previous right")
+        self.assertGreaterEqual(
+            left, icon_right + self.pad_left, f"{name} left not ≥ icon_right + padding"
+        )
+        self.assertLessEqual(
+            right, next_icon_left - self.pad_right, f"{name} right not ≤ next_icon_left - padding"
+        )
 
-            if name != "idle_villager" and i < len(icons) - 1:
-                next_left = regions[icons[i + 1]][0]
-                next_icon_left = panel_box[0] + positions[i + 1]
-                # Ensure ROI ends before the next icon with padding
-                self.assertLessEqual(
-                    right,
-                    next_icon_left - pad_right,
-                    f"{name} right not ≤ next_icon_left - padding",
-                )
-                self.assertLess(right, next_left, f"{name} right not < next left")
+        if name == "population_limit":
+            idle_left = regions["idle_villager"][0]
+            self.assertLess(right, idle_left, "population right not < idle villager left")
+            self.assertLessEqual(
+                right,
+                idle_left - self.pad_right,
+                "population right not ≤ idle villager left - padding",
+            )
+
+    def test_wood_stockpile_roi_bounds(self):
+        regions, icon_width = self._locate_regions()
+        self._assert_bounds(regions, icon_width, 0)
+
+    def test_food_stockpile_roi_bounds(self):
+        regions, icon_width = self._locate_regions()
+        self._assert_bounds(regions, icon_width, 1)
+
+    def test_gold_stockpile_roi_bounds(self):
+        regions, icon_width = self._locate_regions()
+        self._assert_bounds(regions, icon_width, 2)
+
+    def test_stone_stockpile_roi_bounds(self):
+        regions, icon_width = self._locate_regions()
+        self._assert_bounds(regions, icon_width, 3)
+
+    def test_population_limit_roi_bounds(self):
+        regions, icon_width = self._locate_regions()
+        self._assert_bounds(regions, icon_width, 4)
 
     def test_rois_use_available_width_with_close_icons(self):
         frame = np.zeros((50, 100, 3), dtype=np.uint8)
