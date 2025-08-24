@@ -27,39 +27,31 @@ logger = logging.getLogger(__name__)
 def wait_hud(timeout=60):
     logger.info("Aguardando HUD por até %ss...", timeout)
     t0 = time.time()
-    last_best = (-1, None)
+    tmpl = cv2.imread(str(ROOT / "assets/resources.png"), cv2.IMREAD_GRAYSCALE)
     while time.time() - t0 < timeout:
         frame = screen_utils._grab_frame()
-        for name, tmpl in screen_utils.HUD_TEMPLATES.items():
-            if tmpl is None:
-                continue
-            box, score, heat = find_template(
-                frame, tmpl, threshold=CFG["threshold"], scales=CFG["scales"]
-            )
-            if score > last_best[0]:
-                last_best = (score, name)
-            if box:
-                if CFG["debug"]:
-                    cv2.imwrite(f"debug_hud_{name}.png", frame)
-                x, y, w, h = box
-                logger.info("HUD detectada com template '%s'", name)
-                common.HUD_ANCHOR = {
-                    "left": x,
-                    "top": y,
-                    "width": w,
-                    "height": h,
-                    "asset": name,
-                }
-                return common.HUD_ANCHOR, name
+        box, score, heat = find_template(
+            frame, tmpl, threshold=CFG["threshold"], scales=CFG["scales"]
+        )
+        if box:
+            if CFG["debug"]:
+                cv2.imwrite("debug_hud_resources.png", frame)
+            x, y, w, h = box
+            logger.info("HUD detectada com template 'assets/resources.png'")
+            common.HUD_ANCHOR = {
+                "left": x,
+                "top": y,
+                "width": w,
+                "height": h,
+                "asset": "assets/resources.png",
+            }
+            return common.HUD_ANCHOR, "assets/resources.png"
         time.sleep(0.25)
     logger.error(
-        "HUD não encontrada. Melhor score=%.3f no template '%s'. Re-capture o asset e verifique ESCALA 100%%.",
-        last_best[0],
-        last_best[1],
+        "HUD não encontrada usando assets/resources.png. Re-capture o asset e verifique ESCALA 100%."
     )
     raise RuntimeError(
-        f"HUD não encontrada. Melhor score={last_best[0]:.3f} no template '{last_best[1]}'. "
-        "Re-capture o asset (recorte mais justo) e verifique ESCALA 100%."
+        "HUD não encontrada usando assets/resources.png. Re-capture o asset e verifique ESCALA 100%."
     )
 
 
