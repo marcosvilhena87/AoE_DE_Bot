@@ -39,7 +39,7 @@ _LAST_REGION_BOUNDS = None
 def detect_hud(frame):
     """Locate the resource panel and return its bounding box."""
 
-    tmpl = screen_utils.HUD_TEMPLATES.get("assets/resources.png")
+    tmpl = screen_utils.HUD_TEMPLATE
     if tmpl is None:
         return None
 
