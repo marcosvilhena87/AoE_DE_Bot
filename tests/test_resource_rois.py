@@ -146,9 +146,17 @@ class TestResourceROIs(TestCase):
             }):
                 regions = resources.locate_resource_panel(frame)
 
-        for name in icons:
+        icon_width = screen_utils.ICON_TEMPLATES[icons[0]].shape[1]
+        for i, name in enumerate(icons):
             width = regions[name][2]
-            self.assertGreaterEqual(width, min_width, f"{name} width < min_width")
+            icon_left = positions[i]
+            icon_right = icon_left + icon_width
+            if i + 1 < len(icons):
+                next_icon_left = positions[i + 1]
+            else:
+                next_icon_left = panel_box[2]
+            available_width = next_icon_left - pad_right - (icon_right + pad_left)
+            self.assertEqual(width, available_width, f"{name} width mismatch")
 
     def test_rois_respect_min_width_near_panel_edge(self):
         frame = np.zeros((50, 200, 3), dtype=np.uint8)
@@ -187,5 +195,9 @@ class TestResourceROIs(TestCase):
         roi = regions[icons[0]]
         width = roi[2]
         right = roi[0] + roi[2]
-        self.assertGreaterEqual(width, min_width, "width < min_width at panel edge")
+        icon_width = screen_utils.ICON_TEMPLATES[icons[0]].shape[1]
+        icon_left = positions[0]
+        icon_right = icon_left + icon_width
+        available_width = panel_box[2] - pad_right - (icon_right + pad_left)
+        self.assertEqual(width, available_width, "width not limited by panel edge")
         self.assertLessEqual(right, panel_box[0] + panel_box[2] - pad_right, "ROI exceeds panel bounds")
