@@ -115,6 +115,7 @@ def locate_resource_panel(frame):
     pad_left = res_cfg.get("roi_padding_left", 2)
     pad_right = res_cfg.get("roi_padding_right", 2)
     min_width = res_cfg.get("min_width", 110)
+    max_width = res_cfg.get("max_width", min_width)
     top_pct = profile_res.get("top_pct", res_cfg.get("top_pct", 0.08))
     height_pct = profile_res.get("height_pct", res_cfg.get("height_pct", 0.84))
     screen_utils._load_icon_templates()
@@ -179,25 +180,41 @@ def locate_resource_panel(frame):
             top_i = top
             height_i = height
 
-            left = available_left
-            right = available_right
-            width = right - left
-            if width <= 0:
+            available_width = available_right - available_left
+            if available_width <= 0:
                 logger.warning(
                     "Skipping ROI for icon '%s' due to non-positive width (left=%d, right=%d)",
                     name,
-                    left,
-                    right,
+                    available_left,
+                    available_right,
                 )
                 continue
 
+            width = min(available_width, max_width)
+            center = (available_left + available_right) // 2
+            left = max(available_left, center - width // 2)
+            right = left + width
+            if right > available_right:
+                right = available_right
+                left = right - width
+            width = right - left
+
             if width < min_width:
-                center = (left + right) // 2
-                left = max(available_left, center - min_width // 2)
-                right = left + min_width
+                width = min_width
+                left = max(available_left, center - width // 2)
+                right = left + width
                 if right > available_right:
                     right = available_right
-                    left = max(available_left, right - min_width)
+                    left = max(available_left, right - width)
+                width = right - left
+
+            if width > max_width:
+                width = max_width
+                left = max(available_left, center - width // 2)
+                right = left + width
+                if right > available_right:
+                    right = available_right
+                    left = max(available_left, right - width)
                 width = right - left
 
         logger.debug("ROI for '%s': left=%d width=%d", name, left, width)

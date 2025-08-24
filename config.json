@@ -28,6 +28,7 @@
     "roi_padding_left": 4,
     "roi_padding_right": 2,
     "min_width": 110,
+    "max_width": 160,
     "idle_roi_extra_width": 0,
     "top_pct": 0.08,
     "height_pct": 0.84,
