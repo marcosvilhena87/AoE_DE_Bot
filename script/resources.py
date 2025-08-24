@@ -156,6 +156,7 @@ def locate_resource_panel(frame):
         if name == "idle_villager":
             left = panel_left + xi
             width = wi
+            right = left + width
             top_i = y + yi
             height_i = hi
         else:
@@ -190,17 +191,16 @@ def locate_resource_panel(frame):
                 continue
 
             width = min(available_width, max_width)
-            center = (available_left + available_right) // 2
-            left = max(available_left, center - width // 2)
+            left = available_left
             right = left + width
             if right > available_right:
+                left = available_right - width
                 right = available_right
-                left = right - width
             left = max(panel_left, left)
             right = min(panel_right, right)
             width = right - left
 
-        logger.debug("ROI for '%s': left=%d width=%d", name, left, width)
+        logger.debug("ROI for '%s': left=%d right=%d width=%d", name, left, right, width)
         regions[name] = (left, top_i, width, height_i)
 
     global _LAST_REGION_BOUNDS, _LAST_RESOURCE_VALUES, _LAST_RESOURCE_TS
