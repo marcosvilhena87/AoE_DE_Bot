@@ -18,6 +18,16 @@ ROOT = Path(__file__).resolve().parent.parent
 CFG = load_config()
 logger = logging.getLogger(__name__)
 
+# Order in which resource icons appear on the HUD
+RESOURCE_ICON_ORDER = [
+    "wood_stockpile",
+    "food_stockpile",
+    "gold_stockpile",
+    "stone_stockpile",
+    "population_limit",
+    "idle_villager",
+]
+
 # Cache of last detected icon positions
 _LAST_ICON_BOUNDS = {}
 
@@ -109,8 +119,11 @@ def locate_resource_panel(frame):
     height_pct = profile_res.get("height_pct", res_cfg.get("height_pct", 0.84))
     screen_utils._load_icon_templates()
 
-    detections = []
-    for name, icon in screen_utils.ICON_TEMPLATES.items():
+    detected = {}
+    for name in RESOURCE_ICON_ORDER:
+        icon = screen_utils.ICON_TEMPLATES.get(name)
+        if icon is None:
+            continue
         best = (0, None, None)
         for scale in scales:
             icon_scaled = cv2.resize(icon, None, fx=scale, fy=scale)
@@ -119,33 +132,45 @@ def locate_resource_panel(frame):
             if max_val > best[0]:
                 best = (max_val, max_loc, icon_scaled.shape[::-1])
         if best[0] >= match_threshold and best[1] is not None:
-            (bw, bh) = best[2]
-            detections.append((name, best[1][0], best[1][1], bw, bh))
+            bw, bh = best[2]
+            detected[name] = (best[1][0], best[1][1], bw, bh)
             _LAST_ICON_BOUNDS[name] = (best[1][0], best[1][1], bw, bh)
         elif name in _LAST_ICON_BOUNDS:
             logger.info(
                 "Using previous position for icon '%s'; score=%.3f", name, best[0]
             )
-            detections.append((name, *_LAST_ICON_BOUNDS[name]))
+            detected[name] = _LAST_ICON_BOUNDS[name]
         else:
             logger.warning("Icon '%s' not matched; score=%.3f", name, best[0])
 
-    detections.sort(key=lambda d: d[1])  # sort by x position
     top = y + int(top_pct * h)
     height = int(height_pct * h)
     regions = {}
-    for idx, (name, xi, yi, wi, hi) in enumerate(detections):
+    panel_left = x
+    panel_right = x + w - pad_right
+
+    for idx, name in enumerate(RESOURCE_ICON_ORDER):
+        if name not in detected:
+            continue
+        xi, yi, wi, hi = detected[name]
         if name == "idle_villager":
-            left = x + xi
+            left = panel_left + xi
             width = wi
             top_i = y + yi
             height_i = hi
         else:
-            left = x + xi + wi + pad_left
-            if idx + 1 < len(detections):
-                right = x + detections[idx + 1][1] - pad_right
+            left = panel_left + xi + wi + pad_left
+            next_name = (
+                RESOURCE_ICON_ORDER[idx + 1]
+                if idx + 1 < len(RESOURCE_ICON_ORDER)
+                else None
+            )
+            if name == "population_limit":
+                next_name = "idle_villager"
+            if next_name and next_name in detected:
+                right = panel_left + detected[next_name][0] - pad_right
             else:
-                right = x + w - pad_right
+                right = panel_right
             top_i = top
             height_i = height
 
@@ -159,8 +184,6 @@ def locate_resource_panel(frame):
                 )
                 continue
             if width < min_width:
-                panel_left = x
-                panel_right = x + w - pad_right
                 center = (left + right) // 2
                 left = max(panel_left, center - min_width // 2)
                 right = left + min_width
