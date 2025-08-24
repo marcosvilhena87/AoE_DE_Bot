@@ -218,13 +218,14 @@ class TestResourceROIs(TestCase):
         next_icon_left = positions[1]
         available_left = icon_right + pad_left
         available_right = next_icon_left - pad_right
-        expected_center = (available_left + available_right) // 2
-        expected_left = max(available_left, expected_center - max_width // 2)
-        expected_right = expected_left + max_width
+        available_width = available_right - available_left
+        expected_width = min(available_width, max_width)
+        expected_left = available_left
+        expected_right = expected_left + expected_width
         if expected_right > available_right:
+            expected_left = available_right - expected_width
             expected_right = available_right
-            expected_left = max(available_left, expected_right - max_width)
 
-        self.assertEqual(width, max_width, "width not limited by max_width")
-        self.assertEqual(left, expected_left, "ROI not centered within bounds")
+        self.assertEqual(width, expected_width, "width not limited by max_width")
+        self.assertEqual(left, expected_left, "ROI not anchored within bounds")
         self.assertEqual(right, expected_right, "ROI exceeds available space")
