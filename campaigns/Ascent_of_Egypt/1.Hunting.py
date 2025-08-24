@@ -2,14 +2,9 @@
 
 This module orchestrates the very first tutorial mission of Age of Empires
 Definitive Edition.  The objective of the scenario is to grow the tribe to
-seven villagers.  The script uses the generic economic routines provided by
-``script.villager`` and ``script.town_center`` to train new villagers, place
-basic buildings and assign villagers to gather resources.
-
-The heavy lifting (resource gathering, villager training and house building)
-is handled by :func:`script.villager.econ_loop`.  This file only performs the
-scenario specific setup such as reading the scenario information from the
-accompanying text file and initialising the population counters.
+seven villagers.  The script performs the scenario specific setup such as
+reading the scenario information from the accompanying text file and
+initialising the population counters.
 """
 
 from __future__ import annotations
@@ -20,7 +15,6 @@ from pathlib import Path
 
 import script.common as common
 import script.hud as hud
-from script.villager import econ_loop
 from script.config_utils import parse_scenario_info
 
 logger = logging.getLogger(__name__)
@@ -35,24 +29,22 @@ def main() -> None:
         attempt if the first detection fails).
     2.  Parse the scenario information from ``1.Hunting.txt`` which lives
         alongside this file.
-    3.  Initialise the internal population counters so that the economic loop
-        knows how many villagers are currently available and what the target
-        population is.
-    4.  Start the economic loop for the number of minutes configured in
-        ``config.json``.
+    3.  Initialise the internal population counters so that the rest of the
+        automation knows how many villagers are currently available and what
+        the target population is.
     """
 
     logger.info("Entre na missão da campanha (Hunting). O script inicia quando detectar a HUD…")
 
     try:
         anchor, asset = hud.wait_hud(timeout=90)
-        logger.info("HUD detectada em %s usando '%s'. Rodando rotina econômica…", anchor, asset)
+        logger.info("HUD detectada em %s usando '%s'.", anchor, asset)
     except RuntimeError as exc:  # pragma: no cover - retry branch is defensive
         logger.error(str(exc))
         logger.info("Dando mais 25s para você ajustar a câmera/HUD (fallback)…")
         time.sleep(25)
         anchor, asset = hud.wait_hud(timeout=90)
-        logger.info("HUD detectada em %s usando '%s'. Rodando rotina econômica…", anchor, asset)
+        logger.info("HUD detectada em %s usando '%s'.", anchor, asset)
 
     scenario_txt = Path(__file__).with_suffix(".txt")
     info = parse_scenario_info(scenario_txt)
@@ -62,8 +54,7 @@ def main() -> None:
     common.POP_CAP = 4  # População suportada pelo Town Center inicial
     common.TARGET_POP = info.objective_villagers
 
-    econ_loop(minutes=common.CFG["loop_minutes"])
-    logger.info("Rotina concluída.")
+    logger.info("Setup concluído.")
 
 
 if __name__ == "__main__":  # pragma: no cover - manual execution entry point

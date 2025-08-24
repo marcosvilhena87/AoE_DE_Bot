@@ -32,7 +32,6 @@ os.environ.setdefault("TESSERACT_CMD", "/usr/bin/true")
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import script.common as common
 import script.resources as resources
-import script.villager as villager
 
 
 class TestResourceReadRetry(TestCase):
@@ -96,34 +95,3 @@ class TestResourceReadRetry(TestCase):
 
         self.assertEqual(result["wood_stockpile"], 456)
         self.assertEqual(ocr_mock.call_count, 2)
-
-    def test_econ_loop_uses_cached_value(self):
-        common.CURRENT_POP = 8
-        common.POP_CAP = 10
-        common.CFG.setdefault("areas", {}).update({"food_spot": (0, 0), "wood_spot": (0, 0)})
-        common.CFG.setdefault("timers", {}).update({"idle_gap": 0, "loop_sleep": 0})
-
-        def fake_read(_, force_delay=None):
-            resources._LAST_READ_FROM_CACHE = {"idle_villager"}
-            return {"idle_villager": 0}
-
-        def fake_time():
-            fake_time.calls += 1
-            if fake_time.calls < 4:
-                return 0
-            return 1
-
-        fake_time.calls = 0
-
-        with patch("script.villager.select_idle_villager", lambda: True), \
-            patch("script.villager.build_granary", return_value=True), \
-            patch("script.villager.build_storage_pit", return_value=True), \
-            patch("script.villager.build_house", return_value=True), \
-             patch("script.input_utils._click_norm", lambda *a, **k: None), \
-             patch("script.villager.time.sleep", lambda s: None), \
-             patch("script.resources.read_resources_from_hud", side_effect=fake_read), \
-             patch("script.villager.time.time", side_effect=fake_time), \
-             self.assertLogs(level="WARNING") as log:
-            villager.econ_loop(minutes=1 / 60)
-
-        self.assertTrue(any("cached idle villager" in msg for msg in log.output))
