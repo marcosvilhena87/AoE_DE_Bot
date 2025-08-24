@@ -258,3 +258,23 @@ class TestResourceROIs(TestCase):
         self.assertEqual(width, expected_width, "width not limited by max_width")
         self.assertEqual(left, expected_left, "ROI not anchored within bounds")
         self.assertEqual(right, expected_right, "ROI exceeds available space")
+
+    def test_cache_cleared_on_region_change(self):
+        resources._LAST_ICON_BOUNDS.clear()
+        resources._LAST_REGION_BOUNDS = None
+        resources._LAST_RESOURCE_VALUES.clear()
+        resources._LAST_RESOURCE_TS.clear()
+
+        self.positions = [0, 30, 60, 90, 120, 150]
+        self._locate_regions()
+
+        resources._LAST_RESOURCE_VALUES["wood_stockpile"] = 111
+        resources._LAST_RESOURCE_TS["wood_stockpile"] = 1.0
+        self.assertTrue(resources._LAST_RESOURCE_VALUES)
+        self.assertTrue(resources._LAST_RESOURCE_TS)
+
+        self.positions = [5, 35, 65, 95, 125, 155]
+        self._locate_regions()
+
+        self.assertEqual(resources._LAST_RESOURCE_VALUES, {})
+        self.assertEqual(resources._LAST_RESOURCE_TS, {})
