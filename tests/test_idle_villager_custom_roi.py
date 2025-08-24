@@ -37,7 +37,7 @@ import script.resources as resources
 
 
 class TestIdleVillagerCustomROI(TestCase):
-    def test_roi_matches_configured_percentages(self):
+    def test_roi_matches_configured_percentages_when_missing(self):
         frame = np.zeros((100, 200, 3), dtype=np.uint8)
         cfg = {
             "left_pct": 0.2,
