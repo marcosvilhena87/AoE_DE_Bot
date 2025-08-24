@@ -76,23 +76,18 @@ def _load_gray(path):
 
 HUD_TEMPLATE = _load_gray(ROOT / "assets/resources.png")
 
-ICON_NAMES = [
-    "wood_stockpile",
-    "food_stockpile",
-    "gold",
-    "stone",
-    "population",
-    "idle_villager",
-]
+ICONS_DIR = ASSETS / "icons"
+ICON_NAMES = [p.stem for p in sorted(ICONS_DIR.glob("*.png"))]
+if "idle_villager" not in ICON_NAMES:
+    ICON_NAMES.append("idle_villager")
 ICON_TEMPLATES = {}
 
 
 def _load_icon_templates():
-    icons_dir = ASSETS / "icons"
     for name in ICON_NAMES:
         if name in ICON_TEMPLATES:
             continue
-        path = icons_dir / f"{name}.png"
+        path = ICONS_DIR / f"{name}.png"
         icon = cv2.imread(str(path), cv2.IMREAD_GRAYSCALE)
         if icon is None:
             logger.warning("Icon asset missing: %s", path)
