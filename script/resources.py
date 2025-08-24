@@ -159,6 +159,7 @@ def locate_resource_panel(frame):
             top_i = y + yi
             height_i = hi
         else:
+            # Determine the free space between the current icon and the next one
             icon_right = panel_left + xi + wi
             next_name = (
                 RESOURCE_ICON_ORDER[idx + 1]
@@ -175,12 +176,11 @@ def locate_resource_panel(frame):
             available_left = icon_right + pad_left
             available_right = next_icon_left - pad_right
 
-            left = available_left
-            right = available_right
-
             top_i = top
             height_i = height
 
+            left = available_left
+            right = available_right
             width = right - left
             if width <= 0:
                 logger.warning(
@@ -190,6 +190,7 @@ def locate_resource_panel(frame):
                     right,
                 )
                 continue
+
             if width < min_width:
                 center = (left + right) // 2
                 left = max(available_left, center - min_width // 2)
@@ -197,7 +198,7 @@ def locate_resource_panel(frame):
                 if right > available_right:
                     right = available_right
                     left = max(available_left, right - min_width)
-            width = right - left
+                width = right - left
 
         logger.debug("ROI for '%s': left=%d width=%d", name, left, width)
         regions[name] = (left, top_i, width, height_i)
