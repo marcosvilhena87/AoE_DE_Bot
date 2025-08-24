@@ -42,6 +42,17 @@
     "anchor_right_trim_pct": 0.02,
     "debug_failed_ocr": false
   },
+  "hud_icons": {
+    "required": [
+      "wood_stockpile",
+      "food_stockpile",
+      "gold_stockpile",
+      "stone_stockpile",
+      "population_limit",
+      "idle_villager"
+    ],
+    "optional": []
+  },
   "idle_villager_roi": {
     "top_pct": 0.12,
     "height_pct": 0.20,

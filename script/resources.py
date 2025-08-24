@@ -666,8 +666,18 @@ def _read_population_from_roi(roi, conf_threshold=None):
     )
 
 
-def gather_hud_stats(force_delay=None):
+def gather_hud_stats(force_delay=None, required_icons=None, optional_icons=None):
     """Capture a single frame and read resources and population.
+
+    Parameters
+    ----------
+    force_delay : float | None, optional
+        Seconds to sleep before grabbing the screen.
+    required_icons : Iterable[str] | None, optional
+        Icons that must be read successfully. When ``None`` the value is
+        pulled from configuration.
+    optional_icons : Iterable[str] | None, optional
+        Icons that should be read when available but are not required.
 
     Returns
     -------
@@ -680,23 +690,37 @@ def gather_hud_stats(force_delay=None):
 
     frame = screen_utils._grab_frame()
 
-    required_icons = [
-        "wood_stockpile",
-        "food_stockpile",
-        "gold_stockpile",
-        "stone_stockpile",
-        "population_limit",
-        "idle_villager",
-    ]
+    icon_cfg = CFG.get("hud_icons", {})
+    if required_icons is None:
+        required_icons = icon_cfg.get(
+            "required",
+            [
+                "wood_stockpile",
+                "food_stockpile",
+                "gold_stockpile",
+                "stone_stockpile",
+                "population_limit",
+                "idle_villager",
+            ],
+        )
+    if optional_icons is None:
+        optional_icons = icon_cfg.get("optional", [])
 
-    regions = detect_resource_regions(frame, required_icons)
+    required_icons = list(required_icons)
+    optional_icons = list(optional_icons)
 
-    resource_icons = [name for name in required_icons if name != "population_limit"]
+    all_icons = list(dict.fromkeys(required_icons + optional_icons))
+
+    regions = detect_resource_regions(frame, all_icons)
+
+    resource_icons = [name for name in all_icons if name != "population_limit"]
 
     results = {}
     cache_hits = set()
     for name in resource_icons:
         if name not in regions:
+            if name in required_icons:
+                results[name] = None
             continue
         x, y, w, h = regions[name]
         roi = frame[y : y + h, x : x + w]
@@ -750,12 +774,25 @@ def gather_hud_stats(force_delay=None):
             logger.info("Detected %s=%d", name, value)
 
     filtered_regions = {n: regions[n] for n in resource_icons if n in regions}
-    handle_ocr_failure(frame, filtered_regions, results, resource_icons)
+    required_for_ocr = [n for n in required_icons if n != "population_limit"]
+    handle_ocr_failure(frame, filtered_regions, results, required_for_ocr)
 
-    pop_x, pop_y, pop_w, pop_h = regions["population_limit"]
-    pop_roi = frame[pop_y : pop_y + pop_h, pop_x : pop_x + pop_w]
-    cur_pop, pop_cap = _read_population_from_roi(pop_roi)
-    results["population_limit"] = cur_pop
+    cur_pop = pop_cap = None
+    pop_required = "population_limit" in required_icons
+    if "population_limit" in regions:
+        pop_x, pop_y, pop_w, pop_h = regions["population_limit"]
+        pop_roi = frame[pop_y : pop_y + pop_h, pop_x : pop_x + pop_w]
+        try:
+            cur_pop, pop_cap = _read_population_from_roi(pop_roi)
+            results["population_limit"] = cur_pop
+        except common.PopulationReadError:
+            results["population_limit"] = None
+            if pop_required:
+                raise
+    else:
+        results["population_limit"] = None
+        if pop_required:
+            raise common.ResourceReadError("population_limit region not detected")
 
     global _LAST_READ_FROM_CACHE
     _LAST_READ_FROM_CACHE = cache_hits

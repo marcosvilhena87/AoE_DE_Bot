@@ -33,13 +33,24 @@
     "right_trim_pct": 0.02,
     "debug_failed_ocr": true
   },
-    "idle_villager_roi": {
+  "hud_icons": {
+    "required": [
+      "wood_stockpile",
+      "food_stockpile",
+      "gold_stockpile",
+      "stone_stockpile",
+      "population_limit",
+      "idle_villager"
+    ],
+    "optional": []
+  },
+  "idle_villager_roi": {
     "top_pct": 0.10,
     "height_pct": 0.06,
     "left_pct": 0.84,
     "width_pct": 0.05
   },
-    "profiles": {
+  "profiles": {
       "aoe1de": {
         "resource_panel": {
           "match_threshold": 0.82,
