@@ -6,10 +6,6 @@ from unittest.mock import patch
 
 import numpy as np
 
-# Ensure template loading succeeds even if asset files are missing
-import cv2
-cv2.imread = lambda *a, **k: np.zeros((1, 1), dtype=np.uint8)
-
 # Stub modules that require a GUI/display
 
 dummy_pg = types.SimpleNamespace(
@@ -41,6 +37,8 @@ import script.hud as hud
 import script.resources as resources
 import tools.campaign_bot as cb
 
+ASSET = "assets/resources.png"
+
 
 class TestHudAnchor(TestCase):
     def test_wait_hud_sets_asset(self):
@@ -49,12 +47,12 @@ class TestHudAnchor(TestCase):
         with patch("script.screen_utils._grab_frame", return_value=fake_frame), \
              patch("script.hud.find_template", return_value=((10, 20, 30, 40), 0.9, None)):
             anchor, asset = hud.wait_hud(timeout=1)
-        self.assertEqual(asset, "assets/resources.png")
-        self.assertEqual(anchor["asset"], "assets/resources.png")
-        self.assertEqual(common.HUD_ANCHOR["asset"], "assets/resources.png")
+        self.assertEqual(asset, ASSET)
+        self.assertEqual(anchor["asset"], ASSET)
+        self.assertEqual(common.HUD_ANCHOR["asset"], ASSET)
 
     def test_read_resources_uses_anchor_slices(self):
-        anchor = {"left": 10, "top": 20, "width": 600, "height": 60, "asset": "assets/resources.png"}
+        anchor = {"left": 10, "top": 20, "width": 600, "height": 60, "asset": ASSET}
         common.HUD_ANCHOR = anchor.copy()
 
         digits_iter = iter(["100", "200", "300", "400", "500", "600"])
@@ -112,12 +110,12 @@ class TestHudAnchorTools(TestCase):
         with patch("tools.campaign_bot._grab_frame", return_value=fake_frame), \
              patch("tools.campaign_bot.find_template", return_value=((10, 20, 30, 40), 0.9, None)):
             anchor, asset = cb.wait_hud(timeout=1)
-        self.assertEqual(asset, "assets/resources.png")
-        self.assertEqual(anchor["asset"], "assets/resources.png")
-        self.assertEqual(cb.HUD_ANCHOR["asset"], "assets/resources.png")
+        self.assertEqual(asset, ASSET)
+        self.assertEqual(anchor["asset"], ASSET)
+        self.assertEqual(cb.HUD_ANCHOR["asset"], ASSET)
 
     def test_read_resources_uses_anchor_slices(self):
-        anchor = {"left": 10, "top": 20, "width": 600, "height": 60, "asset": "assets/resources.png"}
+        anchor = {"left": 10, "top": 20, "width": 600, "height": 60, "asset": ASSET}
         cb.HUD_ANCHOR = anchor.copy()
 
         digits_iter = iter(["100", "200", "300", "400", "500", "600"])

@@ -11,6 +11,7 @@ import numpy as np
 
 # Public API expected by the tests
 HUD_ANCHOR = common.HUD_ANCHOR
+HUD_TEMPLATES = ["assets/resources.png"]
 HUD_TEMPLATE = np.zeros((1, 1), dtype=np.uint8)
 
 # Default helpers (can be monkeypatched in tests)
