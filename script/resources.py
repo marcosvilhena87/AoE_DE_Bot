@@ -504,6 +504,27 @@ def execute_ocr(gray, conf_threshold=None):
             digits = fallback
             data = {"text": [text.strip()], "conf": []}
             mask = gray
+    if not digits:
+        debug_dir = ROOT / "debug"
+        debug_dir.mkdir(exist_ok=True)
+        ts = int(time.time() * 1000)
+        mask_path = None
+        if mask is not None:
+            mask_path = debug_dir / f"ocr_fail_mask_{ts}.png"
+            cv2.imwrite(str(mask_path), mask)
+        text_path = debug_dir / f"ocr_fail_text_{ts}.txt"
+        with open(text_path, "w", encoding="utf-8") as f:
+            f.write("\n".join(data.get("text", [])))
+        if mask_path is not None:
+            logger.warning(
+                "OCR returned no digits; mask saved to %s; text output saved to %s",
+                mask_path,
+                text_path,
+            )
+        else:
+            logger.warning(
+                "OCR returned no digits; text output saved to %s", text_path
+            )
     return digits, data, mask
 
 
