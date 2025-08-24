@@ -132,8 +132,8 @@ def locate_resource_panel(frame):
     regions = {}
     for idx, (name, xi, yi, wi, hi) in enumerate(detections):
         if name == "idle_villager":
-            left = x + xi + pad_left
-            right = x + xi + wi - pad_right
+            left = x + xi
+            width = wi
             top_i = y + yi
             height_i = hi
         else:
@@ -145,11 +145,11 @@ def locate_resource_panel(frame):
             top_i = top
             height_i = height
 
-        width = right - left
-        if width < min_width:
-            width = min_width
-            if left + width > right:
-                width = right - left
+            width = right - left
+            if width < min_width:
+                width = min_width
+                if left + width > right:
+                    width = right - left
 
         regions[name] = (left, top_i, width, height_i)
 
