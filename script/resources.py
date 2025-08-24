@@ -155,18 +155,17 @@ def locate_resource_panel(frame):
                 )
                 continue
             if width < min_width:
-                extra = min_width - width
-                left = max(left - extra // 2, x)
-                left = max(left, x + xi + wi)
-                width = min(min_width, right - left)
-                if width <= 0:
-                    logger.warning(
-                        "Skipping ROI for icon '%s' after min-width shift due to non-positive width (left=%d, right=%d)",
-                        name,
-                        left,
-                        right,
-                    )
-                    continue
+                panel_left = x
+                panel_right = x + w - pad_right
+                center = (left + right) // 2
+                left = max(panel_left, center - min_width // 2)
+                right = left + min_width
+                if right > panel_right:
+                    right = panel_right
+                    left = right - min_width
+                    if left < panel_left:
+                        left = panel_left
+                width = right - left
 
         logger.debug("ROI for '%s': left=%d width=%d", name, left, width)
         regions[name] = (left, top_i, width, height_i)
