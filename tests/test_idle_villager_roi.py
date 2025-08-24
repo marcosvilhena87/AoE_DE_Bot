@@ -94,7 +94,7 @@ class TestIdleVillagerROI(TestCase):
         self.assertEqual(roi[2], icon_w)
         self.assertGreater(roi[3], 0)
 
-    def test_detect_resource_regions_uses_configured_idle_roi(self):
+    def test_detect_resource_regions_uses_configured_idle_roi_when_missing(self):
         frame = np.zeros((50, 100, 3), dtype=np.uint8)
         cfg = {
             "left_pct": 0.5,
@@ -110,6 +110,22 @@ class TestIdleVillagerROI(TestCase):
             regions = resources.detect_resource_regions(frame, ["idle_villager"])
 
         self.assertEqual(regions["idle_villager"], expected)
+
+    def test_detect_resource_regions_prefers_detected_idle_roi_over_config(self):
+        frame = np.zeros((50, 100, 3), dtype=np.uint8)
+        detected = {"idle_villager": (1, 2, 3, 4)}
+        cfg = {
+            "left_pct": 0.5,
+            "top_pct": 0.25,
+            "width_pct": 0.05,
+            "height_pct": 0.05,
+        }
+        with patch("script.resources.locate_resource_panel", return_value=detected), \
+            patch.dict(resources.CFG, {"idle_villager_roi": cfg}, clear=False), \
+            patch.object(common, "HUD_ANCHOR", None):
+            regions = resources.detect_resource_regions(frame, ["idle_villager"])
+
+        self.assertEqual(regions["idle_villager"], detected["idle_villager"])
 
     def test_count_idle_villagers_via_hotkey_stops_on_no_decrease(self):
         counts = iter([
