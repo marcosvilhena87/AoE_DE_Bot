@@ -67,7 +67,12 @@ def read_resources_from_hud(required_icons=None):
         resources._ocr_digits_better = original_ocr
 
 
-def gather_hud_stats(force_delay=None, required_icons=None, optional_icons=None):
+def gather_hud_stats(
+    force_delay=None,
+    required_icons=None,
+    optional_icons=None,
+    max_cache_age=None,
+):
     """Delegate to :func:`script.resources.gather_hud_stats` using patched helpers."""
     common.HUD_ANCHOR = HUD_ANCHOR
     original_locate = resources.locate_resource_panel
@@ -91,6 +96,7 @@ def gather_hud_stats(force_delay=None, required_icons=None, optional_icons=None)
             force_delay=force_delay,
             required_icons=required_icons,
             optional_icons=optional_icons,
+            max_cache_age=max_cache_age,
         )
     finally:
         resources.locate_resource_panel = original_locate

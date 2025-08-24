@@ -5,6 +5,7 @@ from unittest import TestCase
 from unittest.mock import patch
 
 import numpy as np
+import time
 
 # Stub modules that require a GUI/display before importing the bot modules
 
@@ -39,11 +40,13 @@ class TestResourceReadRetry(TestCase):
         resources._LAST_RESOURCE_VALUES.clear()
         resources._LAST_RESOURCE_TS.clear()
         resources._LAST_READ_FROM_CACHE.clear()
+        resources._RESOURCE_FAILURE_COUNTS.clear()
 
     def tearDown(self):
         resources._LAST_RESOURCE_VALUES.clear()
         resources._LAST_RESOURCE_TS.clear()
         resources._LAST_READ_FROM_CACHE.clear()
+        resources._RESOURCE_FAILURE_COUNTS.clear()
 
     def test_required_icon_fallback(self):
         def fake_detect(frame, required_icons):
@@ -95,3 +98,29 @@ class TestResourceReadRetry(TestCase):
 
         self.assertEqual(result["wood_stockpile"], 456)
         self.assertEqual(ocr_mock.call_count, 2)
+
+    def test_expired_cache_used_after_consecutive_failures(self):
+        def fake_detect(frame, required_icons):
+            return {"wood_stockpile": (0, 0, 50, 50)}
+
+        def fake_ocr(gray):
+            return "", {"text": [""]}, np.zeros((1, 1), dtype=np.uint8)
+
+        frame = np.zeros((600, 600, 3), dtype=np.uint8)
+
+        resources._LAST_RESOURCE_VALUES["wood_stockpile"] = 999
+        resources._LAST_RESOURCE_TS["wood_stockpile"] = (
+            time.time() - (resources._RESOURCE_CACHE_TTL + 10)
+        )
+
+        with patch("script.resources.detect_resource_regions", side_effect=fake_detect), \
+             patch("script.screen_utils._grab_frame", return_value=frame), \
+             patch("script.resources._ocr_digits_better", side_effect=fake_ocr), \
+             patch("script.resources.pytesseract.image_to_string", return_value=""), \
+             patch("script.resources.cv2.imwrite"):
+            with self.assertRaises(common.ResourceReadError):
+                resources.read_resources_from_hud(["wood_stockpile"])
+            result = resources.read_resources_from_hud(["wood_stockpile"])
+
+        self.assertEqual(result["wood_stockpile"], 999)
+        self.assertIn("wood_stockpile", resources._LAST_READ_FROM_CACHE)
