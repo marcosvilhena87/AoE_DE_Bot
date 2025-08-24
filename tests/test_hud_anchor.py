@@ -112,9 +112,9 @@ class TestHudAnchorTools(TestCase):
         with patch("tools.campaign_bot._grab_frame", return_value=fake_frame), \
              patch("tools.campaign_bot.find_template", return_value=((10, 20, 30, 40), 0.9, None)):
             anchor, asset = cb.wait_hud(timeout=1)
-        self.assertEqual(asset, "assets/ui_minimap.png")
-        self.assertEqual(anchor["asset"], "assets/ui_minimap.png")
-        self.assertEqual(cb.HUD_ANCHOR["asset"], "assets/ui_minimap.png")
+        self.assertEqual(asset, "assets/resources.png")
+        self.assertEqual(anchor["asset"], "assets/resources.png")
+        self.assertEqual(cb.HUD_ANCHOR["asset"], "assets/resources.png")
 
     def test_read_resources_uses_anchor_slices(self):
         anchor = {"left": 10, "top": 20, "width": 600, "height": 60, "asset": "assets/resources.png"}

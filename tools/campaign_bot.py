@@ -11,7 +11,7 @@ import numpy as np
 
 # Public API expected by the tests
 HUD_ANCHOR = common.HUD_ANCHOR
-HUD_TEMPLATES = {"assets/ui_minimap.png": np.zeros((1, 1), dtype=np.uint8)}
+HUD_TEMPLATES = {"assets/resources.png": np.zeros((1, 1), dtype=np.uint8)}
 
 # Default helpers (can be monkeypatched in tests)
 _grab_frame = screen_utils._grab_frame
