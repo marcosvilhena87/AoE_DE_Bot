@@ -67,7 +67,7 @@ def read_resources_from_hud(required_icons=None):
         resources._ocr_digits_better = original_ocr
 
 
-def gather_hud_stats():
+def gather_hud_stats(force_delay=None, required_icons=None, optional_icons=None):
     """Delegate to :func:`script.resources.gather_hud_stats` using patched helpers."""
     common.HUD_ANCHOR = HUD_ANCHOR
     original_locate = resources.locate_resource_panel
@@ -87,7 +87,11 @@ def gather_hud_stats():
     resources._ocr_digits_better = wrapper
     resources._read_population_from_roi = _read_population_from_roi
     try:
-        return resources.gather_hud_stats()
+        return resources.gather_hud_stats(
+            force_delay=force_delay,
+            required_icons=required_icons,
+            optional_icons=optional_icons,
+        )
     finally:
         resources.locate_resource_panel = original_locate
         screen_utils._grab_frame = original_grab

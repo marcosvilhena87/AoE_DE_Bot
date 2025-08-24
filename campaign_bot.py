@@ -57,7 +57,12 @@ def main():
         common.TARGET_POP = info.objective_villagers
         for attempt in range(3):
             try:
-                res, (cur_pop, pop_cap) = resources.gather_hud_stats(force_delay=0.1)
+                icon_cfg = common.CFG.get("hud_icons", {})
+                res, (cur_pop, pop_cap) = resources.gather_hud_stats(
+                    force_delay=0.1,
+                    required_icons=icon_cfg.get("required"),
+                    optional_icons=icon_cfg.get("optional"),
+                )
                 logger.info(
                     "Recursos detectados: madeira=%s, comida=%s, ouro=%s, pedra=%s",
                     res.get("wood_stockpile"),

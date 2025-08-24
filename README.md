@@ -49,6 +49,23 @@ used.
 food stockpile, gold stockpile, stone stockpile, population limit, and idle
 villager.
 
+### Customizing required icons
+
+The bot determines which HUD icons must be read through the `hud_icons`
+section in `config.json`:
+
+```json
+"hud_icons": {
+  "required": ["wood_stockpile", "food_stockpile", "gold_stockpile", "stone_stockpile", "population_limit", "idle_villager"],
+  "optional": []
+}
+```
+
+Entries in `required` cause the bot to raise an error when any of those icons
+cannot be detected or read. Icons listed under `optional` are attempted but do
+not stop execution if they are missing. Adjust these lists to match the
+resources shown in your game profile.
+
 ## Calibration helper
 
 To calibrate the `areas.pop_box` fractions interactively, run:
