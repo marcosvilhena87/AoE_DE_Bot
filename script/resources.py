@@ -570,6 +570,7 @@ def read_resources_from_hud(
             results[name] = value
             _LAST_RESOURCE_VALUES[name] = value
             _LAST_RESOURCE_TS[name] = time.time()
+            logger.info("Detected %s=%d", name, value)
 
     filtered_regions = {n: regions[n] for n in icons_to_read if n in regions}
     handle_ocr_failure(frame, filtered_regions, results, required_icons)
@@ -706,6 +707,7 @@ def gather_hud_stats(force_delay=None):
             results[name] = value
             _LAST_RESOURCE_VALUES[name] = value
             _LAST_RESOURCE_TS[name] = time.time()
+            logger.info("Detected %s=%d", name, value)
 
     filtered_regions = {n: regions[n] for n in resource_icons if n in regions}
     handle_ocr_failure(frame, filtered_regions, results, resource_icons)
