@@ -47,9 +47,41 @@ used.
 
 ## Resource Icons
 
-`assets/resources.png` contains the resource icons in order: wood stockpile,
-food stockpile, gold stockpile, stone stockpile, population limit, and idle
-villager.
+The HUD displays resource icons from left to right in the following order:
+
+`wood → food → gold → stone → population → idle villager`
+
+`assets/resources.png` must follow this arrangement so the bot can correctly
+locate each value.
+
+### ROI padding and spacing
+
+The region of interest (ROI) used to read each number sits between two icons.
+Two configuration options define the valid horizontal area:
+
+* `roi_padding_left` – pixels added to the right edge of the current icon.
+* `roi_padding_right` – pixels subtracted from the left edge of the next icon.
+
+For a given resource the horizontal bounds are computed as:
+
+```
+available_left = icon_right + roi_padding_left
+available_right = next_icon_left - roi_padding_right
+```
+
+With icon positions `0, 30, 60, 90, 120, 150`, icon width `5` and paddings
+`left=2` and `right=2`, the calculations look like:
+
+| Resource       | icon_right | next_icon_left | available_left | available_right |
+|----------------|-----------:|---------------:|---------------:|----------------:|
+| wood           | 5          | 30             | 7              | 28              |
+| food           | 35         | 60             | 37             | 58              |
+| gold           | 65         | 90             | 67             | 88              |
+| stone          | 95         | 120            | 97             | 118             |
+| population     | 125        | 150            | 127            | 148             |
+| idle villager* | –          | –              | (ROI equals icon bounds) |            |
+
+`*` Idle villager is the last icon, so its ROI is confined to the icon itself.
 
 ### Customizing required icons
 
