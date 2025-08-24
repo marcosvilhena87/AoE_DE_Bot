@@ -36,6 +36,11 @@ import script.resources as resources
 
 
 class TestIdleVillagerOCR(TestCase):
+    def setUp(self):
+        resources._LAST_RESOURCE_VALUES.clear()
+        resources._LAST_RESOURCE_TS.clear()
+        resources._RESOURCE_FAILURE_COUNTS.clear()
+
     def test_idle_villager_uses_digit_only_tesseract(self):
         def fake_detect(frame, required_icons):
             return {"idle_villager": (0, 0, 50, 50)}

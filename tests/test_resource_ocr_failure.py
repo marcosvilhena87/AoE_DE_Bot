@@ -40,9 +40,13 @@ import script.resources as resources
 class TestResourceOcrFailure(TestCase):
     def setUp(self):
         resources._LAST_RESOURCE_VALUES.clear()
+        resources._LAST_RESOURCE_TS.clear()
+        resources._RESOURCE_FAILURE_COUNTS.clear()
 
     def tearDown(self):
         resources._LAST_RESOURCE_VALUES.clear()
+        resources._LAST_RESOURCE_TS.clear()
+        resources._RESOURCE_FAILURE_COUNTS.clear()
     def test_read_resources_fallback(self):
         def fake_grab_frame(bbox=None):
             if bbox:

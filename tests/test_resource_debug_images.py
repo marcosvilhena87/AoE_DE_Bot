@@ -37,6 +37,11 @@ import script.resources as resources
 
 
 class TestResourceDebugImages(TestCase):
+    def setUp(self):
+        resources._LAST_RESOURCE_VALUES.clear()
+        resources._LAST_RESOURCE_TS.clear()
+        resources._RESOURCE_FAILURE_COUNTS.clear()
+
     def test_debug_images_written_when_all_none_and_debug_off(self):
         common.CFG["debug"] = False
         common.CFG.get("resource_panel", {})["debug_failed_ocr"] = False
@@ -95,6 +100,7 @@ class TestResourceDebugImages(TestCase):
 
         resources._LAST_RESOURCE_VALUES.clear()
         resources._LAST_RESOURCE_TS.clear()
+        resources._RESOURCE_FAILURE_COUNTS.clear()
         with patch("script.screen_utils._grab_frame", side_effect=fake_grab_frame), \
              patch(
                  "script.resources.locate_resource_panel",

@@ -25,12 +25,16 @@ _LAST_ICON_BOUNDS = {}
 _LAST_RESOURCE_VALUES = {}
 # Timestamp of last update for each cached resource value
 _LAST_RESOURCE_TS = {}
+# Consecutive OCR failure counts for each resource
+_RESOURCE_FAILURE_COUNTS = {}
 
 # Icons fulfilled from cache on the most recent read
 _LAST_READ_FROM_CACHE = set()
 
 # Maximum age (in seconds) for cached resource values
-_RESOURCE_CACHE_TTL = 1.5
+_RESOURCE_CACHE_TTL = CFG.get("resource_cache_ttl", 1.5)
+# Optional hard limit on cache age before rejection
+_RESOURCE_CACHE_MAX_AGE = CFG.get("resource_cache_max_age")
 
 # Track last set of regions returned to invalidate cached values
 _LAST_REGION_BOUNDS = None
@@ -500,6 +504,7 @@ def read_resources_from_hud(
     required_icons: Iterable[str] | None = None,
     icons_to_read: Iterable[str] | None = None,
     force_delay: float | None = None,
+    max_cache_age: float | None = None,
 ):
     """Read resource values displayed on the HUD.
 
@@ -516,6 +521,9 @@ def read_resources_from_hud(
         When provided, sleep for the given amount of seconds before
         grabbing a frame from the screen. This is useful when a hotkey has
         just been pressed and the HUD may need a short time to update.
+    max_cache_age : float | None, optional
+        Maximum age (in seconds) for any cached value to be considered when
+        multiple consecutive OCR failures occur. ``None`` disables the limit.
     """
 
     if force_delay is not None:
@@ -542,6 +550,9 @@ def read_resources_from_hud(
     required_set = set(required_icons)
 
     regions = detect_resource_regions(frame, required_icons)
+
+    if max_cache_age is None:
+        max_cache_age = _RESOURCE_CACHE_MAX_AGE
 
     results = {}
     cache_hits = set()
@@ -593,23 +604,36 @@ def read_resources_from_hud(
                 cv2.imwrite(str(thresh_path), mask)
                 logger.warning("Saved threshold image to %s", thresh_path)
             ts_cache = _LAST_RESOURCE_TS.get(name)
-            if (
-                name in _LAST_RESOURCE_VALUES
-                and ts_cache is not None
-                and time.time() - ts_cache < _RESOURCE_CACHE_TTL
-            ):
-                logger.warning(
-                    "Using cached value for %s after OCR failure", name
-                )
+            failure_count = _RESOURCE_FAILURE_COUNTS.get(name, 0)
+            use_cache = False
+            if name in _LAST_RESOURCE_VALUES and ts_cache is not None:
+                age = time.time() - ts_cache
+                if age < _RESOURCE_CACHE_TTL:
+                    logger.warning(
+                        "Using cached value for %s after OCR failure", name
+                    )
+                    use_cache = True
+                elif failure_count >= 1 and (
+                    max_cache_age is None or age <= max_cache_age
+                ):
+                    logger.warning(
+                        "Using cached value for %s despite expired TTL (%.2fs)",
+                        name,
+                        age,
+                    )
+                    use_cache = True
+            if use_cache:
                 results[name] = _LAST_RESOURCE_VALUES[name]
                 cache_hits.add(name)
             else:
                 results[name] = None
+            _RESOURCE_FAILURE_COUNTS[name] = failure_count + 1
         else:
             value = int(digits)
             results[name] = value
             _LAST_RESOURCE_VALUES[name] = value
             _LAST_RESOURCE_TS[name] = time.time()
+            _RESOURCE_FAILURE_COUNTS[name] = 0
             logger.info("Detected %s=%d", name, value)
 
     filtered_regions = {n: regions[n] for n in icons_to_read if n in regions}
@@ -666,7 +690,12 @@ def _read_population_from_roi(roi, conf_threshold=None):
     )
 
 
-def gather_hud_stats(force_delay=None, required_icons=None, optional_icons=None):
+def gather_hud_stats(
+    force_delay=None,
+    required_icons=None,
+    optional_icons=None,
+    max_cache_age: float | None = None,
+):
     """Capture a single frame and read resources and population.
 
     Parameters
@@ -678,6 +707,9 @@ def gather_hud_stats(force_delay=None, required_icons=None, optional_icons=None)
         pulled from configuration.
     optional_icons : Iterable[str] | None, optional
         Icons that should be read when available but are not required.
+    max_cache_age : float | None, optional
+        Maximum age (in seconds) for any cached value to be considered when
+        multiple consecutive OCR failures occur. ``None`` disables the limit.
 
     Returns
     -------
@@ -712,6 +744,9 @@ def gather_hud_stats(force_delay=None, required_icons=None, optional_icons=None)
     all_icons = list(dict.fromkeys(required_icons + optional_icons))
 
     regions = detect_resource_regions(frame, all_icons)
+
+    if max_cache_age is None:
+        max_cache_age = _RESOURCE_CACHE_MAX_AGE
 
     resource_icons = [name for name in all_icons if name != "population_limit"]
 
@@ -754,23 +789,36 @@ def gather_hud_stats(force_delay=None, required_icons=None, optional_icons=None)
             if mask is not None:
                 cv2.imwrite(str(debug_dir / f"resource_{name}_thresh_{ts}.png"), mask)
             ts_cache = _LAST_RESOURCE_TS.get(name)
-            if (
-                name in _LAST_RESOURCE_VALUES
-                and ts_cache is not None
-                and time.time() - ts_cache < _RESOURCE_CACHE_TTL
-            ):
-                logger.warning(
-                    "Using cached value for %s after OCR failure", name
-                )
+            failure_count = _RESOURCE_FAILURE_COUNTS.get(name, 0)
+            use_cache = False
+            if name in _LAST_RESOURCE_VALUES and ts_cache is not None:
+                age = time.time() - ts_cache
+                if age < _RESOURCE_CACHE_TTL:
+                    logger.warning(
+                        "Using cached value for %s after OCR failure", name
+                    )
+                    use_cache = True
+                elif failure_count >= 1 and (
+                    max_cache_age is None or age <= max_cache_age
+                ):
+                    logger.warning(
+                        "Using cached value for %s despite expired TTL (%.2fs)",
+                        name,
+                        age,
+                    )
+                    use_cache = True
+            if use_cache:
                 results[name] = _LAST_RESOURCE_VALUES[name]
                 cache_hits.add(name)
             else:
                 results[name] = None
+            _RESOURCE_FAILURE_COUNTS[name] = failure_count + 1
         else:
             value = int(digits)
             results[name] = value
             _LAST_RESOURCE_VALUES[name] = value
             _LAST_RESOURCE_TS[name] = time.time()
+            _RESOURCE_FAILURE_COUNTS[name] = 0
             logger.info("Detected %s=%d", name, value)
 
     filtered_regions = {n: regions[n] for n in resource_icons if n in regions}
