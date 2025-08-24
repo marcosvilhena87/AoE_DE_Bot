@@ -146,10 +146,26 @@ def locate_resource_panel(frame):
             height_i = height
 
             width = right - left
+            if width <= 0:
+                logger.warning(
+                    "Skipping ROI for icon '%s' due to non-positive width (left=%d, right=%d)",
+                    name,
+                    left,
+                    right,
+                )
+                continue
             if width < min_width:
                 width = min_width
                 if left + width > right:
                     width = right - left
+                    if width <= 0:
+                        logger.warning(
+                            "Skipping ROI for icon '%s' after min-width adjust due to non-positive width (left=%d, right=%d)",
+                            name,
+                            left,
+                            right,
+                        )
+                        continue
 
         regions[name] = (left, top_i, width, height_i)
 
@@ -263,7 +279,16 @@ def detect_resource_regions(frame, required_icons):
                 icon_trim = icon_trims[idx] if idx < len(icon_trims) else icon_trims[-1]
                 left = x + int(idx * slice_w + icon_trim * slice_w)
                 right_limit = x + int((idx + 1) * slice_w - right_trim * slice_w)
-                width = max(90, right_limit - left)
+                width = right_limit - left
+                if width <= 0:
+                    logger.warning(
+                        "Skipping ROI for '%s' due to non-positive width (left=%d, right=%d)",
+                        name,
+                        left,
+                        right_limit,
+                    )
+                    continue
+                width = max(90, width)
                 regions[name] = (left, top, width, height)
         else:
             # Fallback: estimate resource bar from HUD anchor
@@ -306,7 +331,16 @@ def detect_resource_regions(frame, required_icons):
                 icon_trim = icon_trims[idx] if idx < len(icon_trims) else icon_trims[-1]
                 left = x + int(idx * slice_w + icon_trim * slice_w)
                 right_limit = x + int((idx + 1) * slice_w - right_trim * slice_w)
-                width = max(90, right_limit - left)
+                width = right_limit - left
+                if width <= 0:
+                    logger.warning(
+                        "Skipping ROI for '%s' due to non-positive width (left=%d, right=%d)",
+                        name,
+                        left,
+                        right_limit,
+                    )
+                    continue
+                width = max(90, width)
                 regions[name] = (left, top, width, height)
 
         missing = [name for name in required_icons if name not in regions]
