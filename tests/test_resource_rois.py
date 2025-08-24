@@ -48,9 +48,10 @@ class TestResourceROIs(TestCase):
             "gold_stockpile",
             "stone_stockpile",
             "population_limit",
+            "idle_villager",
         ]
 
-        positions = [0, 30, 60, 90, 120]
+        positions = [0, 30, 60, 90, 120, 150]
         pad_left = 2
         pad_right = 2
         loc_iter = iter([(x, 0) for x in positions])
@@ -84,21 +85,23 @@ class TestResourceROIs(TestCase):
             left = roi[0]
             right = roi[0] + roi[2]
             xi = positions[i]
-            icon_right = panel_box[0] + xi + icon_width
+            icon_left = panel_box[0] + xi
+            icon_right = icon_left + icon_width
 
-            # Ensure ROI starts after the icon with padding
-            self.assertGreaterEqual(
-                left,
-                icon_right + pad_left,
-                f"{name} left not ≥ icon_right + padding",
-            )
+            if name != "idle_villager":
+                # Ensure ROI starts after the icon with padding
+                self.assertGreaterEqual(
+                    left,
+                    icon_right + pad_left,
+                    f"{name} left not ≥ icon_right + padding",
+                )
 
             if i > 0:
                 prev = regions[icons[i - 1]]
                 prev_right = prev[0] + prev[2]
                 self.assertGreater(left, prev_right, f"{name} left not > previous right")
 
-            if i < len(icons) - 1:
+            if name != "idle_villager" and i < len(icons) - 1:
                 next_left = regions[icons[i + 1]][0]
                 next_icon_left = panel_box[0] + positions[i + 1]
                 # Ensure ROI ends before the next icon with padding
