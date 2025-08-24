@@ -321,6 +321,16 @@ def detect_resource_regions(frame, required_icons):
             logger.debug(
                 "Custom ROI aplicada para idle_villager: %s", regions["idle_villager"]
             )
+    res_cfg = CFG.get("resource_panel", {})
+    min_width = res_cfg.get("min_width", 110)
+    narrow = any(
+        name in regions and regions[name][2] < min_width for name in required_icons
+    )
+    if narrow and common.HUD_ANCHOR:
+        logger.warning(
+            "Detected narrow resource region; falling back to HUD_ANCHOR slices"
+        )
+        regions = {}
     missing = [name for name in required_icons if name not in regions]
 
     if missing and common.HUD_ANCHOR:
