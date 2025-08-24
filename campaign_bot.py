@@ -55,21 +55,35 @@ def main():
         common.CURRENT_POP = info.starting_villagers
         common.POP_CAP = 4  # 1 Town Center
         common.TARGET_POP = info.objective_villagers
-        try:
-            res, (cur_pop, pop_cap) = resources.gather_hud_stats(force_delay=0.1)
-            logger.info(
-                "Recursos detectados: madeira=%s, comida=%s, ouro=%s, pedra=%s",
-                res.get("wood_stockpile"),
-                res.get("food_stockpile"),
-                res.get("gold_stockpile"),
-                res.get("stone_stockpile"),
+        for attempt in range(3):
+            try:
+                res, (cur_pop, pop_cap) = resources.gather_hud_stats(force_delay=0.1)
+                logger.info(
+                    "Recursos detectados: madeira=%s, comida=%s, ouro=%s, pedra=%s",
+                    res.get("wood_stockpile"),
+                    res.get("food_stockpile"),
+                    res.get("gold_stockpile"),
+                    res.get("stone_stockpile"),
+                )
+                logger.info("População detectada: %s/%s", cur_pop, pop_cap)
+                logger.info(
+                    "Aldeões ociosos detectados: %s", res.get("idle_villager")
+                )
+                break
+            except Exception as e:
+                logger.warning(
+                    "Falha ao detectar recursos ou população (tentativa %s/3): %s",
+                    attempt + 1,
+                    e,
+                )
+                time.sleep(1)
+        else:
+            logger.error(
+                "Falha ao detectar recursos ou população após 3 tentativas; encerrando."
             )
-            logger.info("População detectada: %s/%s", cur_pop, pop_cap)
-            logger.info(
-                "Aldeões ociosos detectados: %s", res.get("idle_villager")
+            raise SystemExit(
+                "Falha ao detectar recursos ou população após 3 tentativas"
             )
-        except Exception as e:
-            logger.warning("Falha ao detectar recursos ou população: %s", e)
 
         logger.info("Setup concluído.")
     finally:
