@@ -74,11 +74,7 @@ def _load_gray(path):
     return im
 
 
-HUD_TEMPLATES = {
-    name: tmpl
-    for name in CFG.get("look_for", [])
-    if (tmpl := _load_gray(ROOT / name)) is not None
-}
+HUD_TEMPLATE = _load_gray(ROOT / "assets/resources.png")
 
 ICON_NAMES = [
     "wood_stockpile",

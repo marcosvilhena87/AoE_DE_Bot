@@ -11,7 +11,7 @@ import numpy as np
 
 # Public API expected by the tests
 HUD_ANCHOR = common.HUD_ANCHOR
-HUD_TEMPLATES = {"assets/ui_minimap.png": np.zeros((1, 1), dtype=np.uint8)}
+HUD_TEMPLATE = np.zeros((1, 1), dtype=np.uint8)
 
 # Default helpers (can be monkeypatched in tests)
 _grab_frame = screen_utils._grab_frame
@@ -21,8 +21,8 @@ _read_population_from_roi = resources._read_population_from_roi
 
 def wait_hud(timeout=60):
     """Delegate to :func:`script.hud.wait_hud` using patched helpers."""
-    original_templates = screen_utils.HUD_TEMPLATES
-    screen_utils.HUD_TEMPLATES = HUD_TEMPLATES
+    original_template = screen_utils.HUD_TEMPLATE
+    screen_utils.HUD_TEMPLATE = HUD_TEMPLATE
     original_grab = screen_utils._grab_frame
     original_find = hud.find_template
     screen_utils._grab_frame = _grab_frame
@@ -35,7 +35,7 @@ def wait_hud(timeout=60):
     finally:
         screen_utils._grab_frame = original_grab
         hud.find_template = original_find
-        screen_utils.HUD_TEMPLATES = original_templates
+        screen_utils.HUD_TEMPLATE = original_template
 
 def _ocr_digits_better(gray):
     """Delegate to resource helper; patched in tests."""
