@@ -6,7 +6,6 @@ import time
 import script.common as common
 import script.hud as hud
 import script.screen_utils as screen_utils
-from script.villager import econ_loop
 from script.config_utils import parse_scenario_info
 
 
@@ -34,22 +33,14 @@ def main():
         )
         try:
             anchor, asset = hud.wait_hud(timeout=90)
-            logger.info(
-                "HUD detectada em %s usando '%s'. Rodando rotina econômica…",
-                anchor,
-                asset,
-            )
+            logger.info("HUD detectada em %s usando '%s'.", anchor, asset)
         except RuntimeError as e:
             logger.error(str(e))
             logger.info("Dando mais 25s para você ajustar a câmera/HUD (fallback)…")
             time.sleep(25)
             try:
                 anchor, asset = hud.wait_hud(timeout=90)
-                logger.info(
-                    "HUD detectada em %s usando '%s'. Rodando rotina econômica…",
-                    anchor,
-                    asset,
-                )
+                logger.info("HUD detectada em %s usando '%s'.", anchor, asset)
             except RuntimeError as e2:
                 logger.error(str(e2))
                 logger.warning(
@@ -64,8 +55,7 @@ def main():
         common.POP_CAP = 4  # 1 Town Center
         common.TARGET_POP = info.objective_villagers
 
-        econ_loop(minutes=common.CFG["loop_minutes"])
-        logger.info("Rotina concluída.")
+        logger.info("Setup concluído.")
     finally:
         screen_utils.teardown_sct()
 
