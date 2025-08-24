@@ -12,10 +12,10 @@ If neither option is provided, `pytesseract` will attempt to find `tesseract` on
 
 ## Configuration notes
 
-The bot locates the resource bar on the HUD only to confirm that the interface
-is visible. It uses a template of the resource bar (`assets/resources.png`).
-Frames are captured from the whole screen unless a different region is
-explicitly requested.
+The bot detects the HUD by matching a single template of the resource bar
+(`assets/resources.png`). This image is also used to read the individual
+resource icons. Frames are captured from the whole screen unless a different
+region is explicitly requested.
 
 HUD-related coordinates, such as `areas.pop_box`, use ``[x, y, width, height]``
 fractions of the entire screen. The default values in `config.json` are
@@ -30,9 +30,11 @@ Two fields in `config.json` allow adjusting how resource numbers are read:
 * `ocr_psm_list` – list of Tesseract [page segmentation modes](https://tesseract-ocr.github.io/tessdoc/ImproveQuality.html#page-segmentation-method)
   tried in order when extracting digits (default `[6, 7, 8, 10, 13]`).
 
-## Capturing `resources.png`
+## Capturing `assets/resources.png`
 
-A template of the resource bar is required for your configuration.
+`assets/resources.png` is the only template needed for HUD detection and
+resource icon recognition. The previous `hud_resources.png` file is no longer
+used.
 
 1. Set the game's UI scale to 100%.
 2. Take a screenshot of the in-game HUD.
