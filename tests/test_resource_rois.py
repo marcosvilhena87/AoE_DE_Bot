@@ -45,9 +45,9 @@ class TestResourceROIs(TestCase):
         icons = [
             "wood_stockpile",
             "food_stockpile",
-            "gold",
-            "stone",
-            "population",
+            "gold_stockpile",
+            "stone_stockpile",
+            "population_limit",
         ]
 
         positions = [0, 30, 60, 90, 120]

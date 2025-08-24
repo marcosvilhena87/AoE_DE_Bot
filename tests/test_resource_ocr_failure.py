@@ -58,9 +58,9 @@ class TestResourceOcrFailure(TestCase):
                  return_value={
                      "wood_stockpile": (0, 0, 50, 50),
                      "food_stockpile": (50, 0, 50, 50),
-                     "gold": (100, 0, 50, 50),
-                     "stone": (150, 0, 50, 50),
-                     "population": (200, 0, 50, 50),
+                     "gold_stockpile": (100, 0, 50, 50),
+                     "stone_stockpile": (150, 0, 50, 50),
+                     "population_limit": (200, 0, 50, 50),
                      "idle_villager": (250, 0, 50, 50),
                  },
              ), \

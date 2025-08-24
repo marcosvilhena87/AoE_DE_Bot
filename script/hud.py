@@ -71,8 +71,8 @@ def read_population_from_hud(retries=3, conf_threshold=None, save_failed_roi=Fal
     frame_full = screen_utils._grab_frame()
     regions = resources.locate_resource_panel(frame_full)
     roi_bbox = None
-    if "population" in regions:
-        x, y, w, h = regions["population"]
+    if "population_limit" in regions:
+        x, y, w, h = regions["population_limit"]
         roi_bbox = {"left": x, "top": y, "width": w, "height": h}
     else:
         x, y, w, h = CFG["areas"]["pop_box"]
@@ -159,7 +159,7 @@ def read_population_from_hud(retries=3, conf_threshold=None, save_failed_roi=Fal
     )
     try:
         _, (cur, limit) = resources.read_resources_from_hud(
-            ["population"], force_delay=0.1
+            ["population_limit"], force_delay=0.1
         )
         if cur is not None and limit is not None:
             logger.info("Fallback de população bem-sucedido: %s/%s", cur, limit)

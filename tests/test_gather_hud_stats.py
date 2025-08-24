@@ -39,10 +39,10 @@ class TestGatherHudStats(TestCase):
         expected_res = {
             "wood_stockpile": 100,
             "food_stockpile": 200,
-            "gold": 300,
-            "stone": 400,
+            "gold_stockpile": 300,
+            "stone_stockpile": 400,
             "idle_villager": 600,
-            "population": 123,
+            "population_limit": 123,
         }
         self.assertEqual(res, expected_res)
         self.assertEqual(pop, (123, 200))

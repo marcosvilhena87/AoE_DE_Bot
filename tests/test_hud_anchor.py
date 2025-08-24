@@ -77,9 +77,9 @@ class TestHudAnchor(TestCase):
         expected = {
             "wood_stockpile": 100,
             "food_stockpile": 200,
-            "gold": 300,
-            "stone": 400,
-            "population": 500,
+            "gold_stockpile": 300,
+            "stone_stockpile": 400,
+            "population_limit": 500,
             "idle_villager": 600,
         }
         self.assertEqual(result, expected)
@@ -139,18 +139,18 @@ class TestHudAnchorTools(TestCase):
             result = cb.read_resources_from_hud([
                 "wood_stockpile",
                 "food_stockpile",
-                "gold",
-                "stone",
-                "population",
+                "gold_stockpile",
+                "stone_stockpile",
+                "population_limit",
                 "idle_villager",
             ])
 
         expected = {
             "wood_stockpile": 100,
             "food_stockpile": 200,
-            "gold": 300,
-            "stone": 400,
-            "population": 500,
+            "gold_stockpile": 300,
+            "stone_stockpile": 400,
+            "population_limit": 500,
             "idle_villager": 600,
         }
         self.assertEqual(result, expected)

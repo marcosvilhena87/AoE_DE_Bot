@@ -490,9 +490,9 @@ def read_resources_from_hud(
         required_icons = [
             "wood_stockpile",
             "food_stockpile",
-            "gold",
-            "stone",
-            "population",
+            "gold_stockpile",
+            "stone_stockpile",
+            "population_limit",
             "idle_villager",
         ]
     else:
@@ -642,15 +642,15 @@ def gather_hud_stats(force_delay=None):
     required_icons = [
         "wood_stockpile",
         "food_stockpile",
-        "gold",
-        "stone",
-        "population",
+        "gold_stockpile",
+        "stone_stockpile",
+        "population_limit",
         "idle_villager",
     ]
 
     regions = detect_resource_regions(frame, required_icons)
 
-    resource_icons = [name for name in required_icons if name != "population"]
+    resource_icons = [name for name in required_icons if name != "population_limit"]
 
     results = {}
     cache_hits = set()
@@ -710,10 +710,10 @@ def gather_hud_stats(force_delay=None):
     filtered_regions = {n: regions[n] for n in resource_icons if n in regions}
     handle_ocr_failure(frame, filtered_regions, results, resource_icons)
 
-    pop_x, pop_y, pop_w, pop_h = regions["population"]
+    pop_x, pop_y, pop_w, pop_h = regions["population_limit"]
     pop_roi = frame[pop_y : pop_y + pop_h, pop_x : pop_x + pop_w]
     cur_pop, pop_cap = _read_population_from_roi(pop_roi)
-    results["population"] = cur_pop
+    results["population_limit"] = cur_pop
 
     global _LAST_READ_FROM_CACHE
     _LAST_READ_FROM_CACHE = cache_hits
