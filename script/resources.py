@@ -42,6 +42,9 @@ _RESOURCE_FAILURE_COUNTS = {}
 # Icons fulfilled from cache on the most recent read
 _LAST_READ_FROM_CACHE = set()
 
+# Resource names whose available span fell below the configured minimum width
+_NARROW_ROIS = set()
+
 # Maximum age (in seconds) for cached resource values
 _RESOURCE_CACHE_TTL = CFG.get("resource_cache_ttl", 1.5)
 # Optional hard limit on cache age before rejection
@@ -111,19 +114,44 @@ def _roi_between_icons(ctx, name, cur_bounds, next_bounds, idx):
         used as the boundary.
     idx : int
         Index of the current icon in :data:`RESOURCE_ICON_ORDER`.
+
+    Returns
+    -------
+    tuple | None, bool
+        ROI tuple ``(left, top, width, height)`` and a flag indicating if the
+        available span was narrower than ``ctx.min_width``.
     """
 
     pad_l = ctx.pad_left[idx] if idx < len(ctx.pad_left) else ctx.pad_left[-1]
     pad_r = ctx.pad_right[idx] if idx < len(ctx.pad_right) else ctx.pad_right[-1]
 
+    # Current icon trim
     cur_x, _cy, cur_w, _ch = cur_bounds
-    available_left = ctx.panel_left + cur_x + cur_w + pad_l
+    cur_trim_val = ctx.icon_trims[idx] if idx < len(ctx.icon_trims) else ctx.icon_trims[-1]
+    if 0 <= cur_trim_val <= 1:
+        cur_trim = int(round(cur_trim_val * cur_w))
+    else:
+        cur_trim = int(round(cur_trim_val))
+    cur_w_eff = cur_w - cur_trim
 
+    # Next icon trim
+    next_trim = 0
     if next_bounds is not None:
-        next_x, _ny, _nw, _nh = next_bounds
-        available_right = ctx.panel_left + next_x - pad_r
+        next_x, _ny, next_w, _nh = next_bounds
+        next_trim_val = (
+            ctx.icon_trims[idx + 1]
+            if idx + 1 < len(ctx.icon_trims)
+            else ctx.icon_trims[-1]
+        )
+        if 0 <= next_trim_val <= 1:
+            next_trim = int(round(next_trim_val * next_w))
+        else:
+            next_trim = int(round(next_trim_val))
+        available_right = ctx.panel_left + next_x - next_trim - pad_r
     else:
         available_right = ctx.panel_right
+
+    available_left = ctx.panel_left + cur_x + cur_w_eff + pad_l
 
     if available_right <= available_left:
         logger.warning(
@@ -132,32 +160,43 @@ def _roi_between_icons(ctx, name, cur_bounds, next_bounds, idx):
             available_left,
             available_right,
         )
-        return None
+        return None, False
 
     available_width = available_right - available_left
     width = min(ctx.max_width, available_width)
-    if width < ctx.min_width:
-        width = ctx.min_width
-    if width > available_width:
+
+    narrow = False
+    if available_width < ctx.min_width:
         width = available_width
+        narrow = True
+        logger.warning(
+            "ROI estreita para '%s': disp=%d min=%d",
+            name,
+            available_width,
+            ctx.min_width,
+        )
 
     left = available_left
     right = left + width
 
     logger.debug(
-        "ROI for '%s': available=(%d,%d) -> (%d,%d) width=%d",
+        "ROI for '%s': available=(%d,%d) -> (%d,%d) width=%d cur_trim=%d next_trim=%d",
         name,
         available_left,
         available_right,
         left,
         right,
         width,
+        cur_trim,
+        next_trim,
     )
-    return (left, ctx.top, width, ctx.height)
+    return (left, ctx.top, width, ctx.height), narrow
 
 
 def _build_resource_rois_between_icons(ctx):
     """Build resource ROIs for icons using consecutive pairs."""
+    if not hasattr(ctx, "narrow"):
+        ctx.narrow = {}
 
     regions = {}
     for idx, (current, next_) in enumerate(
@@ -167,9 +206,11 @@ def _build_resource_rois_between_icons(ctx):
         next_bounds = ctx.detected.get(next_)
         if cur_bounds is None or next_bounds is None:
             continue
-        roi = _roi_between_icons(ctx, current, cur_bounds, next_bounds, idx)
+        roi, narrow = _roi_between_icons(ctx, current, cur_bounds, next_bounds, idx)
         if roi is not None:
             regions[current] = roi
+            if narrow:
+                ctx.narrow[current] = True
     return regions
 
 
@@ -249,6 +290,9 @@ def locate_resource_panel(frame):
     )
 
     regions = _build_resource_rois_between_icons(ctx)
+
+    global _NARROW_ROIS
+    _NARROW_ROIS = set(getattr(ctx, "narrow", {}).keys())
 
     if "idle_villager" in detected:
         xi, yi, wi, hi = detected["idle_villager"]
