@@ -94,9 +94,10 @@ class TestIdleVillagerROI(TestCase):
 
         self.assertIn("idle_villager", regions)
         roi = regions["idle_villager"]
-        expected = (panel_box[0] + xi, panel_box[1] + yi, icon_w, icon_h)
+        extra = common.CFG["resource_panel"].get("idle_roi_extra_width", 0)
+        expected = (panel_box[0] + xi, panel_box[1] + yi, icon_w + extra, icon_h)
         self.assertEqual(roi, expected)
-        self.assertEqual(roi[2], icon_w)
+        self.assertEqual(roi[2], icon_w + extra)
         self.assertGreater(roi[3], 0)
 
     def test_detect_resource_regions_uses_configured_idle_roi_when_missing(self):
