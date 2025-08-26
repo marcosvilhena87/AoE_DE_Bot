@@ -68,12 +68,14 @@ class TestResourceROIs(TestCase):
     panel_box = (0, 0, 200, 20)
     frame = np.zeros((50, 200, 3), dtype=np.uint8)
 
-    def _locate_regions(self):
+    def _locate_regions(self, icon_trim_pct=None):
         loc_iter = iter([(x, 0) for x in self.positions])
 
         def fake_minmax(res):
             xi, yi = next(loc_iter)
             return 0.0, 0.95, (0, 0), (xi, yi)
+
+        trim = icon_trim_pct if icon_trim_pct is not None else [0] * 6
 
         with patch(
             "script.resources.find_template", return_value=(self.panel_box, 0.9, None)
@@ -100,7 +102,7 @@ class TestResourceROIs(TestCase):
             {
                 "roi_padding_left": [self.pad_left] * 6,
                 "roi_padding_right": [self.pad_right] * 6,
-                "icon_trim_pct": [0] * 6,
+                "icon_trim_pct": trim,
                 "scales": [1.0],
                 "match_threshold": 0.5,
                 "max_width": 999,
@@ -111,7 +113,7 @@ class TestResourceROIs(TestCase):
         ), patch.dict(
             common.CFG["profiles"]["aoe1de"]["resource_panel"],
             {
-                "icon_trim_pct": [0] * 6,
+                "icon_trim_pct": trim,
             },
         ):
             regions = resources.locate_resource_panel(self.frame)
@@ -163,6 +165,12 @@ class TestResourceROIs(TestCase):
     def test_population_limit_roi_bounds(self):
         regions, icon_width = self._locate_regions()
         self._assert_bounds(regions, icon_width, 4)
+
+    def test_rois_trimmed_icon_bounds(self):
+        trim = [0.2] * 6
+        regions, icon_width = self._locate_regions(icon_trim_pct=trim)
+        for idx in range(5):
+            self._assert_bounds(regions, icon_width, idx)
 
     def test_rois_use_available_width_with_close_icons(self):
         frame = np.zeros((50, 100, 3), dtype=np.uint8)
