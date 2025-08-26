@@ -217,24 +217,19 @@ def locate_resource_panel(frame):
                         min_width,
                     )
                     return {}
-                width = min(max_width, min_width)
-                center = (available_left + available_right) // 2
-                left = center - width // 2
-                right = left + width
-                if left < panel_left:
-                    right += panel_left - left
-                    left = panel_left
-                if right > panel_right:
-                    left -= right - panel_right
-                    right = panel_right
+                width = min(min_width, max_width)
+                right = available_right
+                left = right - width
+                left = max(panel_left, left)
+                right = min(panel_right, right)
                 width = right - left
             else:
                 width = min(available_width, max_width)
                 left = available_left
                 right = left + width
                 if right > available_right:
-                    left = available_right - width
                     right = available_right
+                    left = right - width
                 left = max(panel_left, left)
                 right = min(panel_right, right)
                 width = right - left
