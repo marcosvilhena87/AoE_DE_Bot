@@ -44,8 +44,6 @@
     "//roi_padding_right": "pixels removed before the next icon; tweak per resource",
     "max_width": 160,
     "min_width": 90,
-    "narrow_mode": "fit",
-    "//narrow_mode": "'fit' uses the gap as-is; 'anchor' skips gaps < min_width; 'right' anchors to next icon",
     "idle_roi_extra_width": 0,
     "anchor_top_pct": 0.15,
     "anchor_height_pct": 0.70,

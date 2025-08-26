@@ -21,7 +21,7 @@ HUD-related coordinates, such as `areas.pop_box`, use ``[x, y, width, height]``
 fractions of the entire screen. The default values in `config.json` are
 placeholders and should be calibrated for your setup.
 
-The `resource_panel` uses a span-based ROI builder that measures the gap between consecutive icons. `max_width` caps the width of each region when the gap is wide. The default `narrow_mode` of `"fit"` keeps the ROI confined to the available span even if it is narrower than `min_width`. Switch to `"anchor"` to skip spans that fall below `min_width` and rely on `HUD_ANCHOR` estimates, or use `"right"` to align the ROI to the following icon.
+The `resource_panel` uses a span-based ROI builder that measures the gap between consecutive icons. `max_width` caps the width of each region when the gap is wide. If the gap is smaller than `min_width`, the ROI shrinks to fit the available space.
 
 ### OCR tuning
 

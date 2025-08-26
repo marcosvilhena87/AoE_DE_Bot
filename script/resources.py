@@ -95,7 +95,7 @@ def detect_hud(frame):
     return box
 
 
-def _roi_between_icons(ctx, name, cur_bounds, next_bounds, idx, anchor="left"):
+def _roi_between_icons(ctx, name, cur_bounds, next_bounds, idx):
     """Compute a ROI span between two consecutive icons.
 
     Parameters
@@ -111,67 +111,44 @@ def _roi_between_icons(ctx, name, cur_bounds, next_bounds, idx, anchor="left"):
         used as the boundary.
     idx : int
         Index of the current icon in :data:`RESOURCE_ICON_ORDER`.
-    anchor : str | None
-        When provided, forces the ROI to anchor to either the ``'left'`` or
-        ``'right'`` side of the available span. Otherwise the ROI is centered.
     """
 
     pad_l = ctx.pad_left[idx] if idx < len(ctx.pad_left) else ctx.pad_left[-1]
     pad_r = ctx.pad_right[idx] if idx < len(ctx.pad_right) else ctx.pad_right[-1]
-    trim = ctx.icon_trims[idx] if idx < len(ctx.icon_trims) else ctx.icon_trims[-1]
-    icon_right = ctx.panel_left + cur_bounds[0] + cur_bounds[2] - int(trim * cur_bounds[2])
+
+    cur_x, _cy, cur_w, _ch = cur_bounds
+    available_left = ctx.panel_left + cur_x + cur_w + pad_l
 
     if next_bounds is not None:
-        trim_next = (
-            ctx.icon_trims[idx + 1]
-            if idx + 1 < len(ctx.icon_trims)
-            else ctx.icon_trims[-1]
-        )
-        next_icon_left = ctx.panel_left + next_bounds[0] + int(trim_next * next_bounds[2])
+        next_x, _ny, _nw, _nh = next_bounds
+        available_right = ctx.panel_left + next_x - pad_r
     else:
-        next_icon_left = ctx.panel_right
+        available_right = ctx.panel_right
 
-    span_left = icon_right + pad_l
-    span_right = next_icon_left - pad_r
-    span_width = span_right - span_left
-    if span_width <= 0:
+    if available_right <= available_left:
         logger.warning(
             "Skipping ROI for icon '%s' due to non-positive span (left=%d, right=%d)",
             name,
-            span_left,
-            span_right,
+            available_left,
+            available_right,
         )
         return None
 
-    if span_width < ctx.min_width and ctx.narrow_mode == "anchor":
-        logger.debug(
-            "Span %d for '%s' below min_width=%d; skipping due to anchor mode",
-            span_width,
-            name,
-            ctx.min_width,
-        )
-        return None
+    available_width = available_right - available_left
+    width = min(ctx.max_width, available_width)
+    if width < ctx.min_width:
+        width = ctx.min_width
+    if width > available_width:
+        width = available_width
 
-    width = min(span_width, ctx.max_width)
-    if anchor == "right":
-        left = span_right - width
-    elif anchor == "center":
-        left = span_left + (span_width - width) // 2
-    else:  # default anchor left
-        left = span_left
+    left = available_left
     right = left + width
-    if right > span_right:
-        left = span_right - width
-        right = span_right
-    left = max(ctx.panel_left, left)
-    right = min(ctx.panel_right, right)
-    width = right - left
 
     logger.debug(
-        "ROI for '%s': span=(%d,%d) -> (%d,%d) width=%d",
+        "ROI for '%s': available=(%d,%d) -> (%d,%d) width=%d",
         name,
-        span_left,
-        span_right,
+        available_left,
+        available_right,
         left,
         right,
         width,
@@ -190,8 +167,7 @@ def _build_resource_rois_between_icons(ctx):
             continue
         cur_bounds = ctx.detected[name]
         next_bounds = ctx.detected[next_name]
-        anchor = "right" if ctx.narrow_mode == "right" else "left"
-        roi = _roi_between_icons(ctx, name, cur_bounds, next_bounds, idx, anchor)
+        roi = _roi_between_icons(ctx, name, cur_bounds, next_bounds, idx)
         if roi is not None:
             regions[name] = roi
     return regions
@@ -228,7 +204,6 @@ def locate_resource_panel(frame):
     )
     max_width = res_cfg.get("max_width", 160)
     min_width = res_cfg.get("min_width", 90)
-    narrow_mode = res_cfg.get("narrow_mode", "expand")
     top_pct = profile_res.get("top_pct", res_cfg.get("top_pct", 0.08))
     height_pct = profile_res.get("height_pct", res_cfg.get("height_pct", 0.84))
     screen_utils._load_icon_templates()
@@ -270,7 +245,6 @@ def locate_resource_panel(frame):
         icon_trims=icon_trims,
         max_width=max_width,
         min_width=min_width,
-        narrow_mode=narrow_mode,
         detected=detected,
     )
 
