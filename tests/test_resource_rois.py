@@ -338,7 +338,6 @@ class TestResourceROIs(TestCase):
             icon_trims=[0] * 6,
             max_width=999,
             min_width=20,
-            narrow_mode="expand",
             detected={
                 "wood_stockpile": (0, 0, 5, 5),
                 "food_stockpile": (15, 0, 5, 5),
@@ -352,33 +351,6 @@ class TestResourceROIs(TestCase):
         self.assertEqual(roi[0], span_left)
         self.assertEqual(roi[0] + roi[2], span_right)
         self.assertEqual(roi[2], span_right - span_left)
-
-    def test_right_anchored_narrow_mode_aligns_to_next_icon(self):
-        """narrow_mode='right' should anchor the ROI to the following icon."""
-
-        ctx = types.SimpleNamespace(
-            panel_left=0,
-            panel_right=200,
-            top=0,
-            height=10,
-            pad_left=[2] * 6,
-            pad_right=[2] * 6,
-            icon_trims=[0] * 6,
-            max_width=10,
-            min_width=0,
-            narrow_mode="right",
-            detected={
-                "wood_stockpile": (0, 0, 5, 5),
-                "food_stockpile": (40, 0, 5, 5),
-            },
-        )
-
-        regions = resources._build_resource_rois_between_icons(ctx)
-        roi = regions["wood_stockpile"]
-        expected_right = 38  # next_icon_left - pad_right
-        expected_left = expected_right - ctx.max_width
-        self.assertEqual(roi[0], expected_left)
-        self.assertEqual(roi[0] + roi[2], expected_right)
 
     def test_cache_cleared_on_region_change(self):
         resources._LAST_ICON_BOUNDS.clear()
