@@ -209,27 +209,31 @@ def locate_resource_panel(frame):
                 )
                 continue
             if available_width < min_width:
-                if narrow_mode == "anchor" and common.HUD_ANCHOR:
-                    logger.warning(
-                        "ROI for '%s' below min_width (%d < %d); using HUD_ANCHOR fallback",
-                        name,
-                        available_width,
-                        min_width,
-                    )
-                    return {}
-                width = min(min_width, max_width)
-                right = available_right
-                left = right - width
-                left = max(panel_left, left)
-                right = min(panel_right, right)
+                # Ancorar PELA ESQUERDA (lado do ícone) e expandir p/ a direita
+                width = min(max_width, min_width)
+                left = available_left
+                right = left + width
+
+                # Respeitar limites do painel e do espaço disponível
+                if right > available_right:
+                    # empurra tudo para a esquerda o máximo possível
+                    left = max(panel_left, available_right - width)
+                    right = left + width
+
+                # clamp final ao painel (defensivo)
+                if left < panel_left:
+                    left = panel_left
+                    right = left + width
+
                 width = right - left
             else:
+                # mantém o caminho existente para o caso amplo
                 width = min(available_width, max_width)
                 left = available_left
                 right = left + width
                 if right > available_right:
+                    left = available_right - width
                     right = available_right
-                    left = right - width
                 left = max(panel_left, left)
                 right = min(panel_right, right)
                 width = right - left
