@@ -1,0 +1,5 @@
+A unit is a player-controlled, individual entity in the Age of Empires series. Representing a fundamental aspect of gameplay, units feature in all titles, their forms ranging from domesticated animals, humans, ships, siege engines, mythical creatures, to artificial constructs. In every game, units have a color scheme to them, with the color matching that of the team they belong to, unless they are neutral.
+
+Each unit variant possesses certain and/or unique abilities, offering a specific function and role in gameplay. The four main types of unit are: economic, military, hero, and animal. In the spin-off Age of Mythology, myth units are also present.
+
+Most units can move, which sets them apart from buildings, the other critical entity to feature in all titles of the series.
