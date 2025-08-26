@@ -103,6 +103,7 @@ class TestResourceROIs(TestCase):
                 "scales": [1.0],
                 "match_threshold": 0.5,
                 "max_width": 999,
+                "min_width": 0,
                 "top_pct": 0.0,
                 "height_pct": 1.0,
             },
@@ -185,6 +186,7 @@ class TestResourceROIs(TestCase):
                 "scales": [1.0],
                 "match_threshold": 0.5,
                 "max_width": 999,
+                "min_width": 0,
                 "top_pct": 0.0,
                 "height_pct": 1.0,
             }):
@@ -232,6 +234,7 @@ class TestResourceROIs(TestCase):
                 "scales": [1.0],
                 "match_threshold": 0.5,
                 "max_width": max_width,
+                "min_width": 0,
                 "top_pct": 0.0,
                 "height_pct": 1.0,
             }):
