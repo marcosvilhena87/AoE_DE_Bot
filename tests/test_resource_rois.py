@@ -98,14 +98,20 @@ class TestResourceROIs(TestCase):
         ), patch.dict(
             common.CFG["resource_panel"],
             {
-                "roi_padding_left": self.pad_left,
-                "roi_padding_right": self.pad_right,
+                "roi_padding_left": [self.pad_left] * 6,
+                "roi_padding_right": [self.pad_right] * 6,
+                "icon_trim_pct": [0] * 6,
                 "scales": [1.0],
                 "match_threshold": 0.5,
                 "max_width": 999,
                 "min_width": 0,
                 "top_pct": 0.0,
                 "height_pct": 1.0,
+            },
+        ), patch.dict(
+            common.CFG["profiles"]["aoe1de"]["resource_panel"],
+            {
+                "icon_trim_pct": [0] * 6,
             },
         ):
             regions = resources.locate_resource_panel(self.frame)
@@ -181,15 +187,19 @@ class TestResourceROIs(TestCase):
             patch.object(screen_utils, "HUD_TEMPLATE", np.zeros((1, 1), dtype=np.uint8)), \
             patch.dict(screen_utils.ICON_TEMPLATES, {name: np.zeros((5, 5), dtype=np.uint8) for name in icons}, clear=True), \
             patch.dict(common.CFG["resource_panel"], {
-                "roi_padding_left": pad_left,
-                "roi_padding_right": pad_right,
+                "roi_padding_left": [pad_left] * 6,
+                "roi_padding_right": [pad_right] * 6,
+                "icon_trim_pct": [0] * 6,
                 "scales": [1.0],
                 "match_threshold": 0.5,
                 "max_width": 999,
                 "min_width": 0,
                 "top_pct": 0.0,
                 "height_pct": 1.0,
-            }):
+            }), patch.dict(
+                common.CFG["profiles"]["aoe1de"]["resource_panel"],
+                {"icon_trim_pct": [0] * 6},
+            ):
                 regions = resources.locate_resource_panel(frame)
                 icon_width = screen_utils.ICON_TEMPLATES[icons[0]].shape[1]
 
@@ -229,15 +239,19 @@ class TestResourceROIs(TestCase):
             patch.object(screen_utils, "HUD_TEMPLATE", np.zeros((1, 1), dtype=np.uint8)), \
             patch.dict(screen_utils.ICON_TEMPLATES, {name: np.zeros((5, 5), dtype=np.uint8) for name in icons}, clear=True), \
             patch.dict(common.CFG["resource_panel"], {
-                "roi_padding_left": pad_left,
-                "roi_padding_right": pad_right,
+                "roi_padding_left": [pad_left] * 6,
+                "roi_padding_right": [pad_right] * 6,
+                "icon_trim_pct": [0] * 6,
                 "scales": [1.0],
                 "match_threshold": 0.5,
                 "max_width": max_width,
                 "min_width": 0,
                 "top_pct": 0.0,
                 "height_pct": 1.0,
-            }):
+            }), patch.dict(
+                common.CFG["profiles"]["aoe1de"]["resource_panel"],
+                {"icon_trim_pct": [0] * 6},
+            ):
                 regions = resources.locate_resource_panel(frame)
                 icon_width = screen_utils.ICON_TEMPLATES[icons[0]].shape[1]
 

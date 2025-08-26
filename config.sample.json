@@ -37,6 +37,8 @@
     "height_pct": 0.84,
     "icon_trim_pct": [0.18, 0.18, 0.18, 0.18, 0.18, 0.18],
     "right_trim_pct": 0.02,
+    "roi_padding_left": [4, 4, 4, 4, 4, 4],
+    "roi_padding_right": [2, 2, 2, 2, 2, 2],
     "max_width": 160,
     "min_width": 90,
     "narrow_mode": "expand",
@@ -71,6 +73,8 @@
           "match_threshold": 0.82,
           "top_pct": 0.08,
           "height_pct": 0.84,
+          "roi_padding_left": [4, 4, 4, 4, 4, 4],
+          "roi_padding_right": [2, 2, 2, 2, 2, 2],
           "icon_trim_pct": [0.18, 0.18, 0.18, 0.18, 0.18, 0.18],
           "right_trim_pct": 0.02
         }

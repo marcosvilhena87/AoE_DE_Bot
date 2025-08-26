@@ -59,16 +59,20 @@ locate each value.
 ### ROI padding and spacing
 
 The region of interest (ROI) used to read each number sits between two icons.
-Two configuration options define the valid horizontal area:
+Three configuration options define the valid horizontal area. Each option
+accepts a list of six values corresponding to the icons in the order
+`wood`, `food`, `gold`, `stone`, `population` and `idle villager`:
 
 * `roi_padding_left` – pixels added to the right edge of the current icon.
 * `roi_padding_right` – pixels subtracted from the left edge of the next icon.
+* `icon_trim_pct` – fraction of the icon slot to skip when estimating ROIs
+  from the HUD anchor.
 
 For a given resource the horizontal bounds are computed as:
 
 ```
-available_left = icon_right + roi_padding_left
-available_right = next_icon_left - roi_padding_right
+available_left = icon_right + roi_padding_left[i]
+available_right = next_icon_left - roi_padding_right[i]
 ```
 
 With icon positions `0, 30, 60, 90, 120, 150`, icon width `5` and paddings
@@ -77,13 +81,27 @@ With icon positions `0, 30, 60, 90, 120, 150`, icon width `5` and paddings
 | Resource       | icon_right | next_icon_left | available_left | available_right |
 |----------------|-----------:|---------------:|---------------:|----------------:|
 | wood           | 5          | 30             | 7              | 28              |
-| food           | 35         | 60             | 37             | 58              |
-| gold           | 65         | 90             | 67             | 88              |
-| stone          | 95         | 120            | 97             | 118             |
+| food           | 35         | 60             | 37              | 58              |
+| gold           | 65         | 90             | 67              | 88              |
+| stone          | 95         | 120            | 97              | 118             |
 | population     | 125        | 150            | 127            | 148             |
 | idle villager* | –          | –              | (ROI equals icon bounds) |            |
 
 `*` Idle villager is the last icon, so its ROI is confined to the icon itself.
+
+#### Calibrating per-icon offsets
+
+| Icon              | `roi_padding_left[i]` measurement                               | `roi_padding_right[i]` measurement                              | `icon_trim_pct[i]` measurement                                                                 |
+|-------------------|----------------------------------------------------------------|-----------------------------------------------------------------|------------------------------------------------------------------------------------------------|
+| wood_stockpile    | pixels from wood icon's right edge to first digit              | pixels from last digit to food icon's left edge                 | width of wood icon and left spacing divided by total slot width                               |
+| food_stockpile    | pixels from food icon's right edge to first digit              | pixels from last digit to gold icon's left edge                 | width of food icon and left spacing divided by slot width                                      |
+| gold_stockpile    | pixels from gold icon's right edge to first digit              | pixels from last digit to stone icon's left edge                | width of gold icon and left spacing divided by slot width                                      |
+| stone_stockpile   | pixels from stone icon's right edge to first digit             | pixels from last digit to population icon's left edge           | width of stone icon and left spacing divided by slot width                                     |
+| population_limit  | pixels from population icon's right edge to first digit        | pixels from last digit to idle villager icon's left edge        | width of population icon and left spacing divided by slot width                               |
+| idle_villager     | not used (ROI equals icon bounds)                              | not used                                                       | width of idle villager icon and left spacing divided by slot width (used only for HUD fallback) |
+
+Use a screenshot editor to count pixels or run `python tools/roi_calibrator.py`
+to compute the `icon_trim_pct` values interactively.
 
 ### Customizing required icons
 

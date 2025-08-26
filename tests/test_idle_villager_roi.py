@@ -78,13 +78,17 @@ class TestIdleVillagerROI(TestCase):
             patch.dict(
                 common.CFG["resource_panel"],
                 {
-                    "roi_padding_left": 0,
-                    "roi_padding_right": 0,
+                    "roi_padding_left": [0] * 6,
+                    "roi_padding_right": [0] * 6,
+                    "icon_trim_pct": [0] * 6,
                     "scales": [1.0],
                     "match_threshold": 0.5,
                     "max_width": 999,
                     "min_width": 0,
                 },
+            ), patch.dict(
+                common.CFG["profiles"]["aoe1de"]["resource_panel"],
+                {"icon_trim_pct": [0] * 6},
             ):
                 regions = resources.locate_resource_panel(frame)
 
