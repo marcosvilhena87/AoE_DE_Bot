@@ -31,6 +31,7 @@
     "pop_box": [0.0, 0.0, 0.1, 0.1],
     "//pop_box": "[x, y, w, h] como frações da tela; calibrar depois."
   },
+  "//resource_panel": "ROIs built from spans between icons via _build_resource_rois_between_icons",
   "resource_panel": {
     "match_threshold": 0.8,
     "top_pct": 0.08,
@@ -38,10 +39,13 @@
     "icon_trim_pct": [0.18, 0.18, 0.18, 0.18, 0.18, 0.18],
     "right_trim_pct": 0.02,
     "roi_padding_left": [6, 6, 6, 6, 6, 6],
+    "//roi_padding_left": "pixels added after each icon; tweak per resource",
     "roi_padding_right": [2, 2, 2, 2, 2, 2],
+    "//roi_padding_right": "pixels removed before the next icon; tweak per resource",
     "max_width": 160,
     "min_width": 90,
-    "narrow_mode": "expand",
+    "narrow_mode": "fit",
+    "//narrow_mode": "'fit' uses the gap as-is; 'anchor' skips gaps < min_width; 'right' anchors to next icon",
     "idle_roi_extra_width": 0,
     "anchor_top_pct": 0.15,
     "anchor_height_pct": 0.70,
