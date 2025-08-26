@@ -190,7 +190,8 @@ def _build_resource_rois_between_icons(ctx):
             continue
         cur_bounds = ctx.detected[name]
         next_bounds = ctx.detected[next_name]
-        roi = _roi_between_icons(ctx, name, cur_bounds, next_bounds, idx)
+        anchor = "right" if ctx.narrow_mode == "right" else "left"
+        roi = _roi_between_icons(ctx, name, cur_bounds, next_bounds, idx, anchor)
         if roi is not None:
             regions[name] = roi
     return regions
