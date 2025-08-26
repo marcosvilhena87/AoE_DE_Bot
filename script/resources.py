@@ -160,16 +160,16 @@ def _build_resource_rois_between_icons(ctx):
     """Build resource ROIs for icons using consecutive pairs."""
 
     regions = {}
-    for idx in range(len(RESOURCE_ICON_ORDER) - 1):
-        name = RESOURCE_ICON_ORDER[idx]
-        next_name = RESOURCE_ICON_ORDER[idx + 1]
-        if name not in ctx.detected or next_name not in ctx.detected:
+    for idx, (current, next_) in enumerate(
+        zip(RESOURCE_ICON_ORDER, RESOURCE_ICON_ORDER[1:])
+    ):
+        cur_bounds = ctx.detected.get(current)
+        next_bounds = ctx.detected.get(next_)
+        if cur_bounds is None or next_bounds is None:
             continue
-        cur_bounds = ctx.detected[name]
-        next_bounds = ctx.detected[next_name]
-        roi = _roi_between_icons(ctx, name, cur_bounds, next_bounds, idx)
+        roi = _roi_between_icons(ctx, current, cur_bounds, next_bounds, idx)
         if roi is not None:
-            regions[name] = roi
+            regions[current] = roi
     return regions
 
 
