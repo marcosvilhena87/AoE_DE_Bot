@@ -114,6 +114,15 @@ def locate_resource_panel(frame):
     scales = res_cfg.get("scales", CFG.get("scales", [1.0]))
     pad_left = res_cfg.get("roi_padding_left", 2)
     pad_right = res_cfg.get("roi_padding_right", 2)
+    pad_left = pad_left if isinstance(pad_left, (list, tuple)) else [pad_left] * 6
+    pad_right = pad_right if isinstance(pad_right, (list, tuple)) else [pad_right] * 6
+    icon_trims = profile_res.get(
+        "icon_trim_pct",
+        res_cfg.get("icon_trim_pct", [0, 0, 0, 0, 0, 0]),
+    )
+    icon_trims = (
+        icon_trims if isinstance(icon_trims, (list, tuple)) else [icon_trims] * 6
+    )
     max_width = res_cfg.get("max_width", 160)
     min_width = res_cfg.get("min_width", 90)
     narrow_mode = res_cfg.get("narrow_mode", "expand")
@@ -162,8 +171,10 @@ def locate_resource_panel(frame):
             top_i = y + yi
             height_i = hi
         else:
-            # Determine the free space between the current icon and the next one
-            icon_right = panel_left + xi + wi
+            pad_l = pad_left[idx] if idx < len(pad_left) else pad_left[-1]
+            pad_r = pad_right[idx] if idx < len(pad_right) else pad_right[-1]
+            trim = icon_trims[idx] if idx < len(icon_trims) else icon_trims[-1]
+            icon_right = panel_left + xi + wi - int(trim * wi)
             next_name = (
                 RESOURCE_ICON_ORDER[idx + 1]
                 if idx + 1 < len(RESOURCE_ICON_ORDER)
@@ -172,12 +183,18 @@ def locate_resource_panel(frame):
             if name == "population_limit":
                 next_name = "idle_villager"
             if next_name and next_name in detected:
-                next_icon_left = panel_left + detected[next_name][0]
+                nx, ny, nwi, nhi = detected[next_name]
+                trim_next = (
+                    icon_trims[idx + 1]
+                    if idx + 1 < len(icon_trims)
+                    else icon_trims[-1]
+                )
+                next_icon_left = panel_left + nx + int(trim_next * nwi)
             else:
                 next_icon_left = panel_right
 
-            available_left = icon_right + pad_left
-            available_right = next_icon_left - pad_right
+            available_left = icon_right + pad_l
+            available_right = next_icon_left - pad_r
 
             top_i = top
             height_i = height
