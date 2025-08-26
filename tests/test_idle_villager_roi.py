@@ -83,6 +83,7 @@ class TestIdleVillagerROI(TestCase):
                     "scales": [1.0],
                     "match_threshold": 0.5,
                     "max_width": 999,
+                    "min_width": 0,
                 },
             ):
                 regions = resources.locate_resource_panel(frame)

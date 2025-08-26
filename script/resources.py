@@ -115,6 +115,8 @@ def locate_resource_panel(frame):
     pad_left = res_cfg.get("roi_padding_left", 2)
     pad_right = res_cfg.get("roi_padding_right", 2)
     max_width = res_cfg.get("max_width", 160)
+    min_width = res_cfg.get("min_width", 90)
+    narrow_mode = res_cfg.get("narrow_mode", "expand")
     top_pct = profile_res.get("top_pct", res_cfg.get("top_pct", 0.08))
     height_pct = profile_res.get("height_pct", res_cfg.get("height_pct", 0.84))
     screen_utils._load_icon_templates()
@@ -189,16 +191,36 @@ def locate_resource_panel(frame):
                     available_right,
                 )
                 continue
-
-            width = min(available_width, max_width)
-            left = available_left
-            right = left + width
-            if right > available_right:
-                left = available_right - width
-                right = available_right
-            left = max(panel_left, left)
-            right = min(panel_right, right)
-            width = right - left
+            if available_width < min_width:
+                if narrow_mode == "anchor" and common.HUD_ANCHOR:
+                    logger.warning(
+                        "ROI for '%s' below min_width (%d < %d); using HUD_ANCHOR fallback",
+                        name,
+                        available_width,
+                        min_width,
+                    )
+                    return {}
+                width = min(max_width, min_width)
+                center = (available_left + available_right) // 2
+                left = center - width // 2
+                right = left + width
+                if left < panel_left:
+                    right += panel_left - left
+                    left = panel_left
+                if right > panel_right:
+                    left -= right - panel_right
+                    right = panel_right
+                width = right - left
+            else:
+                width = min(available_width, max_width)
+                left = available_left
+                right = left + width
+                if right > available_right:
+                    left = available_right - width
+                    right = available_right
+                left = max(panel_left, left)
+                right = min(panel_right, right)
+                width = right - left
 
         logger.debug("ROI for '%s': left=%d right=%d width=%d", name, left, right, width)
         regions[name] = (left, top_i, width, height_i)
