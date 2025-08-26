@@ -215,6 +215,55 @@ class TestResourceROIs(TestCase):
         self.assertGreaterEqual(left, available_left)
         self.assertLessEqual(right, available_right)
 
+    def test_rois_clamp_with_min_width(self):
+        frame = np.zeros((50, 100, 3), dtype=np.uint8)
+        panel_box = (0, 0, 100, 20)
+
+        icons = ["wood_stockpile", "food_stockpile"]
+        positions = [0, 20]
+        pad_left = 2
+        pad_right = 2
+        min_width = 20
+        loc_iter = iter([(x, 0) for x in positions])
+
+        def fake_minmax(res):
+            xi, yi = next(loc_iter)
+            return 0.0, 0.95, (0, 0), (xi, yi)
+
+        with patch("script.resources.find_template", return_value=(panel_box, 0.9, None)), \
+            patch("script.resources.cv2.cvtColor", lambda src, code: np.zeros(src.shape[:2], dtype=np.uint8)), \
+            patch("script.resources.cv2.resize", lambda img, *a, **k: img), \
+            patch("script.resources.cv2.matchTemplate", lambda *a, **k: np.zeros((100, 200), dtype=np.float32)), \
+            patch("script.resources.cv2.minMaxLoc", side_effect=fake_minmax), \
+            patch.object(screen_utils, "_load_icon_templates", lambda: None), \
+            patch.object(screen_utils, "HUD_TEMPLATE", np.zeros((1, 1), dtype=np.uint8)), \
+            patch.dict(screen_utils.ICON_TEMPLATES, {name: np.zeros((5, 5), dtype=np.uint8) for name in icons}, clear=True), \
+            patch.dict(common.CFG["resource_panel"], {
+                "roi_padding_left": [pad_left] * 6,
+                "roi_padding_right": [pad_right] * 6,
+                "icon_trim_pct": [0] * 6,
+                "scales": [1.0],
+                "match_threshold": 0.5,
+                "max_width": 999,
+                "min_width": min_width,
+                "top_pct": 0.0,
+                "height_pct": 1.0,
+            }), patch.dict(
+                common.CFG["profiles"]["aoe1de"]["resource_panel"],
+                {"icon_trim_pct": [0] * 6},
+            ):
+            regions = resources.locate_resource_panel(frame)
+            icon_width = screen_utils.ICON_TEMPLATES[icons[0]].shape[1]
+
+        roi = regions[icons[0]]
+        left, _, width, _ = roi
+        right = left + width
+        icon_right = positions[0] + icon_width
+        next_icon_left = positions[1]
+
+        self.assertGreaterEqual(left, icon_right + pad_left)
+        self.assertLessEqual(right, next_icon_left - pad_right)
+
     def test_roi_limited_by_max_width(self):
         frame = np.zeros((50, 200, 3), dtype=np.uint8)
         panel_box = (0, 0, 200, 20)
