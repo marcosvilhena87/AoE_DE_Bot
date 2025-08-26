@@ -76,6 +76,7 @@ class TestResourceROIs(TestCase):
             return 0.0, 0.95, (0, 0), (xi, yi)
 
         trim = icon_trim_pct if icon_trim_pct is not None else [0] * 6
+        self.trim = trim
 
         with patch(
             "script.resources.find_template", return_value=(self.panel_box, 0.9, None)
@@ -127,14 +128,31 @@ class TestResourceROIs(TestCase):
         left = roi[0]
         right = roi[0] + roi[2]
         icon_left = self.panel_box[0] + self.positions[index]
-        icon_right = icon_left + icon_width
+        cur_trim_val = self.trim[index] if index < len(self.trim) else self.trim[-1]
+        if 0 <= cur_trim_val <= 1:
+            cur_trim_px = int(round(cur_trim_val * icon_width))
+        else:
+            cur_trim_px = int(round(cur_trim_val))
+        icon_right_trimmed = icon_left + icon_width - cur_trim_px
         next_icon_left = self.panel_box[0] + self.positions[index + 1]
+        next_trim_val = (
+            self.trim[index + 1] if index + 1 < len(self.trim) else self.trim[-1]
+        )
+        if 0 <= next_trim_val <= 1:
+            next_trim_px = int(round(next_trim_val * icon_width))
+        else:
+            next_trim_px = int(round(next_trim_val))
+        next_icon_left_trimmed = next_icon_left - next_trim_px
 
         self.assertGreaterEqual(
-            left, icon_right + self.pad_left, f"{name} left not ≥ icon_right + padding"
+            left,
+            icon_right_trimmed + self.pad_left,
+            f"{name} left not ≥ icon_right + padding",
         )
         self.assertLessEqual(
-            right, next_icon_left - self.pad_right, f"{name} right not ≤ next_icon_left - padding"
+            right,
+            next_icon_left_trimmed - self.pad_right,
+            f"{name} right not ≤ next_icon_left - padding",
         )
 
         if name == "population_limit":
@@ -168,6 +186,12 @@ class TestResourceROIs(TestCase):
 
     def test_rois_trimmed_icon_bounds(self):
         trim = [0.2] * 6
+        regions, icon_width = self._locate_regions(icon_trim_pct=trim)
+        for idx in range(5):
+            self._assert_bounds(regions, icon_width, idx)
+
+    def test_rois_trimmed_icon_bounds_pixels(self):
+        trim = [2] * 6
         regions, icon_width = self._locate_regions(icon_trim_pct=trim)
         for idx in range(5):
             self._assert_bounds(regions, icon_width, idx)
@@ -359,6 +383,7 @@ class TestResourceROIs(TestCase):
         self.assertEqual(roi[0], span_left)
         self.assertEqual(roi[0] + roi[2], span_right)
         self.assertEqual(roi[2], span_right - span_left)
+        self.assertIn("wood_stockpile", ctx.narrow)
 
     def test_cache_cleared_on_region_change(self):
         resources._LAST_ICON_BOUNDS.clear()
