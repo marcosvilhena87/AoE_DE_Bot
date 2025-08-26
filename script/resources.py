@@ -237,7 +237,10 @@ def locate_resource_panel(frame):
                 left = max(panel_left, left)
                 right = min(panel_right, right)
                 width = right - left
-
+            # Ajuste final para evitar capturar pixels do ícone à esquerda
+            left = max(left, available_left)
+            right = min(available_right, left + width)
+            width = right - left
         logger.debug("ROI for '%s': left=%d right=%d width=%d", name, left, right, width)
         regions[name] = (left, top_i, width, height_i)
 
