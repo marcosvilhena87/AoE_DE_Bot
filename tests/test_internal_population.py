@@ -32,7 +32,7 @@ sys.modules.setdefault("mss", types.SimpleNamespace(mss=lambda: DummyMSS()))
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import script.common as common
 import script.town_center as tc
-import script.villager as villager
+import script.units.villager as villager
 import script.config_utils as config_utils
 
 
