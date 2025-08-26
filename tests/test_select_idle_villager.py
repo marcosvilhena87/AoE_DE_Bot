@@ -32,7 +32,7 @@ sys.modules.setdefault("mss", types.SimpleNamespace(mss=lambda: DummyMSS()))
 os.environ.setdefault("TESSERACT_CMD", "/usr/bin/true")
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-import script.villager as villager
+import script.units.villager as villager
 
 
 class TestSelectIdleVillager(TestCase):

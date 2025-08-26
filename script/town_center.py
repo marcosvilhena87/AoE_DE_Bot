@@ -4,7 +4,7 @@ import time
 import script.common as common
 import script.resources as resources
 import script.input_utils as input_utils
-from script.villager import build_house, select_idle_villager
+from script.units.villager import build_house, select_idle_villager
 
 logger = logging.getLogger(__name__)
 

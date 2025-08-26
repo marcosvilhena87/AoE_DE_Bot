@@ -37,7 +37,7 @@ os.environ.setdefault("TESSERACT_CMD", "/usr/bin/true")
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import script.common as common
 import script.resources as resources
-import script.villager as villager
+import script.units.villager as villager
 
 
 class TestIdleVillagerROI(TestCase):
@@ -143,7 +143,7 @@ class TestIdleVillagerROI(TestCase):
         def fake_read(keys, force_delay=None):
             return next(counts)
 
-        with patch("script.villager.select_idle_villager") as mock_sel, \
+        with patch("script.units.villager.select_idle_villager") as mock_sel, \
             patch("script.resources.read_resources_from_hud", side_effect=fake_read):
             initial, selections = villager.count_idle_villagers_via_hotkey(
                 delay=0, return_selections=True
@@ -166,7 +166,7 @@ class TestIdleVillagerROI(TestCase):
             delays.append(force_delay)
             return next(counts)
 
-        with patch("script.villager.select_idle_villager"), patch(
+        with patch("script.units.villager.select_idle_villager"), patch(
             "script.resources.read_resources_from_hud", side_effect=fake_read
         ):
             initial, selections = villager.count_idle_villagers_via_hotkey(
@@ -189,7 +189,7 @@ class TestIdleVillagerROI(TestCase):
         def fake_read(keys, force_delay=None):
             return next(counts)
 
-        with patch("script.villager.select_idle_villager") as mock_sel, patch(
+        with patch("script.units.villager.select_idle_villager") as mock_sel, patch(
             "script.resources.read_resources_from_hud", side_effect=fake_read
         ):
             initial, selections = villager.count_idle_villagers_via_hotkey(

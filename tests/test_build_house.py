@@ -34,7 +34,7 @@ os.environ.setdefault("TESSERACT_CMD", "/usr/bin/true")
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import script.common as common
 import script.input_utils as input_utils
-import script.villager as villager
+import script.units.villager as villager
 
 
 class TestClickAndBuildHouse(TestCase):
@@ -53,7 +53,7 @@ class TestClickAndBuildHouse(TestCase):
             patch("script.input_utils._press_key_safe"), \
             patch("script.input_utils._click_norm") as click_mock, \
             patch("script.hud.read_population_from_hud", return_value=(0, 8)) as read_pop_mock, \
-            patch("script.villager.time.sleep"):
+            patch("script.units.villager.time.sleep"):
             result = villager.build_house()
         self.assertTrue(result)
         self.assertEqual(common.POP_CAP, 8)
@@ -76,7 +76,7 @@ class TestBuildHouseResourceRetry(TestCase):
             side_effect=side_effect,
         ) as read_mock, patch("script.input_utils._press_key_safe") as press_mock, patch(
             "script.input_utils._click_norm"
-        ) as click_mock, patch("script.villager.time.sleep"):
+        ) as click_mock, patch("script.units.villager.time.sleep"):
             result = villager.build_house()
         self.assertFalse(result)
         self.assertEqual(read_mock.call_count, 3)
@@ -96,7 +96,7 @@ class TestBuildHouseResourceRetry(TestCase):
             "script.input_utils._click_norm"
         ), patch(
             "script.hud.read_population_from_hud", return_value=(0, 8)
-        ), patch("script.villager.time.sleep"):
+        ), patch("script.units.villager.time.sleep"):
             result = villager.build_house()
         self.assertTrue(result)
         self.assertEqual(read_mock.call_count, 2)
