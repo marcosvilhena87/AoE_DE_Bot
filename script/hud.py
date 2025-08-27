@@ -71,7 +71,7 @@ def wait_hud(timeout=60):
     )
 
 
-def read_population_from_hud(retries=3, conf_threshold=None, save_failed_roi=False):
+def read_population_from_hud(retries=1, conf_threshold=None, save_failed_roi=False):
     if conf_threshold is None:
         conf_threshold = CFG.get("ocr_conf_threshold", 60)
 
