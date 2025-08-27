@@ -29,6 +29,27 @@ class DummyMSS:
 
 sys.modules.setdefault("pyautogui", dummy_pg)
 sys.modules.setdefault("mss", types.SimpleNamespace(mss=lambda: DummyMSS()))
+sys.modules.setdefault(
+    "cv2",
+    types.SimpleNamespace(
+        cvtColor=lambda src, code: src,
+        resize=lambda img, *a, **k: img,
+        matchTemplate=lambda *a, **k: np.zeros((1, 1), dtype=np.float32),
+        minMaxLoc=lambda *a, **k: (0, 0, (0, 0), (0, 0)),
+        imread=lambda *a, **k: np.zeros((1, 1), dtype=np.uint8),
+        imwrite=lambda *a, **k: True,
+        medianBlur=lambda src, k: src,
+        bitwise_not=lambda src: src,
+        threshold=lambda src, *a, **k: (None, src),
+        rectangle=lambda img, pt1, pt2, color, thickness: img,
+        IMREAD_GRAYSCALE=0,
+        COLOR_BGR2GRAY=0,
+        INTER_LINEAR=0,
+        THRESH_BINARY=0,
+        THRESH_OTSU=0,
+        TM_CCOEFF_NORMED=0,
+    ),
+)
 
 os.environ.setdefault("TESSERACT_CMD", "/usr/bin/true")
 
@@ -154,3 +175,114 @@ class TestResourceOcrFailure(TestCase):
 
         self.assertNotIn("food_stockpile", first)
         self.assertNotIn("food_stockpile", second)
+
+
+class TestResourceOcrRois(TestCase):
+    def setUp(self):
+        resources._LAST_RESOURCE_VALUES.clear()
+        resources._LAST_RESOURCE_TS.clear()
+        resources._RESOURCE_FAILURE_COUNTS.clear()
+
+    def tearDown(self):
+        resources._LAST_RESOURCE_VALUES.clear()
+        resources._LAST_RESOURCE_TS.clear()
+        resources._RESOURCE_FAILURE_COUNTS.clear()
+
+    def _build_frame(self):
+        icons = [
+            "wood_stockpile",
+            "food_stockpile",
+            "gold_stockpile",
+            "stone_stockpile",
+            "population_limit",
+            "idle_villager",
+        ]
+        positions = [0, 30, 60, 90, 120, 150]
+        icon_w = 5
+        icon_h = 5
+        frame = np.zeros((20, 200, 3), dtype=np.uint8)
+        icon_color = 255
+        for pos in positions:
+            frame[0:icon_h, pos : pos + icon_w] = icon_color
+        values = {icons[i]: i + 1 for i in range(4)}
+        for idx in range(4):
+            start = positions[idx] + icon_w
+            end = positions[idx + 1]
+            frame[:, start:end] = values[icons[idx]]
+        pop_start = positions[4] + icon_w
+        pop_end = positions[5]
+        mid = (pop_start + pop_end) // 2
+        cur = 5
+        cap = 8
+        frame[:, pop_start:mid] = cur
+        frame[:, mid:pop_end] = cap
+        values["population_limit"] = cur
+        detected = {
+            icons[i]: (positions[i], 0, icon_w, icon_h) for i in range(len(icons))
+        }
+        regions, _spans, _narrow = resources.compute_resource_rois(
+            0,
+            200,
+            0,
+            20,
+            [2] * 6,
+            [2] * 6,
+            [0] * 6,
+            999,
+            [0] * 6,
+            detected,
+        )
+        return frame, regions, values, cap, icon_color
+
+    def test_ocr_reads_values_from_rois(self):
+        frame, regions, values, pop_cap, icon_color = self._build_frame()
+        required = [
+            "wood_stockpile",
+            "food_stockpile",
+            "gold_stockpile",
+            "stone_stockpile",
+            "population_limit",
+        ]
+
+        def fake_grab_frame(bbox=None):
+            return frame
+
+        def fake_detect(frame_in, required_icons):
+            return regions
+
+        def fake_preprocess(roi):
+            return roi[..., 0] if roi.ndim == 3 else roi
+
+        def fake_ocr(gray):
+            assert gray.shape[1] > 0 and gray.shape[0] > 0
+            assert not np.any(gray == icon_color)
+            val = int(np.unique(gray)[0])
+            return str(val), {"text": [str(val)], "conf": ["95"]}, np.zeros(
+                (1, 1), dtype=np.uint8
+            )
+
+        def fake_pop_reader(roi):
+            gray = roi[..., 0] if roi.ndim == 3 else roi
+            assert gray.shape[1] > 0 and gray.shape[0] > 0
+            assert not np.any(gray == icon_color)
+            mid = gray.shape[1] // 2
+            cur = int(np.unique(gray[:, :mid])[0])
+            cap = int(np.unique(gray[:, mid:])[0])
+            return cur, cap
+
+        with patch("script.screen_utils._grab_frame", side_effect=fake_grab_frame), \
+            patch("script.resources.detect_resource_regions", side_effect=fake_detect), \
+            patch("script.resources.preprocess_roi", side_effect=fake_preprocess), \
+            patch("script.resources._ocr_digits_better", side_effect=fake_ocr), \
+            patch(
+                "script.resources._read_population_from_roi",
+                side_effect=fake_pop_reader,
+            ):
+            results, pop = resources.read_resources_from_hud(
+                required_icons=required, icons_to_read=required
+            )
+
+        for name in required:
+            self.assertEqual(results[name], values[name])
+        self.assertEqual(pop[0], values["population_limit"])
+        self.assertEqual(pop[1], pop_cap)

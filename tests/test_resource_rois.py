@@ -38,6 +38,7 @@ sys.modules.setdefault(
         imread=lambda *a, **k: np.zeros((1, 1), dtype=np.uint8),
         imwrite=lambda *a, **k: True,
         medianBlur=lambda src, k: src,
+        bitwise_not=lambda src: src,
         rectangle=lambda img, pt1, pt2, color, thickness: img,
         threshold=lambda src, *a, **k: (None, src),
         IMREAD_GRAYSCALE=0,
@@ -71,6 +72,25 @@ class TestResourceROIs(TestCase):
     pad_right = 2
     panel_box = (0, 0, 200, 20)
     frame = np.zeros((50, 200, 3), dtype=np.uint8)
+
+    def _build_synthetic_frame(self):
+        icon_w = 5
+        icon_h = 5
+        icon_color = 255
+        frame = np.zeros((20, 200, 3), dtype=np.uint8)
+        for pos in self.positions:
+            frame[0:icon_h, pos : pos + icon_w] = icon_color
+        digits = [1, 2, 3, 4, 5]
+        for idx in range(4):
+            start = self.positions[idx] + icon_w
+            end = self.positions[idx + 1]
+            frame[:, start:end] = digits[idx]
+        pop_start = self.positions[4] + icon_w
+        pop_end = self.positions[5]
+        frame[:, pop_start:pop_end] = digits[4]
+        self.frame = frame
+        self.icon_color = icon_color
+        self.digit_values = {self.icons[i]: digits[i] for i in range(5)}
 
     def _locate_regions(self, icon_trim_pct=None):
         loc_iter = iter([(x, 0) for x in self.positions])
@@ -187,6 +207,24 @@ class TestResourceROIs(TestCase):
     def test_population_limit_roi_bounds(self):
         regions, icon_width = self._locate_regions()
         self._assert_bounds(regions, icon_width, 4)
+
+    def test_synthetic_frame_rois_between_icons(self):
+        self._build_synthetic_frame()
+        regions, icon_width = self._locate_regions()
+        for idx in range(5):
+            name = self.icons[idx]
+            self._assert_bounds(regions, icon_width, idx)
+            x, y, w, h = regions[name]
+            self.assertGreater(w, 0, f"{name} ROI width not positive")
+            roi = self.frame[y : y + h, x : x + w]
+            self.assertFalse(
+                np.any(roi == self.icon_color),
+                f"{name} ROI overlaps icon",
+            )
+            self.assertTrue(
+                np.all(roi == self.digit_values[name]),
+                f"{name} ROI missing digits",
+            )
 
     def test_rois_trimmed_icon_bounds(self):
         trim = [0.2] * 6
