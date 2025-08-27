@@ -30,9 +30,9 @@
         "max_width": 160,
         "min_width": [54, 51, 50, 51, 50, 40],
         "idle_roi_extra_width": 24,
-        "top_pct": 0.08,
-        "height_pct": 0.84,
-        "icon_trim_pct": [0.30, 0.25, 0.24, 0.24, 0.22, 0.20],
+        "top_pct": 0.06,
+        "height_pct": 0.88,
+        "icon_trim_pct": [0.30, 0.25, 0.24, 0.24, 0.20, 0.00],
         "right_trim_pct": 0.02,
         "debug_failed_ocr": true
       },
@@ -57,12 +57,12 @@
       "aoe1de": {
         "resource_panel": {
           "match_threshold": 0.82,
-          "top_pct": 0.08,
-          "height_pct": 0.84,
+          "top_pct": 0.06,
+          "height_pct": 0.88,
           "roi_padding_left": [4, 6, 6, 6, 6, 6],
           "roi_padding_right": [2, 2, 2, 2, 2, 2],
           "min_width": [54, 51, 50, 51, 50, 40],
-          "icon_trim_pct": [0.30, 0.25, 0.24, 0.24, 0.22, 0.20],
+          "icon_trim_pct": [0.30, 0.25, 0.24, 0.24, 0.20, 0.00],
           "right_trim_pct": 0.02
         }
       }

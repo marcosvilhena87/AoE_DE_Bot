@@ -34,9 +34,9 @@
   "//resource_panel": "ROIs built from spans between icons via compute_resource_rois",
   "resource_panel": {
     "match_threshold": 0.8,
-    "top_pct": 0.08,
-    "height_pct": 0.84,
-    "icon_trim_pct": [0.18, 0.18, 0.18, 0.18, 0.18, 0.18],
+    "top_pct": 0.06,
+    "height_pct": 0.88,
+    "icon_trim_pct": [0.30, 0.25, 0.24, 0.24, 0.20, 0.00],
     "right_trim_pct": 0.02,
     "roi_padding_left": [4, 6, 6, 6, 6, 6],
     "//roi_padding_left": "pixels added after each icon; tweak per resource",
@@ -74,11 +74,11 @@
       "aoe1de": {
         "resource_panel": {
           "match_threshold": 0.82,
-          "top_pct": 0.08,
-          "height_pct": 0.84,
+          "top_pct": 0.06,
+          "height_pct": 0.88,
           "roi_padding_left": [4, 6, 6, 6, 6, 6],
           "roi_padding_right": [2, 2, 2, 2, 2, 2],
-          "icon_trim_pct": [0.18, 0.18, 0.18, 0.18, 0.18, 0.18],
+          "icon_trim_pct": [0.30, 0.25, 0.24, 0.24, 0.20, 0.00],
           "right_trim_pct": 0.02
         }
       }
