@@ -8,6 +8,7 @@
   "ocr_debug": false,
   "verbose_logging": false,
   "ocr_conf_threshold": 60,
+  "//ocr_conf_threshold": "Minimum OCR confidence (0-100); default 60. For tight ROIs try 45-50.",
   "ocr_kernel_size": 2,
   "ocr_psm_list": [6, 7, 8, 10, 13],
   "tesseract_path": "C:\\Program Files\\Tesseract-OCR\\tesseract.exe",

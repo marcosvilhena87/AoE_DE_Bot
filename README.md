@@ -27,6 +27,9 @@ The `resource_panel` uses a span-based ROI builder that measures the gap between
 
 Two fields in `config.json` allow adjusting how resource numbers are read:
 
+* `ocr_conf_threshold` – minimum confidence (0–100) required to accept OCR
+  digits. The default is `60`; when regions of interest are especially tight,
+  consider lowering this to `45–50`.
 * `ocr_kernel_size` – size of the square kernel used for morphological dilation
   before running OCR (default `2`).
 * `ocr_psm_list` – list of Tesseract [page segmentation modes](https://tesseract-ocr.github.io/tessdoc/ImproveQuality.html#page-segmentation-method)

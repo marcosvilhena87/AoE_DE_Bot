@@ -159,7 +159,7 @@ def read_population_from_hud(retries=3, conf_threshold=None, save_failed_roi=Fal
     )
     try:
         _, (cur, limit) = resources.read_resources_from_hud(
-            ["population_limit"], force_delay=0.1
+            ["population_limit"], force_delay=0.1, conf_threshold=conf_threshold
         )
         if cur is not None and limit is not None:
             logger.info("Fallback de população bem-sucedido: %s/%s", cur, limit)

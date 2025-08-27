@@ -742,13 +742,18 @@ def handle_ocr_failure(frame, regions, results, required_icons):
         )
 
 
-def _extract_population(frame, regions, results, pop_required):
+def _extract_population(frame, regions, results, pop_required, conf_threshold=None):
     cur_pop = pop_cap = None
     if "population_limit" in regions:
         x, y, w, h = regions["population_limit"]
         roi = frame[y : y + h, x : x + w]
         try:
-            cur_pop, pop_cap = _read_population_from_roi(roi)
+            try:
+                cur_pop, pop_cap = _read_population_from_roi(
+                    roi, conf_threshold=conf_threshold
+                )
+            except TypeError:  # compatibility with patches lacking new arg
+                cur_pop, pop_cap = _read_population_from_roi(roi)
             if results is not None:
                 results["population_limit"] = cur_pop
         except common.PopulationReadError:
@@ -768,6 +773,7 @@ def read_resources_from_hud(
     icons_to_read: Iterable[str] | None = None,
     force_delay: float | None = None,
     max_cache_age: float | None = None,
+    conf_threshold: int | None = None,
 ):
     """Read resource values displayed on the HUD.
 
@@ -787,6 +793,9 @@ def read_resources_from_hud(
     max_cache_age : float | None, optional
         Maximum age (in seconds) for any cached value to be considered when
         multiple consecutive OCR failures occur. ``None`` disables the limit.
+    conf_threshold : int | None, optional
+        Minimum confidence required to accept OCR digits. When ``None`` the
+        value from configuration is used.
     """
 
     if force_delay is not None:
@@ -816,6 +825,8 @@ def read_resources_from_hud(
 
     if max_cache_age is None:
         max_cache_age = _RESOURCE_CACHE_MAX_AGE
+    if conf_threshold is None:
+        conf_threshold = CFG.get("ocr_conf_threshold", 60)
 
     resource_icons = [n for n in icons_to_read if n != "population_limit"]
     results = {}
@@ -835,7 +846,7 @@ def read_resources_from_hud(
             data = {"text": [text.strip()], "conf": []}
             mask = gray
         else:
-            digits, data, mask = execute_ocr(gray)
+            digits, data, mask = execute_ocr(gray, conf_threshold=conf_threshold)
         if not digits:
             span_left, span_right = _LAST_REGION_SPANS.get(name, (x, x + w))
             span_width = span_right - span_left
@@ -854,7 +865,9 @@ def read_resources_from_hud(
                     roi_retry = frame[y : y + h, cand_x : cand_x + cand_w]
                     gray_retry = preprocess_roi(roi_retry)
                     digits_retry, data_retry, mask_retry = execute_ocr(
-                        gray_retry, allow_fallback=False
+                        gray_retry,
+                        conf_threshold=conf_threshold,
+                        allow_fallback=False,
                     )
                     if digits_retry:
                         digits, data, mask = digits_retry, data_retry, mask_retry
@@ -923,7 +936,9 @@ def read_resources_from_hud(
     cur_pop = pop_cap = None
     if "population_limit" in icons_to_read:
         pop_required = "population_limit" in required_set
-        cur_pop, pop_cap = _extract_population(frame, regions, results, pop_required)
+        cur_pop, pop_cap = _extract_population(
+            frame, regions, results, pop_required, conf_threshold=conf_threshold
+        )
     global _LAST_READ_FROM_CACHE
     _LAST_READ_FROM_CACHE = cache_hits
     return results, (cur_pop, pop_cap)
@@ -981,6 +996,7 @@ def gather_hud_stats(
     required_icons=None,
     optional_icons=None,
     max_cache_age: float | None = None,
+    conf_threshold: int | None = None,
 ):
     """Capture a single frame and read resources and population.
 
@@ -996,6 +1012,9 @@ def gather_hud_stats(
     max_cache_age : float | None, optional
         Maximum age (in seconds) for any cached value to be considered when
         multiple consecutive OCR failures occur. ``None`` disables the limit.
+    conf_threshold : int | None, optional
+        Minimum confidence required to accept OCR digits. When ``None`` the
+        value from configuration is used.
 
     Returns
     -------
@@ -1033,6 +1052,8 @@ def gather_hud_stats(
 
     if max_cache_age is None:
         max_cache_age = _RESOURCE_CACHE_MAX_AGE
+    if conf_threshold is None:
+        conf_threshold = CFG.get("ocr_conf_threshold", 60)
 
     resource_icons = [name for name in all_icons if name != "population_limit"]
 
@@ -1046,7 +1067,7 @@ def gather_hud_stats(
         x, y, w, h = regions[name]
         roi = frame[y : y + h, x : x + w]
         gray = preprocess_roi(roi)
-        digits, data, mask = execute_ocr(gray)
+        digits, data, mask = execute_ocr(gray, conf_threshold=conf_threshold)
         if not digits:
             span_left, span_right = _LAST_REGION_SPANS.get(name, (x, x + w))
             span_width = span_right - span_left
@@ -1065,7 +1086,9 @@ def gather_hud_stats(
                     roi_retry = frame[y : y + h, cand_x : cand_x + cand_w]
                     gray_retry = preprocess_roi(roi_retry)
                     digits_retry, data_retry, mask_retry = execute_ocr(
-                        gray_retry, allow_fallback=False
+                        gray_retry,
+                        conf_threshold=conf_threshold,
+                        allow_fallback=False,
                     )
                     if digits_retry:
                         digits, data, mask = digits_retry, data_retry, mask_retry
@@ -1131,7 +1154,9 @@ def gather_hud_stats(
     cur_pop = pop_cap = None
     if "population_limit" in all_icons:
         pop_required = "population_limit" in required_icons
-        cur_pop, pop_cap = _extract_population(frame, regions, results, pop_required)
+        cur_pop, pop_cap = _extract_population(
+            frame, regions, results, pop_required, conf_threshold=conf_threshold
+        )
 
     global _LAST_READ_FROM_CACHE
     _LAST_READ_FROM_CACHE = cache_hits
