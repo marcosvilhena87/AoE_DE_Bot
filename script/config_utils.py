@@ -13,6 +13,17 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+
+def _deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
+    """Recursively merge two dictionaries."""
+    result = base.copy()
+    for key, value in override.items():
+        if key in result and isinstance(result[key], dict) and isinstance(value, dict):
+            result[key] = _deep_merge(result[key], value)
+        else:
+            result[key] = value
+    return result
+
 ROOT = Path(__file__).resolve().parent.parent
 _CFG_CACHE: dict[str, Any] | None = None
 
@@ -100,6 +111,14 @@ def load_config(path: str | Path | None = None) -> dict[str, Any]:
         raise RuntimeError(
             f"Invalid JSON in {cfg_path}: {exc}"
         ) from exc
+
+    # Merge profile overrides with base settings
+    profiles = cfg.get("profiles", {})
+    base_cfg = {k: v for k, v in cfg.items() if k != "profiles"}
+    for name, override in profiles.items():
+        profiles[name] = _deep_merge(base_cfg, override)
+    cfg["profiles"] = profiles
+
     validate_config(cfg)
     if path is None:
         _CFG_CACHE = cfg

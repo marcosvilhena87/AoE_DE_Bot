@@ -57,14 +57,7 @@
   "profiles": {
       "aoe1de": {
         "resource_panel": {
-          "match_threshold": 0.82,
-          "top_pct": 0.06,
-          "height_pct": 0.88,
-          "roi_padding_left": [4, 6, 6, 6, 6, 6],
-          "roi_padding_right": [2, 2, 2, 2, 2, 2],
-          "min_width": [54, 51, 50, 51, 50, 40],
-          "icon_trim_pct": [0.30, 0.25, 0.24, 0.24, 0.20, 0.00],
-          "right_trim_pct": 0.02
+          "match_threshold": 0.82
         }
       }
     },
