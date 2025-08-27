@@ -633,7 +633,11 @@ def execute_ocr(gray, conf_threshold=None, allow_fallback=True):
 
     digits, data, mask = _ocr_digits_better(gray)
 
-    confidences = [int(c) for c in data.get("conf", []) if c != "-1"]
+    confidences = [
+        int(c)
+        for c in data.get("conf", [])
+        if c not in ("-1", "") and int(c) >= 0
+    ]
     low_conf = False
     if digits and confidences:
         mean_conf = sum(confidences) / len(confidences)
@@ -658,7 +662,11 @@ def execute_ocr(gray, conf_threshold=None, allow_fallback=True):
     if low_conf:
         alt_gray = cv2.bitwise_not(gray)
         digits2, data2, mask2 = _ocr_digits_better(alt_gray)
-        confidences2 = [int(c) for c in data2.get("conf", []) if c != "-1"]
+        confidences2 = [
+            int(c)
+            for c in data2.get("conf", [])
+            if c not in ("-1", "") and int(c) >= 0
+        ]
         low_conf2 = False
         if digits2 and confidences2:
             mean_conf2 = sum(confidences2) / len(confidences2)
