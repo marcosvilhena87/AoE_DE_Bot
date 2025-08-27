@@ -30,6 +30,7 @@
         "roi_padding_right": [0, 0, 0, 0, 0, 0],
         "max_width": 160,
         "min_width": [5, 5, 5, 5, 5, 4],
+        "min_required_width": 0,
         "idle_roi_extra_width": 24,
         "top_pct": 0.06,
         "height_pct": 0.88,

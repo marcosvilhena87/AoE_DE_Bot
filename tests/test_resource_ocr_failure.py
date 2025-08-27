@@ -277,7 +277,7 @@ class TestResourceOcrRois(TestCase):
             [0] * 6,
             999,
             [0] * 6,
-            detected,
+            detected=detected,
         )
         return frame, regions, values, cap, icon_color
 

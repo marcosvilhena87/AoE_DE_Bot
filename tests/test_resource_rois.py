@@ -416,7 +416,7 @@ class TestResourceROIs(TestCase):
             [0] * 6,
             999,
             [20] * 6,
-            detected,
+            detected=detected,
         )
         roi = regions["wood_stockpile"]
         span_left = 7  # icon_right + pad_left
