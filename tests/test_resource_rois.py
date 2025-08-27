@@ -364,30 +364,29 @@ class TestResourceROIs(TestCase):
     def test_build_rois_reduce_width_when_gap_below_min(self):
         """Icons closer than ``min_width`` should yield a shrunken ROI within the gap."""
 
-        ctx = types.SimpleNamespace(
-            panel_left=0,
-            panel_right=100,
-            top=0,
-            height=10,
-            pad_left=[2] * 6,
-            pad_right=[2] * 6,
-            icon_trims=[0] * 6,
-            max_width=999,
-            min_widths=[20] * 6,
-            detected={
-                "wood_stockpile": (0, 0, 5, 5),
-                "food_stockpile": (15, 0, 5, 5),
-            },
+        detected = {
+            "wood_stockpile": (0, 0, 5, 5),
+            "food_stockpile": (15, 0, 5, 5),
+        }
+        regions, spans, narrow = resources.compute_resource_rois(
+            0,
+            100,
+            0,
+            10,
+            [2] * 6,
+            [2] * 6,
+            [0] * 6,
+            999,
+            [20] * 6,
+            detected,
         )
-
-        regions = resources._build_resource_rois_between_icons(ctx)
         roi = regions["wood_stockpile"]
         span_left = 7  # icon_right + pad_left
         span_right = 13  # next_icon_left - pad_right
         self.assertEqual(roi[0], span_left)
         self.assertEqual(roi[0] + roi[2], span_right)
         self.assertEqual(roi[2], span_right - span_left)
-        self.assertIn("wood_stockpile", ctx.narrow)
+        self.assertIn("wood_stockpile", narrow)
 
     def test_per_icon_min_width(self):
         frame = np.zeros((50, 100, 3), dtype=np.uint8)

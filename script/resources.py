@@ -4,7 +4,6 @@ import logging
 import time
 from pathlib import Path
 from typing import Iterable
-from types import SimpleNamespace
 
 import numpy as np
 import cv2
@@ -100,123 +99,116 @@ def detect_hud(frame):
     return box
 
 
-def _roi_between_icons(ctx, name, cur_bounds, next_bounds, idx):
-    """Compute a ROI span between two consecutive icons.
+def compute_resource_rois(
+    panel_left,
+    panel_right,
+    top,
+    height,
+    pad_left,
+    pad_right,
+    icon_trims,
+    max_width,
+    min_widths,
+    detected,
+):
+    """Compute resource ROIs from detected icon bounds.
 
     Parameters
     ----------
-    ctx : SimpleNamespace
-        Context with configuration and panel data.
-    name : str
-        Current resource name for logging.
-    cur_bounds : tuple[int, int, int, int]
-        Bounding box of the current icon (x, y, w, h) relative to the panel.
-    next_bounds : tuple[int, int, int, int] | None
-        Bounding box of the next icon. When ``None`` the panel's right edge is
-        used as the boundary.
-    idx : int
-        Index of the current icon in :data:`RESOURCE_ICON_ORDER`.
+    panel_left, panel_right : int
+        Horizontal bounds of the resource panel in screen coordinates.
+    top, height : int
+        Vertical position and height for the ROI regions.
+    pad_left, pad_right : Sequence[int]
+        Padding to apply after trimming each icon pair.
+    icon_trims : Sequence[float | int]
+        Trim values applied to icon widths prior to padding. Values in ``[0,1]``
+        are treated as percentages.
+    max_width : int
+        Maximum width for each ROI.
+    min_widths : Sequence[int]
+        Minimum acceptable width for each ROI before being flagged as narrow.
+    detected : dict[str, tuple[int, int, int, int]]
+        Mapping of icon names to bounding boxes relative to the panel ``(x, y, w, h)``.
 
     Returns
     -------
-    tuple | None, bool
-        ROI tuple ``(left, top, width, height)`` and a flag indicating if the
-        available span was narrower than ``ctx.min_widths[idx]``.
+    tuple[dict, dict, dict]
+        ``(regions, spans, narrow)`` where ``regions`` is a mapping of resource
+        names to ROI tuples ``(left, top, width, height)``, ``spans`` contains the
+        available left/right span for each resource, and ``narrow`` flags resources
+        whose available span was smaller than the configured minimum width.
     """
 
-    pad_l = ctx.pad_left[idx] if idx < len(ctx.pad_left) else ctx.pad_left[-1]
-    pad_r = ctx.pad_right[idx] if idx < len(ctx.pad_right) else ctx.pad_right[-1]
-
-    # Current icon trim
-    cur_x, _cy, cur_w, _ch = cur_bounds
-    cur_trim_val = ctx.icon_trims[idx] if idx < len(ctx.icon_trims) else ctx.icon_trims[-1]
-    if 0 <= cur_trim_val <= 1:
-        cur_trim = int(round(cur_trim_val * cur_w))
-    else:
-        cur_trim = int(round(cur_trim_val))
-    cur_w_eff = cur_w - cur_trim
-
-    # Next icon trim
-    next_trim = 0
-    if next_bounds is not None:
-        next_x, _ny, next_w, _nh = next_bounds
-        next_trim_val = (
-            ctx.icon_trims[idx + 1]
-            if idx + 1 < len(ctx.icon_trims)
-            else ctx.icon_trims[-1]
-        )
-        if 0 <= next_trim_val <= 1:
-            next_trim = int(round(next_trim_val * next_w))
-        else:
-            next_trim = int(round(next_trim_val))
-        available_right = ctx.panel_left + next_x - next_trim - pad_r
-    else:
-        available_right = ctx.panel_right
-
-    available_left = ctx.panel_left + cur_x + cur_w_eff + pad_l
-    ctx.spans[name] = (available_left, available_right)
-
-    if available_right <= available_left:
-        logger.warning(
-            "Skipping ROI for icon '%s' due to non-positive span (left=%d, right=%d)",
-            name,
-            available_left,
-            available_right,
-        )
-        return None, False
-
-    available_width = available_right - available_left
-    width = min(ctx.max_width, available_width)
-
-    min_w = ctx.min_widths[idx] if idx < len(ctx.min_widths) else ctx.min_widths[-1]
-    narrow = False
-    if available_width < min_w:
-        width = available_width
-        narrow = True
-        logger.warning(
-            "ROI estreita para '%s': disp=%d min=%d",
-            name,
-            available_width,
-            min_w,
-        )
-
-    left = available_left
-    right = left + width
-
-    logger.debug(
-        "ROI for '%s': available=(%d,%d) -> (%d,%d) width=%d cur_trim=%d next_trim=%d",
-        name,
-        available_left,
-        available_right,
-        left,
-        right,
-        width,
-        cur_trim,
-        next_trim,
-    )
-    return (left, ctx.top, width, ctx.height), narrow
-
-
-def _build_resource_rois_between_icons(ctx):
-    """Build resource ROIs for icons using consecutive pairs."""
-    if not hasattr(ctx, "narrow"):
-        ctx.narrow = {}
-    ctx.spans = {}
-
     regions = {}
-    for idx, (current, next_) in enumerate(
-        zip(RESOURCE_ICON_ORDER, RESOURCE_ICON_ORDER[1:])
-    ):
-        cur_bounds = ctx.detected.get(current)
-        next_bounds = ctx.detected.get(next_)
-        if cur_bounds is None or next_bounds is None:
+    spans = {}
+    narrow = {}
+
+    for idx, current in enumerate(RESOURCE_ICON_ORDER[:-1]):
+        next_name = RESOURCE_ICON_ORDER[idx + 1]
+        cur_bounds = detected.get(current)
+        if cur_bounds is None:
             continue
-        roi, narrow = _roi_between_icons(ctx, current, cur_bounds, next_bounds, idx)
-        if roi is not None:
-            regions[current] = roi
-            if narrow:
-                ctx.narrow[current] = True
-    return regions
+
+        pad_l = pad_left[idx] if idx < len(pad_left) else pad_left[-1]
+        pad_r = pad_right[idx] if idx < len(pad_right) else pad_right[-1]
+
+        cur_x, _cy, cur_w, _ch = cur_bounds
+        cur_trim_val = icon_trims[idx] if idx < len(icon_trims) else icon_trims[-1]
+        cur_trim = int(round(cur_trim_val * cur_w)) if 0 <= cur_trim_val <= 1 else int(
+            round(cur_trim_val)
+        )
+        cur_right = panel_left + cur_x + cur_w - cur_trim
+
+        next_bounds = detected.get(next_name)
+        if next_bounds is not None:
+            next_x, _ny, next_w, _nh = next_bounds
+            next_trim_val = icon_trims[idx + 1] if idx + 1 < len(icon_trims) else icon_trims[-1]
+            next_trim = (
+                int(round(next_trim_val * next_w)) if 0 <= next_trim_val <= 1 else int(round(next_trim_val))
+            )
+            next_left = panel_left + next_x - next_trim
+        else:
+            next_left = panel_right
+
+        left = cur_right + pad_l
+        right = next_left - pad_r
+        spans[current] = (left, right)
+
+        if right <= left:
+            logger.warning(
+                "Skipping ROI for icon '%s' due to non-positive span (left=%d, right=%d)",
+                current,
+                left,
+                right,
+            )
+            continue
+
+        available_width = right - left
+        width = min(max_width, available_width)
+
+        min_w = min_widths[idx] if idx < len(min_widths) else min_widths[-1]
+        if available_width < min_w:
+            width = available_width
+            narrow[current] = True
+            logger.warning(
+                "ROI estreita para '%s': disp=%d min=%d",
+                current,
+                available_width,
+                min_w,
+            )
+
+        regions[current] = (left, top, width, height)
+        logger.debug(
+            "ROI for '%s': available=(%d,%d) width=%d",
+            current,
+            left,
+            right,
+            width,
+        )
+
+    return regions, spans, narrow
+
 
 
 def locate_resource_panel(frame):
@@ -286,24 +278,22 @@ def locate_resource_panel(frame):
     top = y + int(top_pct * h)
     height = int(height_pct * h)
 
-    ctx = SimpleNamespace(
-        panel_left=x,
-        panel_right=x + w,
-        top=top,
-        height=height,
-        pad_left=pad_left,
-        pad_right=pad_right,
-        icon_trims=icon_trims,
-        max_width=max_width,
-        min_widths=min_widths,
-        detected=detected,
+    regions, spans, narrow = compute_resource_rois(
+        x,
+        x + w,
+        top,
+        height,
+        pad_left,
+        pad_right,
+        icon_trims,
+        max_width,
+        min_widths,
+        detected,
     )
 
-    regions = _build_resource_rois_between_icons(ctx)
-
     global _NARROW_ROIS, _LAST_REGION_SPANS
-    _NARROW_ROIS = set(getattr(ctx, "narrow", {}).keys())
-    _LAST_REGION_SPANS = ctx.spans.copy()
+    _NARROW_ROIS = set(narrow.keys())
+    _LAST_REGION_SPANS = spans.copy()
 
     if "idle_villager" in detected:
         xi, yi, wi, hi = detected["idle_villager"]
@@ -373,6 +363,8 @@ def _ocr_digits_better(gray):
 def detect_resource_regions(frame, required_icons):
     """Detect resource value regions on the HUD."""
 
+    global _NARROW_ROIS, _LAST_REGION_SPANS
+
     regions = locate_resource_panel(frame)
     if "idle_villager" not in regions:
         idle_cfg = CFG.get("idle_villager_roi")
@@ -408,37 +400,68 @@ def detect_resource_regions(frame, required_icons):
             )
             top_pct = profile_res.get("top_pct", res_cfg.get("top_pct", 0.08))
             height_pct = profile_res.get("height_pct", res_cfg.get("height_pct", 0.84))
-            icon_trims = profile_res.get(
+            icon_trims_cfg = profile_res.get(
                 "icon_trim_pct",
                 res_cfg.get(
                     "icon_trim_pct",
                     [0.25, 0.20, 0.20, 0.20, 0.20, 0.20],
                 ),
             )
-            if not isinstance(icon_trims, (list, tuple)):
-                icon_trims = [icon_trims] * 6
+            if not isinstance(icon_trims_cfg, (list, tuple)):
+                icon_trims_cfg = [icon_trims_cfg] * 6
             right_trim = profile_res.get(
                 "right_trim_pct", res_cfg.get("right_trim_pct", 0.02)
             )
 
             top = y + int(top_pct * h)
             height = int(height_pct * h)
-            regions = {}
-            for idx, name in enumerate(required_icons):
-                icon_trim = icon_trims[idx] if idx < len(icon_trims) else icon_trims[-1]
-                left = x + int(idx * slice_w + icon_trim * slice_w)
-                right_limit = x + int((idx + 1) * slice_w - right_trim * slice_w)
-                width = right_limit - left
-                if width <= 0:
-                    logger.warning(
-                        "Skipping ROI for '%s' due to non-positive width (left=%d, right=%d)",
-                        name,
-                        left,
-                        right_limit,
+
+            detected = {
+                name: (int(idx * slice_w), 0, 0, 0)
+                for idx, name in enumerate(RESOURCE_ICON_ORDER)
+            }
+            pad_left_fallback = [
+                int(
+                    round(
+                        (icon_trims_cfg[idx] if idx < len(icon_trims_cfg) else icon_trims_cfg[-1])
+                        * slice_w
                     )
-                    continue
-                width = max(90, width)
-                regions[name] = (left, top, width, height)
+                )
+                for idx in range(len(RESOURCE_ICON_ORDER))
+            ]
+            pad_right_fallback = [int(round(right_trim * slice_w))] * len(
+                RESOURCE_ICON_ORDER
+            )
+            icon_trims_zero = [0] * len(RESOURCE_ICON_ORDER)
+            min_widths = [90] * len(RESOURCE_ICON_ORDER)
+            regions, spans, narrow = compute_resource_rois(
+                x,
+                x + w,
+                top,
+                height,
+            pad_left_fallback,
+            pad_right_fallback,
+            icon_trims_zero,
+            w,
+            min_widths,
+            detected,
+            )
+            _NARROW_ROIS = set(narrow.keys())
+            for name in RESOURCE_ICON_ORDER[:-1]:
+                if name in regions:
+                    l, t, width, hgt = regions[name]
+                    if width < 90:
+                        width = 90
+                        regions[name] = (l, t, width, hgt)
+                    spans[name] = (l, l + width)
+            if "idle_villager" in required_icons:
+                idx_iv = RESOURCE_ICON_ORDER.index("idle_villager")
+                left_iv = x + int(idx_iv * slice_w + pad_left_fallback[idx_iv])
+                right_iv = x + int(w - pad_right_fallback[idx_iv])
+                width_iv = max(90, right_iv - left_iv)
+                regions["idle_villager"] = (left_iv, top, width_iv, height)
+                spans["idle_villager"] = (left_iv, left_iv + width_iv)
+            _LAST_REGION_SPANS = spans.copy()
         else:
             # Fallback: estimate resource bar from HUD anchor
             W, H = input_utils._screen_size()
@@ -475,22 +498,52 @@ def detect_resource_regions(frame, required_icons):
             slice_w = panel_w / 6
             top = y + int(top_pct * panel_h)
             height = int(height_pct * panel_h)
-            regions = {}
-            for idx, name in enumerate(required_icons):
-                icon_trim = icon_trims[idx] if idx < len(icon_trims) else icon_trims[-1]
-                left = x + int(idx * slice_w + icon_trim * slice_w)
-                right_limit = x + int((idx + 1) * slice_w - right_trim * slice_w)
-                width = right_limit - left
-                if width <= 0:
-                    logger.warning(
-                        "Skipping ROI for '%s' due to non-positive width (left=%d, right=%d)",
-                        name,
-                        left,
-                        right_limit,
+            detected = {
+                name: (int(idx * slice_w), 0, 0, 0)
+                for idx, name in enumerate(RESOURCE_ICON_ORDER)
+            }
+            pad_left_fallback = [
+                int(
+                    round(
+                        (icon_trims[idx] if idx < len(icon_trims) else icon_trims[-1])
+                        * slice_w
                     )
-                    continue
-                width = max(90, width)
-                regions[name] = (left, top, width, height)
+                )
+                for idx in range(len(RESOURCE_ICON_ORDER))
+            ]
+            pad_right_fallback = [int(round(right_trim * slice_w))] * len(
+                RESOURCE_ICON_ORDER
+            )
+            icon_trims_zero = [0] * len(RESOURCE_ICON_ORDER)
+            min_widths = [90] * len(RESOURCE_ICON_ORDER)
+            regions, spans, narrow = compute_resource_rois(
+                x,
+                x + panel_w,
+                top,
+                height,
+            pad_left_fallback,
+            pad_right_fallback,
+            icon_trims_zero,
+            panel_w,
+            min_widths,
+            detected,
+            )
+            if "idle_villager" in required_icons:
+                idx_iv = RESOURCE_ICON_ORDER.index("idle_villager")
+                left_iv = x + int(idx_iv * slice_w + pad_left_fallback[idx_iv])
+                right_iv = x + int(panel_w - pad_right_fallback[idx_iv])
+                width_iv = max(90, right_iv - left_iv)
+                regions["idle_villager"] = (left_iv, top, width_iv, height)
+                spans["idle_villager"] = (left_iv, left_iv + width_iv)
+            _NARROW_ROIS = set(narrow.keys())
+            for name in RESOURCE_ICON_ORDER[:-1]:
+                if name in regions:
+                    l, t, width, hgt = regions[name]
+                    if width < 90:
+                        width = 90
+                        regions[name] = (l, t, width, hgt)
+                    spans[name] = (l, l + width)
+            _LAST_REGION_SPANS = spans.copy()
 
         missing = [name for name in required_icons if name not in regions]
 
