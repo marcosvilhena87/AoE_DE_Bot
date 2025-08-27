@@ -42,7 +42,7 @@ def _ocr_digits_better(gray):
     """Delegate to resource helper; patched in tests."""
     return resources._ocr_digits_better(gray)
 
-def read_resources_from_hud(required_icons=None):
+def read_resources_from_hud(required_icons=None, conf_threshold=None):
     """Delegate to :func:`script.resources.read_resources_from_hud` using patched helpers."""
     common.HUD_ANCHOR = HUD_ANCHOR
     original_locate = resources.locate_resource_panel
@@ -60,7 +60,10 @@ def read_resources_from_hud(required_icons=None):
     screen_utils._grab_frame = _grab_frame
     resources._ocr_digits_better = wrapper
     try:
-        return resources.read_resources_from_hud(required_icons)
+        kwargs = {}
+        if conf_threshold is not None:
+            kwargs["conf_threshold"] = conf_threshold
+        return resources.read_resources_from_hud(required_icons, **kwargs)
     finally:
         resources.locate_resource_panel = original_locate
         screen_utils._grab_frame = original_grab
@@ -72,6 +75,7 @@ def gather_hud_stats(
     required_icons=None,
     optional_icons=None,
     max_cache_age=None,
+    conf_threshold=None,
 ):
     """Delegate to :func:`script.resources.gather_hud_stats` using patched helpers."""
     common.HUD_ANCHOR = HUD_ANCHOR
@@ -92,12 +96,15 @@ def gather_hud_stats(
     resources._ocr_digits_better = wrapper
     resources._read_population_from_roi = _read_population_from_roi
     try:
-        return resources.gather_hud_stats(
-            force_delay=force_delay,
-            required_icons=required_icons,
-            optional_icons=optional_icons,
-            max_cache_age=max_cache_age,
-        )
+        kwargs = {
+            "force_delay": force_delay,
+            "required_icons": required_icons,
+            "optional_icons": optional_icons,
+            "max_cache_age": max_cache_age,
+        }
+        if conf_threshold is not None:
+            kwargs["conf_threshold"] = conf_threshold
+        return resources.gather_hud_stats(**kwargs)
     finally:
         resources.locate_resource_panel = original_locate
         screen_utils._grab_frame = original_grab
