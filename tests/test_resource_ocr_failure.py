@@ -71,30 +71,28 @@ class TestResourceOcrFailure(TestCase):
         resources._RESOURCE_FAILURE_COUNTS.clear()
         resources._LAST_REGION_SPANS.clear()
     def test_read_resources_fallback(self):
-        def fake_grab_frame(bbox=None):
-            if bbox:
-                return np.zeros((bbox["height"], bbox["width"], 3), dtype=np.uint8)
-            return np.zeros((600, 600, 3), dtype=np.uint8)
-
         def fake_ocr(gray):
             return "", {"text": [""]}, np.zeros((1, 1), dtype=np.uint8)
+        frame = np.zeros((600, 600, 3), dtype=np.uint8)
 
-        with patch("script.screen_utils._grab_frame", side_effect=fake_grab_frame), \
-             patch(
-                 "script.resources.locate_resource_panel",
-                 return_value={
-                     "wood_stockpile": (0, 0, 50, 50),
-                     "food_stockpile": (50, 0, 50, 50),
-                     "gold_stockpile": (100, 0, 50, 50),
-                     "stone_stockpile": (150, 0, 50, 50),
-                     "population_limit": (200, 0, 50, 50),
-                     "idle_villager": (250, 0, 50, 50),
-                 },
-             ), \
-             patch("script.resources._ocr_digits_better", side_effect=fake_ocr), \
-             patch("script.resources.pytesseract.image_to_string", return_value="123"), \
-             patch("script.resources._read_population_from_roi", return_value=(0, 0)):
-            result, _ = resources.read_resources_from_hud()
+        with patch(
+            "script.resources.detect_resource_regions",
+            return_value={
+                "wood_stockpile": (0, 0, 50, 50),
+                "food_stockpile": (50, 0, 50, 50),
+                "gold_stockpile": (100, 0, 50, 50),
+                "stone_stockpile": (150, 0, 50, 50),
+                "population_limit": (200, 0, 50, 50),
+                "idle_villager": (250, 0, 50, 50),
+            },
+        ), patch("script.resources._ocr_digits_better", side_effect=fake_ocr), patch(
+            "script.resources.pytesseract.image_to_string", return_value="123"
+        ), patch("script.resources._read_population_from_roi", return_value=(0, 0)):
+            result, _ = resources._read_resources(
+                frame,
+                resources.RESOURCE_ICON_ORDER,
+                resources.RESOURCE_ICON_ORDER,
+            )
             self.assertEqual(result["wood_stockpile"], 123)
 
     def test_optional_icon_failure_does_not_raise(self):
@@ -210,13 +208,24 @@ class TestGatherHudStatsSliding(TestCase):
                 return "789", {"text": ["789"]}, None
             return "", {"text": [""]}, None
 
-        with patch("script.screen_utils._grab_frame", return_value=frame), \
-             patch("script.resources.detect_resource_regions", side_effect=fake_detect), \
-             patch("script.resources.preprocess_roi", side_effect=lambda roi: roi[..., 0]), \
-             patch.dict("script.resources._LAST_REGION_SPANS", {"wood_stockpile": (0, 120)}, clear=True), \
-             patch("script.resources.execute_ocr", side_effect=fake_execute), \
-             patch("script.resources.pytesseract.image_to_string", return_value=""):
-            res, _ = resources.gather_hud_stats(required_icons=["wood_stockpile"], optional_icons=[])
+        with patch(
+            "script.resources.detect_resource_regions", side_effect=fake_detect
+        ), patch(
+            "script.resources.preprocess_roi", side_effect=lambda roi: roi[..., 0]
+        ), patch.dict(
+            "script.resources._LAST_REGION_SPANS",
+            {"wood_stockpile": (0, 120)},
+            clear=True,
+        ), patch(
+            "script.resources.execute_ocr", side_effect=fake_execute
+        ), patch(
+            "script.resources.pytesseract.image_to_string", return_value=""
+        ):
+            res, _ = resources._read_resources(
+                frame,
+                ["wood_stockpile"],
+                ["wood_stockpile"],
+            )
 
         self.assertEqual(res["wood_stockpile"], 789)
         self.assertEqual(len(calls), 4)
@@ -291,9 +300,6 @@ class TestResourceOcrRois(TestCase):
             "population_limit",
         ]
 
-        def fake_grab_frame(bbox=None):
-            return frame
-
         def fake_detect(frame_in, required_icons):
             return regions
 
@@ -317,17 +323,17 @@ class TestResourceOcrRois(TestCase):
             cap = int(np.unique(gray[:, mid:])[0])
             return cur, cap
 
-        with patch("script.screen_utils._grab_frame", side_effect=fake_grab_frame), \
-            patch("script.resources.detect_resource_regions", side_effect=fake_detect), \
-            patch("script.resources.preprocess_roi", side_effect=fake_preprocess), \
-            patch("script.resources._ocr_digits_better", side_effect=fake_ocr), \
-            patch(
-                "script.resources._read_population_from_roi",
-                side_effect=fake_pop_reader,
-            ):
-            results, pop = resources.read_resources_from_hud(
-                required_icons=required, icons_to_read=required
-            )
+        with patch(
+            "script.resources.detect_resource_regions", side_effect=fake_detect
+        ), patch(
+            "script.resources.preprocess_roi", side_effect=fake_preprocess
+        ), patch(
+            "script.resources._ocr_digits_better", side_effect=fake_ocr
+        ), patch(
+            "script.resources._read_population_from_roi",
+            side_effect=fake_pop_reader,
+        ):
+            results, pop = resources._read_resources(frame, required, required)
 
         for name in required:
             self.assertEqual(results[name], values[name])
