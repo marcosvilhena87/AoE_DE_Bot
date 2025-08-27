@@ -65,21 +65,23 @@ class TestClickAndBuildHouse(TestCase):
 
 
 class TestBuildHouseResourceRetry(TestCase):
-    def test_build_house_retries_before_stopping(self):
+    def test_build_house_stops_after_single_failed_attempt(self):
+        """Ensure build_house aborts after one failed resource read."""
         side_effect = [
             common.ResourceReadError("fail1"),
             common.ResourceReadError("fail2"),
-            common.ResourceReadError("fail3"),
         ]
         with patch(
             "script.resources.read_resources_from_hud",
             side_effect=side_effect,
         ) as read_mock, patch("script.input_utils._press_key_safe") as press_mock, patch(
             "script.input_utils._click_norm"
-        ) as click_mock, patch("script.units.villager.time.sleep"):
+        ) as click_mock, patch("script.units.villager.time.sleep"), patch(
+            "script.hud.wait_hud"
+        ):
             result = villager.build_house()
         self.assertFalse(result)
-        self.assertEqual(read_mock.call_count, 3)
+        self.assertEqual(read_mock.call_count, 2)
         press_mock.assert_not_called()
         click_mock.assert_not_called()
 
@@ -96,7 +98,9 @@ class TestBuildHouseResourceRetry(TestCase):
             "script.input_utils._click_norm"
         ), patch(
             "script.hud.read_population_from_hud", return_value=(0, 8)
-        ), patch("script.units.villager.time.sleep"):
+        ), patch("script.units.villager.time.sleep"), patch(
+            "script.hud.wait_hud"
+        ):
             result = villager.build_house()
         self.assertTrue(result)
         self.assertEqual(read_mock.call_count, 2)
