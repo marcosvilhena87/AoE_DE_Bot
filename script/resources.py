@@ -816,60 +816,20 @@ def _extract_population(frame, regions, results, pop_required, conf_threshold=No
             raise common.ResourceReadError("population_limit region not detected")
     return cur_pop, pop_cap
 
-def read_resources_from_hud(
-    required_icons: Iterable[str] | None = None,
-    icons_to_read: Iterable[str] | None = None,
-    force_delay: float | None = None,
+def _read_resources(
+    frame,
+    required_icons,
+    icons_to_read,
     max_cache_age: float | None = None,
     conf_threshold: int | None = None,
 ):
-    """Read resource values displayed on the HUD.
+    """Core routine for reading resource values from a frame."""
 
-    Parameters
-    ----------
-    required_icons : Iterable[str] | None, optional
-        Icons that must be successfully read or a
-        :class:`common.ResourceReadError` is raised. When ``None`` the
-        default set of resource icons is used.
-    icons_to_read : Iterable[str] | None, optional
-        Additional icons to attempt reading beyond those required. If
-        ``None`` only ``required_icons`` are read.
-    force_delay : float | None, optional
-        When provided, sleep for the given amount of seconds before
-        grabbing a frame from the screen. This is useful when a hotkey has
-        just been pressed and the HUD may need a short time to update.
-    max_cache_age : float | None, optional
-        Maximum age (in seconds) for any cached value to be considered when
-        multiple consecutive OCR failures occur. ``None`` disables the limit.
-    conf_threshold : int | None, optional
-        Minimum confidence required to accept OCR digits. When ``None`` the
-        value from configuration is used.
-    """
-
-    if force_delay is not None:
-        time.sleep(force_delay)
-
-    frame = screen_utils._grab_frame()
-    if required_icons is None:
-        required_icons = [
-            "wood_stockpile",
-            "food_stockpile",
-            "gold_stockpile",
-            "stone_stockpile",
-            "population_limit",
-            "idle_villager",
-        ]
-    else:
-        required_icons = list(required_icons)
-
-    if icons_to_read is None:
-        icons_to_read = list(required_icons)
-    else:
-        icons_to_read = list(set(required_icons).union(icons_to_read))
-
+    required_icons = list(required_icons)
+    icons_to_read = list(icons_to_read)
     required_set = set(required_icons)
 
-    regions = detect_resource_regions(frame, required_icons)
+    regions = detect_resource_regions(frame, icons_to_read)
 
     if max_cache_age is None:
         max_cache_age = _RESOURCE_CACHE_MAX_AGE
@@ -881,6 +841,8 @@ def read_resources_from_hud(
     cache_hits = set()
     for name in resource_icons:
         if name not in regions:
+            if name in required_set:
+                results[name] = None
             continue
         x, y, w, h = regions[name]
         roi = frame[y : y + h, x : x + w]
@@ -981,15 +943,46 @@ def read_resources_from_hud(
     filtered_regions = {n: regions[n] for n in resource_icons if n in regions}
     required_for_ocr = [n for n in required_icons if n != "population_limit"]
     handle_ocr_failure(frame, filtered_regions, results, required_for_ocr)
+
     cur_pop = pop_cap = None
     if "population_limit" in icons_to_read:
         pop_required = "population_limit" in required_set
         cur_pop, pop_cap = _extract_population(
             frame, regions, results, pop_required, conf_threshold=conf_threshold
         )
+
     global _LAST_READ_FROM_CACHE
     _LAST_READ_FROM_CACHE = cache_hits
+
     return results, (cur_pop, pop_cap)
+
+def read_resources_from_hud(
+    required_icons: Iterable[str] | None = None,
+    icons_to_read: Iterable[str] | None = None,
+    force_delay: float | None = None,
+    max_cache_age: float | None = None,
+    conf_threshold: int | None = None,
+):
+    """Read resource values displayed on the HUD."""
+
+    if force_delay is not None:
+        time.sleep(force_delay)
+
+    frame = screen_utils._grab_frame()
+
+    if required_icons is None:
+        required_icons = list(RESOURCE_ICON_ORDER)
+    else:
+        required_icons = list(required_icons)
+
+    if icons_to_read is None:
+        icons_to_read = list(required_icons)
+    else:
+        icons_to_read = list(set(required_icons).union(icons_to_read))
+
+    return _read_resources(
+        frame, required_icons, icons_to_read, max_cache_age, conf_threshold
+    )
 
 
 def _read_population_from_roi(roi, conf_threshold=None):
@@ -1046,29 +1039,7 @@ def gather_hud_stats(
     max_cache_age: float | None = None,
     conf_threshold: int | None = None,
 ):
-    """Capture a single frame and read resources and population.
-
-    Parameters
-    ----------
-    force_delay : float | None, optional
-        Seconds to sleep before grabbing the screen.
-    required_icons : Iterable[str] | None, optional
-        Icons that must be read successfully. When ``None`` the value is
-        pulled from configuration.
-    optional_icons : Iterable[str] | None, optional
-        Icons that should be read when available but are not required.
-    max_cache_age : float | None, optional
-        Maximum age (in seconds) for any cached value to be considered when
-        multiple consecutive OCR failures occur. ``None`` disables the limit.
-    conf_threshold : int | None, optional
-        Minimum confidence required to accept OCR digits. When ``None`` the
-        value from configuration is used.
-
-    Returns
-    -------
-    tuple
-        ``(resources, (current_pop, pop_cap))``
-    """
+    """Capture a single frame and read resources and population."""
 
     if force_delay is not None:
         time.sleep(force_delay)
@@ -1093,120 +1064,8 @@ def gather_hud_stats(
 
     required_icons = list(required_icons)
     optional_icons = list(optional_icons)
-
     all_icons = list(dict.fromkeys(required_icons + optional_icons))
 
-    regions = detect_resource_regions(frame, all_icons)
-
-    if max_cache_age is None:
-        max_cache_age = _RESOURCE_CACHE_MAX_AGE
-    if conf_threshold is None:
-        conf_threshold = CFG.get("ocr_conf_threshold", 60)
-
-    resource_icons = [name for name in all_icons if name != "population_limit"]
-
-    results = {}
-    cache_hits = set()
-    for name in resource_icons:
-        if name not in regions:
-            if name in required_icons:
-                results[name] = None
-            continue
-        x, y, w, h = regions[name]
-        roi = frame[y : y + h, x : x + w]
-        gray = preprocess_roi(roi)
-        digits, data, mask = execute_ocr(gray, conf_threshold=conf_threshold)
-        if not digits:
-            span_left, span_right = _LAST_REGION_SPANS.get(name, (x, x + w))
-            span_width = span_right - span_left
-            cand_widths = [min(w, span_width)]
-            cand_widths += [min(span_width, cw) for cw in (64, 56, 48)]
-            cand_widths = list(dict.fromkeys(cand_widths))
-            for cand_w in cand_widths:
-                for anchor in ("left", "center", "right"):
-                    if anchor == "left":
-                        cand_x = span_left
-                    elif anchor == "center":
-                        cand_x = span_left + (span_width - cand_w) // 2
-                    else:
-                        cand_x = span_right - cand_w
-                    cand_x = max(span_left, min(cand_x, span_right - cand_w))
-                    roi_retry = frame[y : y + h, cand_x : cand_x + cand_w]
-                    gray_retry = preprocess_roi(roi_retry)
-                    digits_retry, data_retry, mask_retry = execute_ocr(
-                        gray_retry,
-                        conf_threshold=conf_threshold,
-                        allow_fallback=False,
-                    )
-                    if digits_retry:
-                        digits, data, mask = digits_retry, data_retry, mask_retry
-                        roi, gray = roi_retry, gray_retry
-                        x, w = cand_x, cand_w
-                        break
-                if digits:
-                    break
-        if CFG.get("ocr_debug"):
-            debug_dir = ROOT / "debug"
-            debug_dir.mkdir(exist_ok=True)
-            ts = int(time.time() * 1000)
-            cv2.imwrite(str(debug_dir / f"resource_{name}_roi_{ts}.png"), roi)
-            if mask is not None:
-                cv2.imwrite(str(debug_dir / f"resource_{name}_thresh_{ts}.png"), mask)
-        if not digits:
-            logger.warning(
-                "OCR failed for %s; raw boxes=%s", name, data.get("text")
-            )
-            debug_dir = ROOT / "debug"
-            debug_dir.mkdir(exist_ok=True)
-            ts = int(time.time() * 1000)
-            cv2.imwrite(str(debug_dir / f"resource_{name}_roi_{ts}.png"), roi)
-            if mask is not None:
-                cv2.imwrite(str(debug_dir / f"resource_{name}_thresh_{ts}.png"), mask)
-            ts_cache = _LAST_RESOURCE_TS.get(name)
-            failure_count = _RESOURCE_FAILURE_COUNTS.get(name, 0)
-            use_cache = False
-            if name in _LAST_RESOURCE_VALUES and ts_cache is not None:
-                age = time.time() - ts_cache
-                if age < _RESOURCE_CACHE_TTL:
-                    logger.warning(
-                        "Using cached value for %s after OCR failure", name
-                    )
-                    use_cache = True
-                elif failure_count >= 1 and (
-                    max_cache_age is None or age <= max_cache_age
-                ):
-                    logger.warning(
-                        "Using cached value for %s despite expired TTL (%.2fs)",
-                        name,
-                        age,
-                    )
-                    use_cache = True
-            if use_cache:
-                results[name] = _LAST_RESOURCE_VALUES[name]
-                cache_hits.add(name)
-            else:
-                results[name] = None
-            _RESOURCE_FAILURE_COUNTS[name] = failure_count + 1
-        else:
-            value = int(digits)
-            results[name] = value
-            _LAST_RESOURCE_VALUES[name] = value
-            _LAST_RESOURCE_TS[name] = time.time()
-            _RESOURCE_FAILURE_COUNTS[name] = 0
-            logger.info("Detected %s=%d", name, value)
-
-    filtered_regions = {n: regions[n] for n in resource_icons if n in regions}
-    required_for_ocr = [n for n in required_icons if n != "population_limit"]
-    handle_ocr_failure(frame, filtered_regions, results, required_for_ocr)
-
-    cur_pop = pop_cap = None
-    if "population_limit" in all_icons:
-        pop_required = "population_limit" in required_icons
-        cur_pop, pop_cap = _extract_population(
-            frame, regions, results, pop_required, conf_threshold=conf_threshold
-        )
-
-    global _LAST_READ_FROM_CACHE
-    _LAST_READ_FROM_CACHE = cache_hits
-
-    return results, (cur_pop, pop_cap)
+    return _read_resources(
+        frame, required_icons, all_icons, max_cache_age, conf_threshold
+    )
