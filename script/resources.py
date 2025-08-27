@@ -141,8 +141,9 @@ def compute_resource_rois(
     tuple[dict, dict, dict]
         ``(regions, spans, narrow)`` where ``regions`` is a mapping of resource
         names to ROI tuples ``(left, top, width, height)``, ``spans`` contains the
-        available left/right span for each resource, and ``narrow`` flags resources
-        whose available span was smaller than the configured minimum width.
+        available left/right span for each resource with a valid ROI, and
+        ``narrow`` flags resources whose available span was smaller than the
+        configured minimum width.
     """
 
     if min_requireds is None:
@@ -183,8 +184,6 @@ def compute_resource_rois(
 
         left = cur_right + pad_l
         right = next_left - pad_r
-        spans[current] = (left, right)
-
         if right <= left:
             logger.warning(
                 "Skipping ROI for icon '%s' due to non-positive span (left=%d, right=%d)",
@@ -193,6 +192,8 @@ def compute_resource_rois(
                 right,
             )
             continue
+
+        spans[current] = (left, right)
 
         available_width = right - left
         width = min(max_width, available_width)

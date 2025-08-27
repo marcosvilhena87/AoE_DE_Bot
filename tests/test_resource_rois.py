@@ -426,6 +426,30 @@ class TestResourceROIs(TestCase):
         self.assertEqual(roi[2], span_right - span_left)
         self.assertIn("wood_stockpile", narrow)
 
+    def test_ignores_non_positive_span(self):
+        """Resources with zero or negative spans should be skipped entirely."""
+
+        detected = {
+            "wood_stockpile": (0, 0, 5, 5),
+            "food_stockpile": (6, 0, 5, 5),
+        }
+        regions, spans, narrow = resources.compute_resource_rois(
+            0,
+            100,
+            0,
+            10,
+            [2] * 6,
+            [2] * 6,
+            [0] * 6,
+            999,
+            [0] * 6,
+            detected=detected,
+        )
+        self.assertNotIn("wood_stockpile", regions)
+        self.assertNotIn("wood_stockpile", spans)
+        self.assertNotIn("wood_stockpile", narrow)
+        self.assertIn("food_stockpile", spans)
+
     def test_per_icon_min_width(self):
         frame = np.zeros((50, 100, 3), dtype=np.uint8)
         panel_box = (0, 0, 100, 20)
