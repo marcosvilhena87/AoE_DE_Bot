@@ -54,6 +54,36 @@
     "left_pct": 0.84,
     "width_pct": 0.05
   },
+  "wood_stockpile_roi": {
+    "top_pct": 0.06,
+    "height_pct": 0.88,
+    "left_pct": 0.05,
+    "width_pct": 0.05
+  },
+  "food_stockpile_roi": {
+    "top_pct": 0.06,
+    "height_pct": 0.88,
+    "left_pct": 0.15,
+    "width_pct": 0.05
+  },
+  "gold_stockpile_roi": {
+    "top_pct": 0.06,
+    "height_pct": 0.88,
+    "left_pct": 0.25,
+    "width_pct": 0.05
+  },
+  "stone_stockpile_roi": {
+    "top_pct": 0.06,
+    "height_pct": 0.88,
+    "left_pct": 0.35,
+    "width_pct": 0.05
+  },
+  "population_limit_roi": {
+    "top_pct": 0.06,
+    "height_pct": 0.88,
+    "left_pct": 0.45,
+    "width_pct": 0.05
+  },
   "profiles": {
       "aoe1de": {
         "resource_panel": {
