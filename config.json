@@ -48,12 +48,6 @@
     ],
     "optional": []
   },
-  "idle_villager_roi": {
-    "top_pct": 0.10,
-    "height_pct": 0.06,
-    "left_pct": 0.84,
-    "width_pct": 0.05
-  },
   "wood_stockpile_roi": {
     "top_pct": 0.10,
     "height_pct": 0.06,
@@ -82,6 +76,12 @@
     "top_pct": 0.10,
     "height_pct": 0.06,
     "left_pct": 0.45,
+    "width_pct": 0.05
+  },
+  "idle_villager_roi": {
+    "top_pct": 0.10,
+    "height_pct": 0.06,
+    "left_pct": 0.84,
     "width_pct": 0.05
   },
   "profiles": {
