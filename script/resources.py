@@ -52,6 +52,8 @@ _RESOURCE_CACHE_MAX_AGE = CFG.get("resource_cache_max_age")
 
 # Track last set of regions returned to invalidate cached values
 _LAST_REGION_BOUNDS = None
+# Track last available spans for each region
+_LAST_REGION_SPANS = {}
 
 
 def detect_hud(frame):
@@ -152,6 +154,7 @@ def _roi_between_icons(ctx, name, cur_bounds, next_bounds, idx):
         available_right = ctx.panel_right
 
     available_left = ctx.panel_left + cur_x + cur_w_eff + pad_l
+    ctx.spans[name] = (available_left, available_right)
 
     if available_right <= available_left:
         logger.warning(
@@ -197,6 +200,7 @@ def _build_resource_rois_between_icons(ctx):
     """Build resource ROIs for icons using consecutive pairs."""
     if not hasattr(ctx, "narrow"):
         ctx.narrow = {}
+    ctx.spans = {}
 
     regions = {}
     for idx, (current, next_) in enumerate(
@@ -291,8 +295,9 @@ def locate_resource_panel(frame):
 
     regions = _build_resource_rois_between_icons(ctx)
 
-    global _NARROW_ROIS
+    global _NARROW_ROIS, _LAST_REGION_SPANS
     _NARROW_ROIS = set(getattr(ctx, "narrow", {}).keys())
+    _LAST_REGION_SPANS = ctx.spans.copy()
 
     if "idle_villager" in detected:
         xi, yi, wi, hi = detected["idle_villager"]
@@ -728,8 +733,11 @@ def read_resources_from_hud(
             digits, data, mask = execute_ocr(gray)
         if not digits:
             expand = 24
-            x1 = max(0, x - expand)
-            x2 = min(frame.shape[1], x + w + expand)
+            span_left, span_right = _LAST_REGION_SPANS.get(name, (x, x + w))
+            expand_left = min(expand, max(0, x - span_left))
+            expand_right = min(expand, max(0, span_right - (x + w)))
+            x1 = max(0, x - expand_left)
+            x2 = min(frame.shape[1], x + w + expand_right)
             roi_retry = frame[y : y + h, x1:x2]
             gray_retry = preprocess_roi(roi_retry)
             digits_retry, data_retry, mask_retry = execute_ocr(gray_retry)
@@ -917,8 +925,11 @@ def gather_hud_stats(
         digits, data, mask = execute_ocr(gray)
         if not digits:
             expand = 24
-            x1 = max(0, x - expand)
-            x2 = min(frame.shape[1], x + w + expand)
+            span_left, span_right = _LAST_REGION_SPANS.get(name, (x, x + w))
+            expand_left = min(expand, max(0, x - span_left))
+            expand_right = min(expand, max(0, span_right - (x + w)))
+            x1 = max(0, x - expand_left)
+            x2 = min(frame.shape[1], x + w + expand_right)
             roi_retry = frame[y : y + h, x1:x2]
             gray_retry = preprocess_roi(roi_retry)
             digits_retry, data_retry, mask_retry = execute_ocr(gray_retry)
