@@ -21,7 +21,7 @@ def train_villagers(target_pop: int):
 
         res_vals = None
         food = None
-        for attempt in range(1, 4):
+        for attempt in range(1, 2):
             logger.debug(
                 "Attempt %s to read food from HUD while training villagers", attempt
             )
@@ -29,7 +29,7 @@ def train_villagers(target_pop: int):
                 res_vals, _ = resources.read_resources_from_hud(["food_stockpile"])
             except common.ResourceReadError as exc:
                 logger.error(
-                    "Resource read error while training villagers (attempt %s/3): %s",
+                    "Resource read error while training villagers (attempt %s): %s",
                     attempt,
                     exc,
                 )
@@ -38,14 +38,13 @@ def train_villagers(target_pop: int):
                 if isinstance(food, int):
                     break
                 logger.warning(
-                    "food_stockpile not detected (attempt %s/3); HUD may not be updated",
+                    "food_stockpile not detected (attempt %s); HUD may not be updated",
                     attempt,
                 )
-            if attempt < 3:
-                time.sleep(0.2)
+            time.sleep(0.2)
         if not isinstance(food, int):
             logger.error(
-                "Failed to obtain food stockpile after 3 attempts; stopping villager training"
+                "Failed to obtain food stockpile after 1 attempt; stopping villager training"
             )
             break
         if food < 50:
