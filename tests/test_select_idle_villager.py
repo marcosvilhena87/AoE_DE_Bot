@@ -38,8 +38,8 @@ import script.units.villager as villager
 class TestSelectIdleVillager(TestCase):
     def test_returns_true_when_count_decreases(self):
         reads = iter([
-            {"idle_villager": 2},
-            {"idle_villager": 1},
+            ({"idle_villager": 2}, (None, None)),
+            ({"idle_villager": 1}, (None, None)),
         ])
 
         with patch("script.input_utils._press_key_safe"), \
@@ -48,8 +48,8 @@ class TestSelectIdleVillager(TestCase):
 
     def test_returns_false_when_no_idle_villagers(self):
         reads = iter([
-            {"idle_villager": 0},
-            {"idle_villager": 0},
+            ({"idle_villager": 0}, (None, None)),
+            ({"idle_villager": 0}, (None, None)),
         ])
 
         with patch("script.input_utils._press_key_safe"), \

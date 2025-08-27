@@ -135,10 +135,10 @@ class TestIdleVillagerROI(TestCase):
 
     def test_count_idle_villagers_via_hotkey_stops_on_no_decrease(self):
         counts = iter([
-            {"idle_villager": 3},
-            {"idle_villager": 2},
-            {"idle_villager": 1},
-            {"idle_villager": 1},
+            ({"idle_villager": 3}, (None, None)),
+            ({"idle_villager": 2}, (None, None)),
+            ({"idle_villager": 1}, (None, None)),
+            ({"idle_villager": 1}, (None, None)),
         ])
 
         def fake_read(keys, force_delay=None):
@@ -156,9 +156,9 @@ class TestIdleVillagerROI(TestCase):
 
     def test_count_idle_villagers_via_hotkey_uses_force_delay(self):
         counts = iter([
-            {"idle_villager": 2},
-            {"idle_villager": 1},
-            {"idle_villager": 0},
+            ({"idle_villager": 2}, (None, None)),
+            ({"idle_villager": 1}, (None, None)),
+            ({"idle_villager": 0}, (None, None)),
         ])
 
         delays = []
@@ -181,10 +181,10 @@ class TestIdleVillagerROI(TestCase):
 
     def test_count_idle_villagers_via_hotkey_stops_on_threshold(self):
         counts = iter([
-            {"idle_villager": 4},
-            {"idle_villager": 3},
-            {"idle_villager": 2},
-            {"idle_villager": 1},
+            ({"idle_villager": 4}, (None, None)),
+            ({"idle_villager": 3}, (None, None)),
+            ({"idle_villager": 2}, (None, None)),
+            ({"idle_villager": 1}, (None, None)),
         ])
 
         def fake_read(keys, force_delay=None):

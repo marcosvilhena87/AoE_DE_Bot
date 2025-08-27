@@ -69,8 +69,9 @@ class TestResourceOcrFailure(TestCase):
                  },
              ), \
              patch("script.resources._ocr_digits_better", side_effect=fake_ocr), \
-             patch("script.resources.pytesseract.image_to_string", return_value="123"):
-            result = resources.read_resources_from_hud()
+             patch("script.resources.pytesseract.image_to_string", return_value="123"), \
+             patch("script.resources._read_population_from_roi", return_value=(0, 0)):
+            result, _ = resources.read_resources_from_hud()
             self.assertEqual(result["wood_stockpile"], 123)
 
     def test_optional_icon_failure_does_not_raise(self):
@@ -98,7 +99,7 @@ class TestResourceOcrFailure(TestCase):
              patch("script.resources._ocr_digits_better", side_effect=fake_ocr), \
              patch("script.resources.pytesseract.image_to_string", return_value=""), \
              patch("script.resources.cv2.imwrite"):
-            result = resources.read_resources_from_hud(["wood_stockpile"])
+            result, _ = resources.read_resources_from_hud(["wood_stockpile"])
         self.assertEqual(result.get("wood_stockpile"), 123)
         self.assertIsNone(result.get("food_stockpile"))
 
@@ -148,8 +149,8 @@ class TestResourceOcrFailure(TestCase):
              patch("script.resources._ocr_digits_better", side_effect=fake_ocr), \
              patch("script.resources.pytesseract.image_to_string", return_value=""), \
              patch("script.resources.cv2.imwrite"):
-            first = resources.read_resources_from_hud(["wood_stockpile"])
-            second = resources.read_resources_from_hud(["wood_stockpile"])
+            first, _ = resources.read_resources_from_hud(["wood_stockpile"])
+            second, _ = resources.read_resources_from_hud(["wood_stockpile"])
 
         self.assertNotIn("food_stockpile", first)
         self.assertNotIn("food_stockpile", second)

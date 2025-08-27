@@ -50,7 +50,7 @@ class TestIdleVillagerOCR(TestCase):
              patch("script.screen_utils._grab_frame", return_value=frame), \
              patch("script.resources.pytesseract.image_to_string", return_value="12") as img2str, \
              patch("script.resources._ocr_digits_better") as ocr_mock:
-            result = resources.read_resources_from_hud(["idle_villager"])
+            result, _ = resources.read_resources_from_hud(["idle_villager"])
 
         self.assertEqual(result["idle_villager"], 12)
         img2str.assert_called_once_with(ANY, config="--psm 7 -c tessedit_char_whitelist=0123456789")

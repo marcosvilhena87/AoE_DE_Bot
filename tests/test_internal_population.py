@@ -52,7 +52,7 @@ class TestInternalPopulation(TestCase):
 
         with patch(
             "script.resources.read_resources_from_hud",
-            return_value={"food_stockpile": 500},
+            return_value=({"food_stockpile": 500}, (None, None)),
         ), \
              patch("script.buldings.town_center.build_house", side_effect=fake_build_house) as build_house_mock, \
              patch("script.buldings.town_center.select_idle_villager", return_value=True), \

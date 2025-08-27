@@ -20,7 +20,7 @@ def select_idle_villager(delay: float = 0.1) -> bool:
 
     before = None
     try:
-        res_before = resources.read_resources_from_hud(["idle_villager"])
+        res_before, _ = resources.read_resources_from_hud(["idle_villager"])
     except common.ResourceReadError as exc:  # pragma: no cover - falha de OCR
         logger.error("Falha ao ler idle_villager: %s", exc)
     else:
@@ -30,7 +30,7 @@ def select_idle_villager(delay: float = 0.1) -> bool:
 
     after = None
     try:
-        res_after = resources.read_resources_from_hud(
+        res_after, _ = resources.read_resources_from_hud(
             ["idle_villager"], force_delay=delay
         )
     except common.ResourceReadError as exc:  # pragma: no cover - falha de OCR
@@ -74,7 +74,7 @@ def count_idle_villagers_via_hotkey(
     """
 
     try:
-        res = resources.read_resources_from_hud(["idle_villager"])
+        res, _ = resources.read_resources_from_hud(["idle_villager"])
     except common.ResourceReadError as exc:  # pragma: no cover - falha de OCR
         logger.error("Falha ao ler idle_villager: %s", exc)
         initial = 0
@@ -90,7 +90,7 @@ def count_idle_villagers_via_hotkey(
         select_idle_villager()
         selections += 1
         try:
-            res = resources.read_resources_from_hud(
+            res, _ = resources.read_resources_from_hud(
                 ["idle_villager"], force_delay=delay
             )
         except common.ResourceReadError as exc:  # pragma: no cover - falha de OCR
@@ -132,7 +132,7 @@ def build_house():
             "Attempt %s to read wood from HUD while building house", attempt
         )
         try:
-            res_vals = resources.read_resources_from_hud(["wood_stockpile"])
+            res_vals, _ = resources.read_resources_from_hud(["wood_stockpile"])
         except common.ResourceReadError as exc:
             logger.error(
                 "Resource read error while building house (attempt %s/3): %s",
@@ -153,7 +153,7 @@ def build_house():
         logger.debug("Refreshing HUD anchor before final resource read")
         try:
             hud.wait_hud()
-            res_vals = resources.read_resources_from_hud(["wood_stockpile"])
+            res_vals, _ = resources.read_resources_from_hud(["wood_stockpile"])
         except Exception as exc:
             logger.error(
                 "Failed to refresh HUD or read resources while building house: %s",
@@ -207,7 +207,7 @@ def build_house():
 
         logger.warning("Tentativa %s de construir casa falhou.", idx)
         try:
-            res_vals = resources.read_resources_from_hud(["wood_stockpile"])
+            res_vals, _ = resources.read_resources_from_hud(["wood_stockpile"])
         except common.ResourceReadError as exc:
             logger.error(
                 "Resource read error while retrying house construction: %s", exc
