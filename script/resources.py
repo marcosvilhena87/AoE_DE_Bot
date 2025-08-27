@@ -358,8 +358,9 @@ def _ocr_digits_better(gray):
         results.sort(key=lambda r: len(r[0]), reverse=True)
         return results[0]
 
-    _, thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-    thresh = cv2.dilate(thresh, kernel, iterations=1)
+    thresh = cv2.adaptiveThreshold(
+        gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2
+    )
     primary = _run_masks([thresh, cv2.bitwise_not(thresh)], 0)
     if primary[0]:
         return primary
