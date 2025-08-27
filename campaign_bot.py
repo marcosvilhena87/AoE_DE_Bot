@@ -55,40 +55,27 @@ def main():
         common.CURRENT_POP = info.starting_villagers
         common.POP_CAP = 4  # 1 Town Center
         common.TARGET_POP = info.objective_villagers
-        for attempt in range(3):
-            try:
-                icon_cfg = common.CFG.get("hud_icons", {})
-                res, (cur_pop, pop_cap) = resources.gather_hud_stats(
-                    force_delay=0.1,
-                    required_icons=icon_cfg.get("required"),
-                    optional_icons=icon_cfg.get("optional"),
-                )
-                logger.info(
-                    "Recursos detectados: madeira=%s, comida=%s, ouro=%s, pedra=%s",
-                    res.get("wood_stockpile"),
-                    res.get("food_stockpile"),
-                    res.get("gold_stockpile"),
-                    res.get("stone_stockpile"),
-                )
-                logger.info("População detectada: %s/%s", cur_pop, pop_cap)
-                logger.info(
-                    "Aldeões ociosos detectados: %s", res.get("idle_villager")
-                )
-                break
-            except Exception as e:
-                logger.warning(
-                    "Falha ao detectar recursos ou população (tentativa %s/3): %s",
-                    attempt + 1,
-                    e,
-                )
-                time.sleep(1)
-        else:
-            logger.error(
-                "Falha ao detectar recursos ou população após 3 tentativas; encerrando."
+        try:
+            icon_cfg = common.CFG.get("hud_icons", {})
+            res, (cur_pop, pop_cap) = resources.gather_hud_stats(
+                force_delay=0.1,
+                required_icons=icon_cfg.get("required"),
+                optional_icons=icon_cfg.get("optional"),
             )
-            raise SystemExit(
-                "Falha ao detectar recursos ou população após 3 tentativas"
+            logger.info(
+                "Recursos detectados: madeira=%s, comida=%s, ouro=%s, pedra=%s",
+                res.get("wood_stockpile"),
+                res.get("food_stockpile"),
+                res.get("gold_stockpile"),
+                res.get("stone_stockpile"),
             )
+            logger.info("População detectada: %s/%s", cur_pop, pop_cap)
+            logger.info(
+                "Aldeões ociosos detectados: %s", res.get("idle_villager")
+            )
+        except Exception as e:
+            logger.error("Falha ao detectar recursos ou população: %s", e)
+            raise SystemExit("Falha ao detectar recursos ou população")
 
         logger.info("Setup concluído.")
     finally:
