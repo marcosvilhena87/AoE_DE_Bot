@@ -54,12 +54,17 @@ class TestResourceReadRetry(TestCase):
 
         ocr_seq = [
             ("123", {"text": ["123"]}, np.zeros((1, 1), dtype=np.uint8)),
-            ("", {"text": [""]}, np.zeros((1, 1), dtype=np.uint8)),
-            ("", {"text": [""]}, np.zeros((1, 1), dtype=np.uint8)),
+        ] + [
+            ("", {"text": [""]}, np.zeros((1, 1), dtype=np.uint8))
+            for _ in range(20)
         ]
 
         def fake_ocr(gray):
-            return ocr_seq.pop(0)
+            return ocr_seq.pop(0) if ocr_seq else (
+                "",
+                {"text": [""]},
+                np.zeros((1, 1), dtype=np.uint8),
+            )
 
         frame = np.zeros((600, 600, 3), dtype=np.uint8)
 

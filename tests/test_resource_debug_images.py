@@ -90,14 +90,17 @@ class TestResourceDebugImages(TestCase):
 
         ocr_sequence = [
             ("123", {"text": ["123"]}, np.zeros((1, 1), dtype=np.uint8)),
-            ("", {"text": [""]}, np.zeros((1, 1), dtype=np.uint8)),
-            ("", {"text": [""]}, np.zeros((1, 1), dtype=np.uint8)),
+        ] + [
+            ("", {"text": [""]}, np.zeros((1, 1), dtype=np.uint8))
+            for _ in range(20)
         ]
 
         def fake_ocr(gray):
-            if ocr_sequence:
-                return ocr_sequence.pop(0)
-            return ("0", {"text": ["0"]}, np.zeros((1, 1), dtype=np.uint8))
+            return ocr_sequence.pop(0) if ocr_sequence else (
+                "",
+                {"text": [""]},
+                np.zeros((1, 1), dtype=np.uint8),
+            )
 
         resources._LAST_RESOURCE_VALUES.clear()
         resources._LAST_RESOURCE_TS.clear()
@@ -117,7 +120,7 @@ class TestResourceDebugImages(TestCase):
              patch("script.resources._ocr_digits_better", side_effect=fake_ocr), \
             patch(
                 "script.resources.pytesseract.image_to_string",
-                side_effect=["", "", "0"],
+                side_effect=[""] * 20 + ["0"],
             ), \
             patch("script.resources._read_population_from_roi", return_value=(0, 0)), \
             patch("script.resources.cv2.imwrite") as imwrite_mock:
