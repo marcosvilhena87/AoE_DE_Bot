@@ -121,7 +121,7 @@ def _roi_between_icons(ctx, name, cur_bounds, next_bounds, idx):
     -------
     tuple | None, bool
         ROI tuple ``(left, top, width, height)`` and a flag indicating if the
-        available span was narrower than ``ctx.min_width``.
+        available span was narrower than ``ctx.min_widths[idx]``.
     """
 
     pad_l = ctx.pad_left[idx] if idx < len(ctx.pad_left) else ctx.pad_left[-1]
@@ -168,15 +168,16 @@ def _roi_between_icons(ctx, name, cur_bounds, next_bounds, idx):
     available_width = available_right - available_left
     width = min(ctx.max_width, available_width)
 
+    min_w = ctx.min_widths[idx] if idx < len(ctx.min_widths) else ctx.min_widths[-1]
     narrow = False
-    if available_width < ctx.min_width:
+    if available_width < min_w:
         width = available_width
         narrow = True
         logger.warning(
             "ROI estreita para '%s': disp=%d min=%d",
             name,
             available_width,
-            ctx.min_width,
+            min_w,
         )
 
     left = available_left
@@ -248,7 +249,12 @@ def locate_resource_panel(frame):
         icon_trims if isinstance(icon_trims, (list, tuple)) else [icon_trims] * 6
     )
     max_width = res_cfg.get("max_width", 160)
-    min_width = res_cfg.get("min_width", 90)
+    min_width_cfg = res_cfg.get("min_width", 90)
+    min_widths = (
+        min_width_cfg
+        if isinstance(min_width_cfg, (list, tuple))
+        else [min_width_cfg] * 6
+    )
     top_pct = profile_res.get("top_pct", res_cfg.get("top_pct", 0.08))
     height_pct = profile_res.get("height_pct", res_cfg.get("height_pct", 0.84))
     screen_utils._load_icon_templates()
@@ -289,7 +295,7 @@ def locate_resource_panel(frame):
         pad_right=pad_right,
         icon_trims=icon_trims,
         max_width=max_width,
-        min_width=min_width,
+        min_widths=min_widths,
         detected=detected,
     )
 
