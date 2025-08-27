@@ -63,11 +63,13 @@ class TestResourceOcrFailure(TestCase):
         resources._LAST_RESOURCE_VALUES.clear()
         resources._LAST_RESOURCE_TS.clear()
         resources._RESOURCE_FAILURE_COUNTS.clear()
+        resources._LAST_REGION_SPANS.clear()
 
     def tearDown(self):
         resources._LAST_RESOURCE_VALUES.clear()
         resources._LAST_RESOURCE_TS.clear()
         resources._RESOURCE_FAILURE_COUNTS.clear()
+        resources._LAST_REGION_SPANS.clear()
     def test_read_resources_fallback(self):
         def fake_grab_frame(bbox=None):
             if bbox:
@@ -175,6 +177,51 @@ class TestResourceOcrFailure(TestCase):
 
         self.assertNotIn("food_stockpile", first)
         self.assertNotIn("food_stockpile", second)
+
+
+class TestGatherHudStatsSliding(TestCase):
+    def setUp(self):
+        resources._LAST_RESOURCE_VALUES.clear()
+        resources._LAST_RESOURCE_TS.clear()
+        resources._RESOURCE_FAILURE_COUNTS.clear()
+        resources._LAST_REGION_SPANS.clear()
+
+    def tearDown(self):
+        resources._LAST_RESOURCE_VALUES.clear()
+        resources._LAST_RESOURCE_TS.clear()
+        resources._RESOURCE_FAILURE_COUNTS.clear()
+        resources._LAST_REGION_SPANS.clear()
+
+    def test_gather_hud_stats_succeeds_after_sliding(self):
+        frame = np.tile(np.arange(120, dtype=np.uint8), (20, 1))
+        frame = np.stack([frame] * 3, axis=-1)
+
+        def fake_detect(frame_in, required_icons):
+            return {"wood_stockpile": (10, 0, 50, 20)}
+
+        calls = []
+
+        def fake_execute(gray, conf_threshold=None, allow_fallback=True):
+            h, w = gray.shape
+            mean = gray.mean()
+            x = int(round(mean - (w - 1) / 2))
+            calls.append((x, w, allow_fallback))
+            if mean > 80:
+                return "789", {"text": ["789"]}, None
+            return "", {"text": [""]}, None
+
+        with patch("script.screen_utils._grab_frame", return_value=frame), \
+             patch("script.resources.detect_resource_regions", side_effect=fake_detect), \
+             patch("script.resources.preprocess_roi", side_effect=lambda roi: roi[..., 0]), \
+             patch.dict("script.resources._LAST_REGION_SPANS", {"wood_stockpile": (0, 120)}, clear=True), \
+             patch("script.resources.execute_ocr", side_effect=fake_execute), \
+             patch("script.resources.pytesseract.image_to_string", return_value=""):
+            res, _ = resources.gather_hud_stats(required_icons=["wood_stockpile"], optional_icons=[])
+
+        self.assertEqual(res["wood_stockpile"], 789)
+        self.assertEqual(len(calls), 4)
+        self.assertEqual(len({(x, w) for x, w, _ in calls}), len(calls))
+        self.assertEqual([a for _, _, a in calls], [True, False, False, False])
 
 
 class TestResourceOcrRois(TestCase):
