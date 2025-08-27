@@ -68,8 +68,8 @@ class TestResourceReadRetry(TestCase):
              patch("script.resources._ocr_digits_better", side_effect=fake_ocr), \
              patch("script.resources.pytesseract.image_to_string", return_value=""), \
              patch("script.resources.cv2.imwrite"):
-            first = resources.read_resources_from_hud(["wood_stockpile"])
-            second = resources.read_resources_from_hud(["wood_stockpile"])
+            first, _ = resources.read_resources_from_hud(["wood_stockpile"])
+            second, _ = resources.read_resources_from_hud(["wood_stockpile"])
 
         self.assertEqual(first["wood_stockpile"], 123)
         self.assertEqual(second["wood_stockpile"], 123)
@@ -94,7 +94,7 @@ class TestResourceReadRetry(TestCase):
              patch("script.resources._ocr_digits_better", side_effect=fake_ocr) as ocr_mock, \
              patch("script.resources.pytesseract.image_to_string", return_value=""), \
              patch("script.resources.cv2.imwrite"):
-            result = resources.read_resources_from_hud(["wood_stockpile"])
+            result, _ = resources.read_resources_from_hud(["wood_stockpile"])
 
         self.assertEqual(result["wood_stockpile"], 456)
         self.assertEqual(ocr_mock.call_count, 2)
@@ -120,7 +120,7 @@ class TestResourceReadRetry(TestCase):
              patch("script.resources.cv2.imwrite"):
             with self.assertRaises(common.ResourceReadError):
                 resources.read_resources_from_hud(["wood_stockpile"])
-            result = resources.read_resources_from_hud(["wood_stockpile"])
+            result, _ = resources.read_resources_from_hud(["wood_stockpile"])
 
         self.assertEqual(result["wood_stockpile"], 999)
         self.assertIn("wood_stockpile", resources._LAST_READ_FROM_CACHE)

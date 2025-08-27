@@ -66,9 +66,10 @@ class TestResourceDebugImages(TestCase):
                      "idle_villager": (250, 0, 50, 50),
                  },
              ), \
-             patch("script.resources._ocr_digits_better", side_effect=fake_ocr), \
-             patch("script.resources.pytesseract.image_to_string", return_value=""), \
-             patch("script.resources.cv2.imwrite") as imwrite_mock:
+            patch("script.resources._ocr_digits_better", side_effect=fake_ocr), \
+            patch("script.resources.pytesseract.image_to_string", return_value=""), \
+            patch("script.resources._read_population_from_roi", return_value=(0, 0)), \
+            patch("script.resources.cv2.imwrite") as imwrite_mock:
             with self.assertRaises(common.ResourceReadError):
                 resources.read_resources_from_hud()
         paths = [call.args[0] for call in imwrite_mock.call_args_list]
@@ -114,11 +115,12 @@ class TestResourceDebugImages(TestCase):
                  },
              ), \
              patch("script.resources._ocr_digits_better", side_effect=fake_ocr), \
-             patch(
-                 "script.resources.pytesseract.image_to_string",
-                 side_effect=["", "", "0"],
-             ), \
-             patch("script.resources.cv2.imwrite") as imwrite_mock:
+            patch(
+                "script.resources.pytesseract.image_to_string",
+                side_effect=["", "", "0"],
+            ), \
+            patch("script.resources._read_population_from_roi", return_value=(0, 0)), \
+            patch("script.resources.cv2.imwrite") as imwrite_mock:
             with self.assertRaises(common.ResourceReadError) as ctx:
                 resources.read_resources_from_hud()
 

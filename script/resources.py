@@ -275,6 +275,17 @@ def locate_resource_panel(frame):
         else:
             logger.warning("Icon '%s' not matched; score=%.3f", name, best[0])
 
+    if "population_limit" not in detected and "idle_villager" in detected:
+        xi, yi, wi, hi = detected["idle_villager"]
+        prev = _LAST_ICON_BOUNDS.get("population_limit")
+        if prev:
+            pw, ph = prev[2], prev[3]
+        else:
+            pw, ph = wi, hi
+        px = max(0, xi - pw)
+        detected["population_limit"] = (px, yi, pw, ph)
+        _LAST_ICON_BOUNDS["population_limit"] = (px, yi, pw, ph)
+
     top = y + int(top_pct * h)
     height = int(height_pct * h)
 
@@ -718,6 +729,28 @@ def handle_ocr_failure(frame, regions, results, required_icons):
             ", ".join(roi_logs),
         )
 
+
+def _extract_population(frame, regions, results, pop_required):
+    cur_pop = pop_cap = None
+    if "population_limit" in regions:
+        x, y, w, h = regions["population_limit"]
+        roi = frame[y : y + h, x : x + w]
+        try:
+            cur_pop, pop_cap = _read_population_from_roi(roi)
+            if results is not None:
+                results["population_limit"] = cur_pop
+        except common.PopulationReadError:
+            if results is not None:
+                results["population_limit"] = None
+            if pop_required:
+                raise
+    else:
+        if results is not None:
+            results["population_limit"] = None
+        if pop_required:
+            raise common.ResourceReadError("population_limit region not detected")
+    return cur_pop, pop_cap
+
 def read_resources_from_hud(
     required_icons: Iterable[str] | None = None,
     icons_to_read: Iterable[str] | None = None,
@@ -772,9 +805,10 @@ def read_resources_from_hud(
     if max_cache_age is None:
         max_cache_age = _RESOURCE_CACHE_MAX_AGE
 
+    resource_icons = [n for n in icons_to_read if n != "population_limit"]
     results = {}
     cache_hits = set()
-    for name in icons_to_read:
+    for name in resource_icons:
         if name not in regions:
             continue
         x, y, w, h = regions[name]
@@ -857,11 +891,16 @@ def read_resources_from_hud(
             _RESOURCE_FAILURE_COUNTS[name] = 0
             logger.info("Detected %s=%d", name, value)
 
-    filtered_regions = {n: regions[n] for n in icons_to_read if n in regions}
-    handle_ocr_failure(frame, filtered_regions, results, required_icons)
+    filtered_regions = {n: regions[n] for n in resource_icons if n in regions}
+    required_for_ocr = [n for n in required_icons if n != "population_limit"]
+    handle_ocr_failure(frame, filtered_regions, results, required_for_ocr)
+    cur_pop = pop_cap = None
+    if "population_limit" in icons_to_read:
+        pop_required = "population_limit" in required_set
+        cur_pop, pop_cap = _extract_population(frame, regions, results, pop_required)
     global _LAST_READ_FROM_CACHE
     _LAST_READ_FROM_CACHE = cache_hits
-    return results
+    return results, (cur_pop, pop_cap)
 
 
 def _read_population_from_roi(roi, conf_threshold=None):
@@ -1050,21 +1089,9 @@ def gather_hud_stats(
     handle_ocr_failure(frame, filtered_regions, results, required_for_ocr)
 
     cur_pop = pop_cap = None
-    pop_required = "population_limit" in required_icons
-    if "population_limit" in regions:
-        pop_x, pop_y, pop_w, pop_h = regions["population_limit"]
-        pop_roi = frame[pop_y : pop_y + pop_h, pop_x : pop_x + pop_w]
-        try:
-            cur_pop, pop_cap = _read_population_from_roi(pop_roi)
-            results["population_limit"] = cur_pop
-        except common.PopulationReadError:
-            results["population_limit"] = None
-            if pop_required:
-                raise
-    else:
-        results["population_limit"] = None
-        if pop_required:
-            raise common.ResourceReadError("population_limit region not detected")
+    if "population_limit" in all_icons:
+        pop_required = "population_limit" in required_icons
+        cur_pop, pop_cap = _extract_population(frame, regions, results, pop_required)
 
     global _LAST_READ_FROM_CACHE
     _LAST_READ_FROM_CACHE = cache_hits
