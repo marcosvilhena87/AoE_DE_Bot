@@ -82,6 +82,17 @@ class TestExecuteOcr(TestCase):
         self.assertEqual(digits, "")
         img2str_mock.assert_called_once()
 
+    def test_execute_ocr_accepts_low_conf_single_digit(self):
+        gray = np.zeros((5, 5), dtype=np.uint8)
+        data = {"text": ["0"], "conf": ["10"]}
+        with patch("script.resources._ocr_digits_better", return_value=("0", data, None)), \
+             patch("script.resources.pytesseract.image_to_string", return_value="") as img2str_mock, \
+             patch("script.resources.logger.warning") as warn_mock:
+            digits, _, _ = resources.execute_ocr(gray, conf_threshold=60)
+        self.assertEqual(digits, "0")
+        img2str_mock.assert_not_called()
+        warn_mock.assert_called_once()
+
     def test_execute_ocr_second_attempt_success(self):
         gray = np.zeros((5, 5), dtype=np.uint8)
         data1 = {"text": ["123"], "conf": ["10", "20", "30"]}
