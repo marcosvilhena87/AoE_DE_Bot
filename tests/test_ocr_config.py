@@ -46,7 +46,12 @@ class TestOcrConfig(TestCase):
             kernels.append(kernel.shape)
             return src
 
+        call_count = [0]
+
         def fake_image_to_data(image, config="", output_type=None):
+            call_count[0] += 1
+            if call_count[0] <= 4:
+                return {"text": [""]}
             m = re.search(r"--psm (\d+)", config)
             if m:
                 psms.append(int(m.group(1)))
