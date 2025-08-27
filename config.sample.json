@@ -31,7 +31,7 @@
     "pop_box": [0.0, 0.0, 0.1, 0.1],
     "//pop_box": "[x, y, w, h] como frações da tela; calibrar depois."
   },
-  "//resource_panel": "ROIs built from spans between icons via _build_resource_rois_between_icons",
+  "//resource_panel": "ROIs built from spans between icons via compute_resource_rois",
   "resource_panel": {
     "match_threshold": 0.8,
     "top_pct": 0.08,
