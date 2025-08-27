@@ -395,6 +395,24 @@ def detect_resource_regions(frame, required_icons):
             logger.debug(
                 "Custom ROI aplicada para idle_villager: %s", regions["idle_villager"]
             )
+    custom_names = [
+        "wood_stockpile",
+        "food_stockpile",
+        "gold_stockpile",
+        "stone_stockpile",
+        "population_limit",
+    ]
+    W, H = input_utils._screen_size()
+    for name in custom_names:
+        cfg = CFG.get(f"{name}_roi")
+        if not cfg:
+            continue
+        left = int(cfg.get("left_pct", 0) * W)
+        top = int(cfg.get("top_pct", 0) * H)
+        width = int(cfg.get("width_pct", 0) * W)
+        height = int(cfg.get("height_pct", 0) * H)
+        regions[name] = (left, top, width, height)
+        logger.debug("Custom ROI aplicada para %s: %s", name, regions[name])
     missing = [name for name in required_icons if name not in regions]
 
     if missing and common.HUD_ANCHOR:

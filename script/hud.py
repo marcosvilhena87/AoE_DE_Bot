@@ -77,6 +77,14 @@ def read_population_from_hud(retries=1, conf_threshold=None, save_failed_roi=Fal
 
     frame_full = screen_utils._grab_frame()
     regions = resources.locate_resource_panel(frame_full)
+    pop_cfg = CFG.get("population_limit_roi")
+    if pop_cfg:
+        W, H = input_utils._screen_size()
+        left = int(pop_cfg.get("left_pct", 0) * W)
+        top = int(pop_cfg.get("top_pct", 0) * H)
+        width = int(pop_cfg.get("width_pct", 0) * W)
+        height = int(pop_cfg.get("height_pct", 0) * H)
+        regions["population_limit"] = (left, top, width, height)
     roi_bbox = None
     if "population_limit" in regions:
         x, y, w, h = regions["population_limit"]

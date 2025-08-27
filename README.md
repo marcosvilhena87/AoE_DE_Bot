@@ -135,6 +135,25 @@ cannot be detected or read. Icons listed under `optional` are attempted but do
 not stop execution if they are missing. Adjust these lists to match the
 resources shown in your game profile.
 
+### Manual ROI overrides
+
+Automatic ROI detection may fail on unusual HUD layouts. Optional sections in
+`config.json` let you override the detected rectangles with percentages of the
+screen size. Each entry supplies at least `left_pct` and `width_pct` and may
+also include `top_pct` and `height_pct`:
+
+```json
+"wood_stockpile_roi": {"left_pct": 0.05, "width_pct": 0.05},
+"food_stockpile_roi": {"left_pct": 0.15, "width_pct": 0.05},
+"gold_stockpile_roi": {"left_pct": 0.25, "width_pct": 0.05},
+"stone_stockpile_roi": {"left_pct": 0.35, "width_pct": 0.05},
+"population_limit_roi": {"left_pct": 0.45, "width_pct": 0.05},
+"idle_villager_roi": {"left_pct": 0.84, "width_pct": 0.05}
+```
+
+When present, these overrides take precedence and allow OCR to proceed even
+when the resource bar cannot be located automatically.
+
 ## Calibration helper
 
 To calibrate the `areas.pop_box` fractions interactively, run:
