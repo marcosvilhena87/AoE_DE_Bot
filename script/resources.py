@@ -639,14 +639,22 @@ def execute_ocr(gray, conf_threshold=None, allow_fallback=True):
         mean_conf = sum(confidences) / len(confidences)
         max_conf = max(confidences)
         if mean_conf < conf_threshold or max_conf < conf_threshold:
-            logger.debug(
-                "Clearing low-confidence OCR result: mean=%.1f max=%.1f digits=%s",
-                mean_conf,
-                max_conf,
-                digits,
-            )
-            digits = ""
-            low_conf = True
+            if len(digits) == 1:
+                logger.warning(
+                    "Accepting low-confidence OCR result: mean=%.1f max=%.1f digits=%s",
+                    mean_conf,
+                    max_conf,
+                    digits,
+                )
+            else:
+                logger.debug(
+                    "Clearing low-confidence OCR result: mean=%.1f max=%.1f digits=%s",
+                    mean_conf,
+                    max_conf,
+                    digits,
+                )
+                digits = ""
+                low_conf = True
     if low_conf:
         alt_gray = cv2.bitwise_not(gray)
         digits2, data2, mask2 = _ocr_digits_better(alt_gray)
