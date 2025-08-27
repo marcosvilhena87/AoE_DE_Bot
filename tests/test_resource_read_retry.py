@@ -27,6 +27,27 @@ class DummyMSS:
 
 sys.modules.setdefault("pyautogui", dummy_pg)
 sys.modules.setdefault("mss", types.SimpleNamespace(mss=lambda: DummyMSS()))
+sys.modules.setdefault(
+    "cv2",
+    types.SimpleNamespace(
+        cvtColor=lambda src, code: src,
+        resize=lambda img, *a, **k: img,
+        matchTemplate=lambda *a, **k: np.zeros((1, 1), dtype=np.float32),
+        minMaxLoc=lambda *a, **k: (0, 0, (0, 0), (0, 0)),
+        imread=lambda *a, **k: np.zeros((1, 1), dtype=np.uint8),
+        imwrite=lambda *a, **k: True,
+        medianBlur=lambda src, k: src,
+        bitwise_not=lambda src: src,
+        threshold=lambda src, *a, **k: (None, src),
+        rectangle=lambda img, pt1, pt2, color, thickness: img,
+        IMREAD_GRAYSCALE=0,
+        COLOR_BGR2GRAY=0,
+        INTER_LINEAR=0,
+        THRESH_BINARY=0,
+        THRESH_OTSU=0,
+        TM_CCOEFF_NORMED=0,
+    ),
+)
 
 os.environ.setdefault("TESSERACT_CMD", "/usr/bin/true")
 
@@ -41,12 +62,14 @@ class TestResourceReadRetry(TestCase):
         resources._LAST_RESOURCE_TS.clear()
         resources._LAST_READ_FROM_CACHE.clear()
         resources._RESOURCE_FAILURE_COUNTS.clear()
+        resources._LAST_REGION_SPANS.clear()
 
     def tearDown(self):
         resources._LAST_RESOURCE_VALUES.clear()
         resources._LAST_RESOURCE_TS.clear()
         resources._LAST_READ_FROM_CACHE.clear()
         resources._RESOURCE_FAILURE_COUNTS.clear()
+        resources._LAST_REGION_SPANS.clear()
 
     def test_required_icon_fallback(self):
         def fake_detect(frame, required_icons):
@@ -103,6 +126,37 @@ class TestResourceReadRetry(TestCase):
 
         self.assertEqual(result["wood_stockpile"], 456)
         self.assertEqual(ocr_mock.call_count, 2)
+
+    def test_sliding_window_succeeds_when_anchor_right(self):
+        def fake_detect(frame, required_icons):
+            return {"wood_stockpile": (10, 0, 50, 20)}
+
+        frame = np.tile(np.arange(120, dtype=np.uint8), (20, 1))
+        frame = np.stack([frame] * 3, axis=-1)
+
+        calls = []
+
+        def fake_execute(gray, conf_threshold=None, allow_fallback=True):
+            h, w = gray.shape
+            mean = gray.mean()
+            x = int(round(mean - (w - 1) / 2))
+            calls.append((x, w, allow_fallback))
+            if mean > 80:
+                return "789", {"text": ["789"]}, None
+            return "", {"text": [""]}, None
+
+        with patch("script.resources.detect_resource_regions", side_effect=fake_detect), \
+             patch("script.screen_utils._grab_frame", return_value=frame), \
+             patch("script.resources.preprocess_roi", side_effect=lambda roi: roi[..., 0]), \
+             patch("script.resources.execute_ocr", side_effect=fake_execute), \
+             patch.dict("script.resources._LAST_REGION_SPANS", {"wood_stockpile": (0, 120)}, clear=True), \
+             patch("script.resources.pytesseract.image_to_string", return_value=""):
+            result, _ = resources.read_resources_from_hud(["wood_stockpile"])
+
+        self.assertEqual(result["wood_stockpile"], 789)
+        self.assertEqual(len(calls), 4)
+        self.assertEqual(len({(x, w) for x, w, _ in calls}), len(calls))
+        self.assertEqual([a for _, _, a in calls], [True, False, False, False])
 
     def test_expired_cache_used_after_consecutive_failures(self):
         def fake_detect(frame, required_icons):
