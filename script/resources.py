@@ -573,8 +573,20 @@ def preprocess_roi(roi):
     return cv2.medianBlur(gray, 3)
 
 
-def execute_ocr(gray, conf_threshold=None):
-    """Run OCR on a preprocessed grayscale image."""
+def execute_ocr(gray, conf_threshold=None, allow_fallback=True):
+    """Run OCR on a preprocessed grayscale image.
+
+    Parameters
+    ----------
+    gray : np.ndarray
+        Grayscale ROI image.
+    conf_threshold : int | None, optional
+        Confidence threshold for accepting digits.
+    allow_fallback : bool, optional
+        When ``True`` (default) an additional Tesseract ``image_to_string``
+        pass is attempted if no digits are detected. Sliding-window retries
+        disable this to avoid excessive fallback calls.
+    """
 
     if conf_threshold is None:
         conf_threshold = CFG.get("ocr_conf_threshold", 60)
@@ -618,7 +630,7 @@ def execute_ocr(gray, conf_threshold=None):
         digits, data, mask = digits2, data2, mask2
         low_conf = low_conf2
 
-    if not digits:
+    if not digits and allow_fallback:
         text = pytesseract.image_to_string(
             gray,
             config="--psm 6 --oem 3 -c tessedit_char_whitelist=0123456789",
@@ -825,18 +837,32 @@ def read_resources_from_hud(
         else:
             digits, data, mask = execute_ocr(gray)
         if not digits:
-            expand = 24
             span_left, span_right = _LAST_REGION_SPANS.get(name, (x, x + w))
-            expand_left = min(expand, max(0, x - span_left))
-            expand_right = min(expand, max(0, span_right - (x + w)))
-            x1 = max(0, x - expand_left)
-            x2 = min(frame.shape[1], x + w + expand_right)
-            roi_retry = frame[y : y + h, x1:x2]
-            gray_retry = preprocess_roi(roi_retry)
-            digits_retry, data_retry, mask_retry = execute_ocr(gray_retry)
-            if digits_retry:
-                digits, data, mask = digits_retry, data_retry, mask_retry
-                roi, gray = roi_retry, gray_retry
+            span_width = span_right - span_left
+            cand_widths = [min(w, span_width)]
+            cand_widths += [min(span_width, cw) for cw in (64, 56, 48)]
+            cand_widths = list(dict.fromkeys(cand_widths))
+            for cand_w in cand_widths:
+                for anchor in ("left", "center", "right"):
+                    if anchor == "left":
+                        cand_x = span_left
+                    elif anchor == "center":
+                        cand_x = span_left + (span_width - cand_w) // 2
+                    else:
+                        cand_x = span_right - cand_w
+                    cand_x = max(span_left, min(cand_x, span_right - cand_w))
+                    roi_retry = frame[y : y + h, cand_x : cand_x + cand_w]
+                    gray_retry = preprocess_roi(roi_retry)
+                    digits_retry, data_retry, mask_retry = execute_ocr(
+                        gray_retry, allow_fallback=False
+                    )
+                    if digits_retry:
+                        digits, data, mask = digits_retry, data_retry, mask_retry
+                        roi, gray = roi_retry, gray_retry
+                        x, w = cand_x, cand_w
+                        break
+                if digits:
+                    break
         if CFG.get("ocr_debug"):
             debug_dir = ROOT / "debug"
             debug_dir.mkdir(exist_ok=True)
@@ -1022,18 +1048,32 @@ def gather_hud_stats(
         gray = preprocess_roi(roi)
         digits, data, mask = execute_ocr(gray)
         if not digits:
-            expand = 24
             span_left, span_right = _LAST_REGION_SPANS.get(name, (x, x + w))
-            expand_left = min(expand, max(0, x - span_left))
-            expand_right = min(expand, max(0, span_right - (x + w)))
-            x1 = max(0, x - expand_left)
-            x2 = min(frame.shape[1], x + w + expand_right)
-            roi_retry = frame[y : y + h, x1:x2]
-            gray_retry = preprocess_roi(roi_retry)
-            digits_retry, data_retry, mask_retry = execute_ocr(gray_retry)
-            if digits_retry:
-                digits, data, mask = digits_retry, data_retry, mask_retry
-                roi, gray = roi_retry, gray_retry
+            span_width = span_right - span_left
+            cand_widths = [min(w, span_width)]
+            cand_widths += [min(span_width, cw) for cw in (64, 56, 48)]
+            cand_widths = list(dict.fromkeys(cand_widths))
+            for cand_w in cand_widths:
+                for anchor in ("left", "center", "right"):
+                    if anchor == "left":
+                        cand_x = span_left
+                    elif anchor == "center":
+                        cand_x = span_left + (span_width - cand_w) // 2
+                    else:
+                        cand_x = span_right - cand_w
+                    cand_x = max(span_left, min(cand_x, span_right - cand_w))
+                    roi_retry = frame[y : y + h, cand_x : cand_x + cand_w]
+                    gray_retry = preprocess_roi(roi_retry)
+                    digits_retry, data_retry, mask_retry = execute_ocr(
+                        gray_retry, allow_fallback=False
+                    )
+                    if digits_retry:
+                        digits, data, mask = digits_retry, data_retry, mask_retry
+                        roi, gray = roi_retry, gray_retry
+                        x, w = cand_x, cand_w
+                        break
+                if digits:
+                    break
         if CFG.get("ocr_debug"):
             debug_dir = ROOT / "debug"
             debug_dir.mkdir(exist_ok=True)
