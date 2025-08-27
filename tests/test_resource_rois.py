@@ -39,8 +39,12 @@ sys.modules.setdefault(
         imwrite=lambda *a, **k: True,
         medianBlur=lambda src, k: src,
         rectangle=lambda img, pt1, pt2, color, thickness: img,
+        threshold=lambda src, *a, **k: (None, src),
         IMREAD_GRAYSCALE=0,
         COLOR_BGR2GRAY=0,
+        INTER_LINEAR=0,
+        THRESH_BINARY=0,
+        THRESH_OTSU=0,
         TM_CCOEFF_NORMED=0,
     ),
 )
@@ -369,7 +373,7 @@ class TestResourceROIs(TestCase):
             pad_right=[2] * 6,
             icon_trims=[0] * 6,
             max_width=999,
-            min_width=20,
+            min_widths=[20] * 6,
             detected={
                 "wood_stockpile": (0, 0, 5, 5),
                 "food_stockpile": (15, 0, 5, 5),
@@ -384,6 +388,49 @@ class TestResourceROIs(TestCase):
         self.assertEqual(roi[0] + roi[2], span_right)
         self.assertEqual(roi[2], span_right - span_left)
         self.assertIn("wood_stockpile", ctx.narrow)
+
+    def test_per_icon_min_width(self):
+        frame = np.zeros((50, 100, 3), dtype=np.uint8)
+        panel_box = (0, 0, 100, 20)
+
+        icons = ["wood_stockpile", "food_stockpile", "gold_stockpile"]
+        positions = [0, 39, 78]
+        pad_left = 2
+        pad_right = 2
+        min_widths = [40, 10, 0, 0, 0, 0]
+        loc_iter = iter([(x, 0) for x in positions])
+
+        def fake_minmax(res):
+            xi, yi = next(loc_iter)
+            return 0.0, 0.95, (0, 0), (xi, yi)
+
+        with patch("script.resources.find_template", return_value=(panel_box, 0.9, None)), \
+            patch("script.resources.cv2.cvtColor", lambda src, code: np.zeros(src.shape[:2], dtype=np.uint8)), \
+            patch("script.resources.cv2.resize", lambda img, *a, **k: img), \
+            patch("script.resources.cv2.matchTemplate", lambda *a, **k: np.zeros((100, 200), dtype=np.float32)), \
+            patch("script.resources.cv2.minMaxLoc", side_effect=fake_minmax), \
+            patch.object(screen_utils, "_load_icon_templates", lambda: None), \
+            patch.object(screen_utils, "HUD_TEMPLATE", np.zeros((1, 1), dtype=np.uint8)), \
+            patch.dict(screen_utils.ICON_TEMPLATES, {name: np.zeros((5, 5), dtype=np.uint8) for name in icons}, clear=True), \
+            patch.dict(common.CFG["resource_panel"], {
+                "roi_padding_left": [pad_left] * 6,
+                "roi_padding_right": [pad_right] * 6,
+                "icon_trim_pct": [0] * 6,
+                "scales": [1.0],
+                "match_threshold": 0.5,
+                "max_width": 999,
+                "min_width": min_widths,
+                "top_pct": 0.0,
+                "height_pct": 1.0,
+            }), patch.dict(
+                common.CFG["profiles"]["aoe1de"]["resource_panel"],
+                {"icon_trim_pct": [0] * 6},
+            ):
+            with patch.object(resources, "_NARROW_ROIS", set()):
+                resources.locate_resource_panel(frame)
+                result = resources._NARROW_ROIS.copy()
+
+        self.assertEqual(result, {"wood_stockpile"})
 
     def test_cache_cleared_on_region_change(self):
         resources._LAST_ICON_BOUNDS.clear()
