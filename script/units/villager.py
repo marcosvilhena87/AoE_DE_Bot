@@ -127,7 +127,7 @@ def build_house():
     wood_needed = 30
     res_vals = None
     wood = None
-    for attempt in range(1, 4):
+    for attempt in range(1, 2):
         logger.debug(
             "Attempt %s to read wood from HUD while building house", attempt
         )
@@ -135,7 +135,7 @@ def build_house():
             res_vals, _ = resources.read_resources_from_hud(["wood_stockpile"])
         except common.ResourceReadError as exc:
             logger.error(
-                "Resource read error while building house (attempt %s/3): %s",
+                "Resource read error while building house (attempt %s): %s",
                 attempt,
                 exc,
             )
@@ -144,11 +144,10 @@ def build_house():
             if isinstance(wood, int):
                 break
             logger.warning(
-                "wood_stockpile not detected (attempt %s/3); HUD may not be updated",
+                "wood_stockpile not detected (attempt %s); HUD may not be updated",
                 attempt,
             )
-        if attempt < 3:
-            time.sleep(0.2)
+        time.sleep(0.2)
     if not isinstance(wood, int):
         logger.debug("Refreshing HUD anchor before final resource read")
         try:
