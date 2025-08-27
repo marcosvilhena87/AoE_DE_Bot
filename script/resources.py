@@ -109,7 +109,8 @@ def compute_resource_rois(
     icon_trims,
     max_width,
     min_widths,
-    detected,
+    min_requireds=None,
+    detected=None,
 ):
     """Compute resource ROIs from detected icon bounds.
 
@@ -128,7 +129,11 @@ def compute_resource_rois(
         Maximum width for each ROI.
     min_widths : Sequence[int]
         Minimum acceptable width for each ROI before being flagged as narrow.
-    detected : dict[str, tuple[int, int, int, int]]
+    min_requireds : Sequence[int] | None, optional
+        Minimum width to allocate for each ROI. When provided, each computed
+        ``width`` will be at least the corresponding value, bounded by the
+        available span.
+    detected : dict[str, tuple[int, int, int, int]] | None
         Mapping of icon names to bounding boxes relative to the panel ``(x, y, w, h)``.
 
     Returns
@@ -139,6 +144,11 @@ def compute_resource_rois(
         available left/right span for each resource, and ``narrow`` flags resources
         whose available span was smaller than the configured minimum width.
     """
+
+    if min_requireds is None:
+        min_requireds = [0] * len(RESOURCE_ICON_ORDER)
+    if detected is None:
+        detected = {}
 
     regions = {}
     spans = {}
@@ -186,6 +196,10 @@ def compute_resource_rois(
 
         available_width = right - left
         width = min(max_width, available_width)
+
+        min_req = min_requireds[idx] if idx < len(min_requireds) else min_requireds[-1]
+        if available_width >= min_req:
+            width = max(width, min_req)
 
         min_w = min_widths[idx] if idx < len(min_widths) else min_widths[-1]
         if available_width < min_w:
@@ -247,6 +261,12 @@ def locate_resource_panel(frame):
         if isinstance(min_width_cfg, (list, tuple))
         else [min_width_cfg] * 6
     )
+    min_req_cfg = res_cfg.get("min_required_width", 0)
+    min_requireds = (
+        min_req_cfg
+        if isinstance(min_req_cfg, (list, tuple))
+        else [min_req_cfg] * 6
+    )
     top_pct = profile_res.get("top_pct", res_cfg.get("top_pct", 0.08))
     height_pct = profile_res.get("height_pct", res_cfg.get("height_pct", 0.84))
     screen_utils._load_icon_templates()
@@ -299,6 +319,7 @@ def locate_resource_panel(frame):
         icon_trims,
         max_width,
         min_widths,
+        min_requireds,
         detected,
     )
 
@@ -469,12 +490,12 @@ def detect_resource_regions(frame, required_icons):
                 x + w,
                 top,
                 height,
-            pad_left_fallback,
-            pad_right_fallback,
-            icon_trims_zero,
-            w,
-            min_widths,
-            detected,
+                pad_left_fallback,
+                pad_right_fallback,
+                icon_trims_zero,
+                w,
+                min_widths,
+                detected=detected,
             )
             _NARROW_ROIS = set(narrow.keys())
             for name in RESOURCE_ICON_ORDER[:-1]:
@@ -551,12 +572,12 @@ def detect_resource_regions(frame, required_icons):
                 x + panel_w,
                 top,
                 height,
-            pad_left_fallback,
-            pad_right_fallback,
-            icon_trims_zero,
-            panel_w,
-            min_widths,
-            detected,
+                pad_left_fallback,
+                pad_right_fallback,
+                icon_trims_zero,
+                panel_w,
+                min_widths,
+                detected=detected,
             )
             if "idle_villager" in required_icons:
                 idx_iv = RESOURCE_ICON_ORDER.index("idle_villager")
