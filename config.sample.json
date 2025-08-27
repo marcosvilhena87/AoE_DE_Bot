@@ -1,16 +1,16 @@
 {
   "profile": "aoe1de",
-  "threshold": 0.82,
-  "threshold_fallback": 0.7,
-  "scales": [0.88, 0.92, 0.96, 1.0, 1.04, 1.08, 1.12],
+  "threshold": 0.80,
+  "threshold_fallback": 0.68,
+  "scales": [0.84, 0.88, 0.92, 0.96, 1.0, 1.04, 1.08, 1.12, 1.16],
   "loop_minutes": 6,
   "debug": false,
-  "ocr_debug": false,
+  "ocr_debug": true,
   "verbose_logging": false,
-  "ocr_conf_threshold": 60,
-  "//ocr_conf_threshold": "Minimum OCR confidence (0-100); default 60. For tight ROIs try 45-50.",
+  "ocr_conf_threshold": 45,
+  "//ocr_conf_threshold": "Minimum OCR confidence (0-100); default 60. Tight ROIs may require 45-50.",
   "ocr_kernel_size": 2,
-  "ocr_psm_list": [6, 7, 8, 10, 13],
+  "ocr_psm_list": [7, 6, 8, 10, 13],
   "tesseract_path": "C:\\Program Files\\Tesseract-OCR\\tesseract.exe",
   "resource_cache_ttl": 1.5,
   "resource_cache_max_age": null,
@@ -20,39 +20,23 @@
     "house": "e",
     "select_tc": "h",
     "train_vill": "q",
-    "granary": null,
-    "storage_pit": null
+    "granary": "g",
+    "storage_pit": "s"
   },
-  "areas": {
-    "food_spot": [0.46, 0.7],
-    "wood_spot": [0.62, 0.55],
-    "house_spot": [0.47, 0.72],
-    "granary_spot": [0.44, 0.66],
-    "storage_spot": [0.58, 0.52],
-    "pop_box": [0.0, 0.0, 0.1, 0.1],
-    "//pop_box": "[x, y, w, h] como frações da tela; calibrar depois."
-  },
-  "//resource_panel": "ROIs built from spans between icons via compute_resource_rois",
-  "resource_panel": {
-    "match_threshold": 0.8,
-    "top_pct": 0.06,
-    "height_pct": 0.88,
-    "icon_trim_pct": [0.30, 0.25, 0.24, 0.24, 0.20, 0.00],
-    "right_trim_pct": 0.02,
-    "roi_padding_left": [4, 6, 6, 6, 6, 6],
-    "//roi_padding_left": "pixels added after each icon; tweak per resource",
-    "roi_padding_right": [2, 2, 2, 2, 2, 2],
-    "//roi_padding_right": "pixels removed before the next icon; tweak per resource",
-    "max_width": 160,
-    "min_width": 90,
-    "idle_roi_extra_width": 24,
-    "//idle_roi_extra_width": "extra pixels appended to the idle villager ROI for digits",
-    "anchor_top_pct": 0.15,
-    "anchor_height_pct": 0.70,
-    "anchor_icon_trim_pct": [0.42, 0.42, 0.35, 0.35, 0.35, 0.35],
-    "anchor_right_trim_pct": 0.02,
-    "debug_failed_ocr": false
-  },
+    "resource_panel": {
+        "match_threshold": 0.8,
+        "scales": [0.9, 0.95, 1.0, 1.05, 1.1],
+        "roi_padding_left": [0, 0, 0, 0, 0, 0],
+        "roi_padding_right": [0, 0, 0, 0, 0, 0],
+        "max_width": 160,
+        "min_width": [5, 5, 5, 5, 5, 4],
+        "idle_roi_extra_width": 24,
+        "top_pct": 0.06,
+        "height_pct": 0.88,
+        "icon_trim_pct": [0.25, 0.25, 0.25, 0.25, 0.20, 0.00],
+        "right_trim_pct": 0.02,
+        "debug_failed_ocr": true
+      },
   "hud_icons": {
     "required": [
       "wood_stockpile",
@@ -65,25 +49,27 @@
     "optional": []
   },
   "idle_villager_roi": {
-    "top_pct": 0.12,
-    "height_pct": 0.20,
-    "left_pct": 0.78,
-    "width_pct": 0.10
+    "top_pct": 0.10,
+    "height_pct": 0.06,
+    "left_pct": 0.84,
+    "width_pct": 0.05
   },
-  "//idle_villager_roi": "Valores como percentuais da resolução atual.",
-    "profiles": {
+  "profiles": {
       "aoe1de": {
         "resource_panel": {
-          "match_threshold": 0.82,
-          "top_pct": 0.06,
-          "height_pct": 0.88,
-          "roi_padding_left": [4, 6, 6, 6, 6, 6],
-          "roi_padding_right": [2, 2, 2, 2, 2, 2],
-          "icon_trim_pct": [0.30, 0.25, 0.24, 0.24, 0.20, 0.00],
-          "right_trim_pct": 0.02
+          "match_threshold": 0.82
         }
       }
     },
+  "areas": {
+    "food_spot": [0.46, 0.7],
+    "wood_spot": [0.62, 0.55],
+    "house_spot": [0.47, 0.72],
+    "granary_spot": [0.44, 0.66],
+    "storage_spot": [0.58, 0.52],
+    "pop_box": [0.0, 0.0, 0.1, 0.1],
+    "//pop_box": "[x, y, w, h] como frações da tela; calibrar depois."
+  },
   "timers": {
     "house_interval": 45.0,
     "idle_gap": 0.35,
