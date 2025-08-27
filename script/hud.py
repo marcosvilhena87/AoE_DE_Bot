@@ -52,15 +52,22 @@ def wait_hud(timeout=60):
             return common.HUD_ANCHOR, asset
         if score > last_score:
             last_score = score
+            logger.debug("HUD template '%s' score improved to %.3f", asset, score)
         time.sleep(0.25)
+    logger.debug(
+        "HUD search ended. Highest score=%.3f using template '%s'",
+        last_score,
+        asset,
+    )
     logger.error(
-        "HUD não encontrada. Melhor score=%.3f no template '%s'. Re-capture o asset e verifique ESCALA 100%%.",
+        "HUD não encontrada. Melhor score=%.3f no template '%s'. "
+        "Considere recapturar templates de ícones ou verificar a resolução/ESCALA 100%%.",
         last_score,
         asset,
     )
     raise RuntimeError(
         f"HUD não encontrada. Melhor score={last_score:.3f} no template '{asset}'. "
-        "Re-capture o asset (recorte mais justo) e verifique ESCALA 100%.",
+        "Considere recapturar os templates de ícones ou verificar a resolução/ESCALA 100%.",
     )
 
 
