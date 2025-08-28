@@ -123,10 +123,11 @@ def read_population_from_hud(retries=1, conf_threshold=None, save_failed_roi=Fal
             conf_threshold=conf_threshold,
             save_failed_roi=save_failed_roi,
         )
-    except common.PopulationReadError:
+    except common.PopulationReadError as primary_exc:
         logger.info(
             "Triggering fallback to read population via resources.read_resources_from_hud"
         )
+        fallback_exc = None
         try:
             _, (cur, limit) = resources.read_resources_from_hud(
                 ["population_limit"], force_delay=0.1, conf_threshold=conf_threshold
@@ -134,8 +135,14 @@ def read_population_from_hud(retries=1, conf_threshold=None, save_failed_roi=Fal
             if cur is not None and limit is not None:
                 logger.info("Population fallback succeeded: %s/%s", cur, limit)
                 return cur, limit
-        except Exception as exc:  # pragma: no cover - log but ignore any failure
+        except (common.ResourceReadError, common.PopulationReadError) as exc:
+            # pragma: no cover - log but ignore expected OCR failures
             logger.debug("Fallback failed: %s", exc)
+            fallback_exc = exc
 
+        if fallback_exc is not None:
+            raise common.PopulationReadError(
+                f"{primary_exc} (fallback failed: {fallback_exc})"
+            ) from fallback_exc
         raise
 
