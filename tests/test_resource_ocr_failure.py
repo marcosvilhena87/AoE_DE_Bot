@@ -43,6 +43,8 @@ except ModuleNotFoundError:  # pragma: no cover - fallback stub
             imwrite=lambda *a, **k: True,
             medianBlur=lambda src, k: src,
             bitwise_not=lambda src: src,
+            bitwise_or=lambda a, b: a,
+            morphologyEx=lambda src, op, kernel, iterations=1: src,
             threshold=lambda src, *a, **k: (None, src),
             rectangle=lambda img, pt1, pt2, color, thickness: img,
             bilateralFilter=lambda src, d, sigmaColor, sigmaSpace: src,
@@ -60,6 +62,7 @@ except ModuleNotFoundError:  # pragma: no cover - fallback stub
             INTER_LINEAR=0,
             THRESH_BINARY=0,
             THRESH_OTSU=0,
+            MORPH_CLOSE=0,
             TM_CCOEFF_NORMED=0,
         ),
     )
@@ -254,8 +257,16 @@ class TestResourceOcrFailure(TestCase):
         self.assertEqual(digits, "0")
         self.assertEqual(data, {})
 
-    def test_gray_zero_digits_return_zero(self):
-        def make_roi():
+    def test_gold_and_stone_zero_digits_return_zero(self):
+        def make_gold_roi():
+            roi = np.full((10, 10), 210, dtype=np.uint8)
+            roi[2:-2, 2] = 200
+            roi[2:-2, -3] = 200
+            roi[2, 2:-2] = 200
+            roi[-3, 2:-2] = 200
+            return roi
+
+        def make_stone_roi():
             roi = np.full((10, 10), 180, dtype=np.uint8)
             roi[2:-2, 2] = 170
             roi[2:-2, -3] = 170
@@ -266,9 +277,9 @@ class TestResourceOcrFailure(TestCase):
         with patch(
             "script.resources.pytesseract.image_to_data",
             return_value={"text": [""], "conf": ["-1"]},
-        ), patch.dict(resources.CFG, {"ocr_zero_variance": 30}, clear=False):
-            gold, _, _ = resources._ocr_digits_better(make_roi())
-            stone, _, _ = resources._ocr_digits_better(make_roi())
+        ), patch.dict(resources.CFG, {"ocr_zero_variance": 50}, clear=False):
+            gold, _, _ = resources._ocr_digits_better(make_gold_roi())
+            stone, _, _ = resources._ocr_digits_better(make_stone_roi())
         self.assertEqual(gold, "0")
         self.assertEqual(stone, "0")
 
