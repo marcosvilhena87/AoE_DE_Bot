@@ -9,6 +9,8 @@
   "verbose_logging": false,
   "ocr_conf_threshold": 45,
   "//ocr_conf_threshold": "Minimum OCR confidence (0-100); default 60. Tight ROIs may require 45-50.",
+  "ocr_retry_limit": 3,
+  "//ocr_retry_limit": "Consecutive OCR failures before using fallback value.",
   "ocr_kernel_size": 1,
   "ocr_psm_list": [7],
   "ocr_zero_variance": 15,
