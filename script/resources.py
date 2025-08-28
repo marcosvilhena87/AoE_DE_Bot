@@ -931,18 +931,23 @@ def execute_ocr(gray, conf_threshold=None, allow_fallback=True):
         if mask is not None:
             mask_path = debug_dir / f"ocr_fail_mask_{ts}.png"
             cv2.imwrite(str(mask_path), mask)
+        roi_path = debug_dir / f"ocr_fail_roi_{ts}.png"
+        cv2.imwrite(str(roi_path), gray)
         text_path = debug_dir / f"ocr_fail_text_{ts}.txt"
         with open(text_path, "w", encoding="utf-8") as f:
             f.write("\n".join(data.get("text", [])))
         if mask_path is not None:
             logger.warning(
-                "OCR returned no digits; mask saved to %s; text output saved to %s",
+                "OCR returned no digits; mask saved to %s; ROI saved to %s; text output saved to %s",
                 mask_path,
+                roi_path,
                 text_path,
             )
         else:
             logger.warning(
-                "OCR returned no digits; text output saved to %s", text_path
+                "OCR returned no digits; ROI saved to %s; text output saved to %s",
+                roi_path,
+                text_path,
             )
     return digits, data, mask
 
