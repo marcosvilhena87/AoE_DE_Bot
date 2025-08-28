@@ -29,32 +29,37 @@ class DummyMSS:
 
 sys.modules.setdefault("pyautogui", dummy_pg)
 sys.modules.setdefault("mss", types.SimpleNamespace(mss=lambda: DummyMSS()))
-sys.modules.setdefault(
-    "cv2",
-    types.SimpleNamespace(
-        cvtColor=lambda src, code: src,
-        resize=lambda img, *a, **k: img,
-        matchTemplate=lambda *a, **k: np.zeros((1, 1), dtype=np.float32),
-        minMaxLoc=lambda *a, **k: (0, 0, (0, 0), (0, 0)),
-        imread=lambda *a, **k: np.zeros((1, 1), dtype=np.uint8),
-        imwrite=lambda *a, **k: True,
-        medianBlur=lambda src, k: src,
-        bitwise_not=lambda src: src,
-        threshold=lambda src, *a, **k: (None, src),
-        rectangle=lambda img, pt1, pt2, color, thickness: img,
-        bilateralFilter=lambda src, d, sigmaColor, sigmaSpace: src,
-        adaptiveThreshold=lambda src, maxValue, adaptiveMethod, thresholdType, blockSize, C: src,
-        dilate=lambda src, kernel, iterations=1: src,
-        ADAPTIVE_THRESH_GAUSSIAN_C=0,
-        ADAPTIVE_THRESH_MEAN_C=0,
-        IMREAD_GRAYSCALE=0,
-        COLOR_BGR2GRAY=0,
-        INTER_LINEAR=0,
-        THRESH_BINARY=0,
-        THRESH_OTSU=0,
-        TM_CCOEFF_NORMED=0,
-    ),
-)
+try:  # pragma: no cover - used for environments without OpenCV
+    import cv2  # noqa: F401
+except ModuleNotFoundError:  # pragma: no cover - fallback stub
+    sys.modules.setdefault(
+        "cv2",
+        types.SimpleNamespace(
+            cvtColor=lambda src, code: src,
+            resize=lambda img, *a, **k: img,
+            matchTemplate=lambda *a, **k: np.zeros((1, 1), dtype=np.float32),
+            minMaxLoc=lambda *a, **k: (0, 0, (0, 0), (0, 0)),
+            imread=lambda *a, **k: np.zeros((1, 1), dtype=np.uint8),
+            imwrite=lambda *a, **k: True,
+            medianBlur=lambda src, k: src,
+            bitwise_not=lambda src: src,
+            threshold=lambda src, *a, **k: (None, src),
+            rectangle=lambda img, pt1, pt2, color, thickness: img,
+            bilateralFilter=lambda src, d, sigmaColor, sigmaSpace: src,
+            adaptiveThreshold=lambda src, maxValue, adaptiveMethod, thresholdType, blockSize, C: src,
+            dilate=lambda src, kernel, iterations=1: src,
+            equalizeHist=lambda src: src,
+            countNonZero=lambda src: int(np.count_nonzero(src)),
+            ADAPTIVE_THRESH_GAUSSIAN_C=0,
+            ADAPTIVE_THRESH_MEAN_C=0,
+            IMREAD_GRAYSCALE=0,
+            COLOR_BGR2GRAY=0,
+            INTER_LINEAR=0,
+            THRESH_BINARY=0,
+            THRESH_OTSU=0,
+            TM_CCOEFF_NORMED=0,
+        ),
+    )
 
 os.environ.setdefault("TESSERACT_CMD", "/usr/bin/true")
 
@@ -212,6 +217,24 @@ class TestResourceOcrFailure(TestCase):
             digits, data, _ = resources._ocr_digits_better(gray)
         self.assertEqual(digits, "0")
         self.assertEqual(data, {})
+
+    def test_gray_zero_digits_return_zero(self):
+        def make_roi():
+            roi = np.full((10, 10), 180, dtype=np.uint8)
+            roi[2:-2, 2] = 170
+            roi[2:-2, -3] = 170
+            roi[2, 2:-2] = 170
+            roi[-3, 2:-2] = 170
+            return roi
+
+        with patch(
+            "script.resources.pytesseract.image_to_data",
+            return_value={"text": [""], "conf": ["-1"]},
+        ), patch.dict(resources.CFG, {"ocr_zero_variance": 30}, clear=False):
+            gold, _, _ = resources._ocr_digits_better(make_roi())
+            stone, _, _ = resources._ocr_digits_better(make_roi())
+        self.assertEqual(gold, "0")
+        self.assertEqual(stone, "0")
 
 
 class TestGatherHudStatsSliding(TestCase):

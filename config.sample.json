@@ -11,6 +11,7 @@
   "//ocr_conf_threshold": "Minimum OCR confidence (0-100); default 60. Tight ROIs may require 45-50.",
   "ocr_kernel_size": 1,
   "ocr_psm_list": [7],
+  "ocr_zero_variance": 15,
   "tesseract_path": "C:\\Program Files\\Tesseract-OCR\\tesseract.exe",
   "resource_cache_ttl": 1.5,
   "resource_cache_max_age": null,
