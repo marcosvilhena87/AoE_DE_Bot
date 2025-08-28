@@ -1334,7 +1334,7 @@ def _read_resources(
                     digits_exp, data_exp, mask_exp = execute_ocr(
                         gray_expanded, conf_threshold=conf_threshold
                     )
-                if digits_exp:
+                if digits_exp and not data_exp.get("low_conf_single"):
                     digits, data, mask = digits_exp, data_exp, mask_exp
                     roi, gray = roi_expanded, gray_expanded
                     x, y = x0, y0
@@ -1370,7 +1370,7 @@ def _read_resources(
                             conf_threshold=conf_threshold,
                             allow_fallback=False,
                         )
-                    if digits_retry:
+                    if digits_retry and not data_retry.get("low_conf_single"):
                         digits, data, mask = digits_retry, data_retry, mask_retry
                         roi, gray = roi_retry, gray_retry
                         x, w = cand_x, cand_w
