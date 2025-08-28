@@ -404,9 +404,27 @@ def locate_resource_panel(frame, cache: ResourceCache = RESOURCE_CACHE):
 
 def _ocr_digits_better(gray):
     gray = cv2.resize(gray, None, fx=2, fy=2, interpolation=cv2.INTER_LINEAR)
-    gray = cv2.bilateralFilter(gray, 7, 60, 60)
+    bilateral = CFG.get("ocr_bilateral", [7, 60, 60])
+    if bilateral:
+        if isinstance(bilateral, dict):
+            d = bilateral.get("d", 7)
+            sc = bilateral.get("sigmaColor", bilateral.get("sc", 60))
+            ss = bilateral.get("sigmaSpace", bilateral.get("ss", 60))
+            gray = cv2.bilateralFilter(gray, d, sc, ss)
+        elif isinstance(bilateral, (list, tuple)) and len(bilateral) >= 3:
+            gray = cv2.bilateralFilter(gray, bilateral[0], bilateral[1], bilateral[2])
+        else:
+            gray = cv2.bilateralFilter(gray, 7, 60, 60)
     orig = gray.copy()
-    gray = cv2.equalizeHist(gray)
+    equalize = CFG.get("ocr_equalize_hist", True)
+    if equalize:
+        if isinstance(equalize, dict):
+            clip = equalize.get("clipLimit", equalize.get("clip_limit", 2.0))
+            tile = tuple(equalize.get("tileGridSize", equalize.get("tile_grid_size", (8, 8))))
+            clahe = cv2.createCLAHE(clipLimit=clip, tileGridSize=tile)
+            gray = clahe.apply(gray)
+        else:
+            gray = cv2.equalizeHist(gray)
 
     kernel_size = CFG.get("ocr_kernel_size", 2)
     kernel = np.ones((kernel_size, kernel_size), np.uint8)
@@ -462,6 +480,11 @@ def _ocr_digits_better(gray):
             gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU
         )
     digits, data, mask = _run_masks([adaptive, cv2.bitwise_not(adaptive)], 2)
+
+    if not digits:
+        hsv = cv2.cvtColor(cv2.cvtColor(orig, cv2.COLOR_GRAY2BGR), cv2.COLOR_BGR2HSV)
+        white_mask = cv2.inRange(hsv, np.array([0, 0, 200]), np.array([180, 30, 255]))
+        digits, data, mask = _run_masks([white_mask, cv2.bitwise_not(white_mask)], 4)
 
     if not digits:
         variance = float(np.var(orig))

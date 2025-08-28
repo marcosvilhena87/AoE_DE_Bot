@@ -12,6 +12,8 @@
   "ocr_retry_limit": 3,
   "//ocr_retry_limit": "Consecutive OCR failures before using fallback value.",
   "ocr_kernel_size": 1,
+  "ocr_bilateral": [7, 60, 60],
+  "ocr_equalize_hist": true,
   "ocr_psm_list": [7],
   "ocr_zero_variance": 15,
   "tesseract_path": "C:\\Program Files\\Tesseract-OCR\\tesseract.exe",
