@@ -6,6 +6,8 @@
   "loop_minutes": 6,
   "debug": false,
   "ocr_debug": true,
+  "ocr_debug_success": false,
+  "//ocr_debug_success": "Save grayscale and threshold images even when OCR succeeds.",
   "verbose_logging": false,
   "ocr_conf_threshold": 45,
   "//ocr_conf_threshold": "Minimum OCR confidence (0-100); default 60. Tight ROIs may require 45-50.",
