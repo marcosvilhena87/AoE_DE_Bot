@@ -65,15 +65,15 @@ import script.resources as resources
 
 class TestResourceOcrFailure(TestCase):
     def setUp(self):
-        resources._LAST_RESOURCE_VALUES.clear()
-        resources._LAST_RESOURCE_TS.clear()
-        resources._RESOURCE_FAILURE_COUNTS.clear()
+        resources.RESOURCE_CACHE.last_resource_values.clear()
+        resources.RESOURCE_CACHE.last_resource_ts.clear()
+        resources.RESOURCE_CACHE.resource_failure_counts.clear()
         resources._LAST_REGION_SPANS.clear()
 
     def tearDown(self):
-        resources._LAST_RESOURCE_VALUES.clear()
-        resources._LAST_RESOURCE_TS.clear()
-        resources._RESOURCE_FAILURE_COUNTS.clear()
+        resources.RESOURCE_CACHE.last_resource_values.clear()
+        resources.RESOURCE_CACHE.last_resource_ts.clear()
+        resources.RESOURCE_CACHE.resource_failure_counts.clear()
         resources._LAST_REGION_SPANS.clear()
     def test_read_resources_fallback(self):
         def fake_ocr(gray):
@@ -106,7 +106,7 @@ class TestResourceOcrFailure(TestCase):
                 return np.zeros((bbox["height"], bbox["width"], 3), dtype=np.uint8)
             return np.zeros((600, 600, 3), dtype=np.uint8)
 
-        def fake_detect(frame, required_icons):
+        def fake_detect(frame, required_icons, cache=None):
             return {
                 "wood_stockpile": (0, 0, 50, 50),
                 "food_stockpile": (50, 0, 50, 50),
@@ -135,7 +135,7 @@ class TestResourceOcrFailure(TestCase):
                 return np.zeros((bbox["height"], bbox["width"], 3), dtype=np.uint8)
             return np.zeros((600, 600, 3), dtype=np.uint8)
 
-        def fake_detect(frame, required_icons):
+        def fake_detect(frame, required_icons, cache=None):
             return {"wood_stockpile": (0, 0, 50, 50)}
 
         def fake_ocr(gray):
@@ -157,7 +157,7 @@ class TestResourceOcrFailure(TestCase):
                 return np.zeros((bbox["height"], bbox["width"], 3), dtype=np.uint8)
             return np.zeros((600, 600, 3), dtype=np.uint8)
 
-        def fake_detect(frame, required_icons):
+        def fake_detect(frame, required_icons, cache=None):
             return {"wood_stockpile": (0, 0, 50, 50)}
 
         def fake_ocr(gray):
@@ -174,7 +174,7 @@ class TestResourceOcrFailure(TestCase):
         self.assertGreaterEqual(img2str_mock.call_count, 1)
 
     def test_cached_value_used_for_optional_failure(self):
-        def fake_detect(frame, required_icons):
+        def fake_detect(frame, required_icons, cache=None):
             return {
                 "wood_stockpile": (0, 0, 50, 50),
                 "food_stockpile": (50, 0, 50, 50),
@@ -216,22 +216,22 @@ class TestResourceOcrFailure(TestCase):
 
 class TestGatherHudStatsSliding(TestCase):
     def setUp(self):
-        resources._LAST_RESOURCE_VALUES.clear()
-        resources._LAST_RESOURCE_TS.clear()
-        resources._RESOURCE_FAILURE_COUNTS.clear()
+        resources.RESOURCE_CACHE.last_resource_values.clear()
+        resources.RESOURCE_CACHE.last_resource_ts.clear()
+        resources.RESOURCE_CACHE.resource_failure_counts.clear()
         resources._LAST_REGION_SPANS.clear()
 
     def tearDown(self):
-        resources._LAST_RESOURCE_VALUES.clear()
-        resources._LAST_RESOURCE_TS.clear()
-        resources._RESOURCE_FAILURE_COUNTS.clear()
+        resources.RESOURCE_CACHE.last_resource_values.clear()
+        resources.RESOURCE_CACHE.last_resource_ts.clear()
+        resources.RESOURCE_CACHE.resource_failure_counts.clear()
         resources._LAST_REGION_SPANS.clear()
 
     def test_gather_hud_stats_succeeds_after_sliding(self):
         frame = np.tile(np.arange(120, dtype=np.uint8), (20, 1))
         frame = np.stack([frame] * 3, axis=-1)
 
-        def fake_detect(frame_in, required_icons):
+        def fake_detect(frame_in, required_icons, cache=None):
             return {"wood_stockpile": (10, 0, 50, 20)}
 
         calls = []
@@ -272,14 +272,14 @@ class TestGatherHudStatsSliding(TestCase):
 
 class TestResourceOcrRois(TestCase):
     def setUp(self):
-        resources._LAST_RESOURCE_VALUES.clear()
-        resources._LAST_RESOURCE_TS.clear()
-        resources._RESOURCE_FAILURE_COUNTS.clear()
+        resources.RESOURCE_CACHE.last_resource_values.clear()
+        resources.RESOURCE_CACHE.last_resource_ts.clear()
+        resources.RESOURCE_CACHE.resource_failure_counts.clear()
 
     def tearDown(self):
-        resources._LAST_RESOURCE_VALUES.clear()
-        resources._LAST_RESOURCE_TS.clear()
-        resources._RESOURCE_FAILURE_COUNTS.clear()
+        resources.RESOURCE_CACHE.last_resource_values.clear()
+        resources.RESOURCE_CACHE.last_resource_ts.clear()
+        resources.RESOURCE_CACHE.resource_failure_counts.clear()
 
     def _build_frame(self):
         icons = [
@@ -337,7 +337,7 @@ class TestResourceOcrRois(TestCase):
             "population_limit",
         ]
 
-        def fake_detect(frame_in, required_icons):
+        def fake_detect(frame_in, required_icons, cache=None):
             return regions
 
         def fake_preprocess(roi):

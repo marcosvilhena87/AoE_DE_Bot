@@ -35,9 +35,9 @@ import script.resources as resources
 
 class TestResourceForceDelay(TestCase):
     def setUp(self):
-        resources._LAST_RESOURCE_VALUES.clear()
-        resources._LAST_RESOURCE_TS.clear()
-        resources._RESOURCE_FAILURE_COUNTS.clear()
+        resources.RESOURCE_CACHE.last_resource_values.clear()
+        resources.RESOURCE_CACHE.last_resource_ts.clear()
+        resources.RESOURCE_CACHE.resource_failure_counts.clear()
 
     def test_force_delay_waits_before_grab(self):
         calls = []

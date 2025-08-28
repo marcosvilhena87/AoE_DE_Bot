@@ -2,6 +2,7 @@
 
 import logging
 import time
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable
 
@@ -28,15 +29,18 @@ RESOURCE_ICON_ORDER = [
     "idle_villager",
 ]
 
-# Cache of last detected icon positions
-_LAST_ICON_BOUNDS = {}
+@dataclass
+class ResourceCache:
+    """In-memory cache for resource detection state."""
 
-# Cache of last successfully read resource values
-_LAST_RESOURCE_VALUES = {}
-# Timestamp of last update for each cached resource value
-_LAST_RESOURCE_TS = {}
-# Consecutive OCR failure counts for each resource
-_RESOURCE_FAILURE_COUNTS = {}
+    last_icon_bounds: dict = field(default_factory=dict)
+    last_resource_values: dict = field(default_factory=dict)
+    last_resource_ts: dict = field(default_factory=dict)
+    resource_failure_counts: dict = field(default_factory=dict)
+
+
+# Shared cache instance used by default
+RESOURCE_CACHE = ResourceCache()
 
 # Icons fulfilled from cache on the most recent read
 _LAST_READ_FROM_CACHE = set()
@@ -226,7 +230,7 @@ def compute_resource_rois(
 
 
 
-def locate_resource_panel(frame):
+def locate_resource_panel(frame, cache: ResourceCache = RESOURCE_CACHE):
     """Locate the resource panel and return bounding boxes for each value."""
 
     box = detect_hud(frame)
@@ -287,25 +291,25 @@ def locate_resource_panel(frame):
         if best[0] >= match_threshold and best[1] is not None:
             bw, bh = best[2]
             detected[name] = (best[1][0], best[1][1], bw, bh)
-            _LAST_ICON_BOUNDS[name] = (best[1][0], best[1][1], bw, bh)
-        elif name in _LAST_ICON_BOUNDS:
+            cache.last_icon_bounds[name] = (best[1][0], best[1][1], bw, bh)
+        elif name in cache.last_icon_bounds:
             logger.info(
                 "Using previous position for icon '%s'; score=%.3f", name, best[0]
             )
-            detected[name] = _LAST_ICON_BOUNDS[name]
+            detected[name] = cache.last_icon_bounds[name]
         else:
             logger.warning("Icon '%s' not matched; score=%.3f", name, best[0])
 
     if "population_limit" not in detected and "idle_villager" in detected:
         xi, yi, wi, hi = detected["idle_villager"]
-        prev = _LAST_ICON_BOUNDS.get("population_limit")
+        prev = cache.last_icon_bounds.get("population_limit")
         if prev:
             pw, ph = prev[2], prev[3]
         else:
             pw, ph = wi, hi
         px = max(0, xi - pw)
         detected["population_limit"] = (px, yi, pw, ph)
-        _LAST_ICON_BOUNDS["population_limit"] = (px, yi, pw, ph)
+        cache.last_icon_bounds["population_limit"] = (px, yi, pw, ph)
 
     top = y + int(top_pct * h)
     height = int(height_pct * h)
@@ -341,11 +345,11 @@ def locate_resource_panel(frame):
             "ROI for 'idle_villager': icon=(%d,%d) width=%d", left, y + yi, width
         )
 
-    global _LAST_REGION_BOUNDS, _LAST_RESOURCE_VALUES, _LAST_RESOURCE_TS
+    global _LAST_REGION_BOUNDS
     if _LAST_REGION_BOUNDS != regions:
         _LAST_REGION_BOUNDS = regions.copy()
-        _LAST_RESOURCE_VALUES.clear()
-        _LAST_RESOURCE_TS.clear()
+        cache.last_resource_values.clear()
+        cache.last_resource_ts.clear()
 
     return regions
 
@@ -401,7 +405,7 @@ def _ocr_digits_better(gray):
     return digits, data, mask
 
 
-def _auto_calibrate_from_icons(frame):
+def _auto_calibrate_from_icons(frame, cache: ResourceCache = RESOURCE_CACHE):
     """Locate resource icons directly on the frame to derive ROI regions.
 
     This acts as a fallback when the resource panel template cannot be
@@ -464,9 +468,9 @@ def _auto_calibrate_from_icons(frame):
         if best[0] >= match_threshold and best[1] is not None:
             bw, bh = best[2]
             detected[name] = (best[1][0], best[1][1], bw, bh)
-            _LAST_ICON_BOUNDS[name] = (best[1][0], best[1][1], bw, bh)
-        elif name in _LAST_ICON_BOUNDS:
-            detected[name] = _LAST_ICON_BOUNDS[name]
+            cache.last_icon_bounds[name] = (best[1][0], best[1][1], bw, bh)
+        elif name in cache.last_icon_bounds:
+            detected[name] = cache.last_icon_bounds[name]
 
     if len(detected) < 2:
         return {}
@@ -499,7 +503,7 @@ def _auto_calibrate_from_icons(frame):
         detected_rel,
     )
 
-    global _NARROW_ROIS, _LAST_REGION_SPANS, _LAST_REGION_BOUNDS, _LAST_RESOURCE_VALUES, _LAST_RESOURCE_TS
+    global _NARROW_ROIS, _LAST_REGION_SPANS, _LAST_REGION_BOUNDS
     _NARROW_ROIS = set(narrow.keys())
     _LAST_REGION_SPANS = spans.copy()
 
@@ -515,8 +519,8 @@ def _auto_calibrate_from_icons(frame):
 
     if _LAST_REGION_BOUNDS != regions:
         _LAST_REGION_BOUNDS = regions.copy()
-        _LAST_RESOURCE_VALUES.clear()
-        _LAST_RESOURCE_TS.clear()
+        cache.last_resource_values.clear()
+        cache.last_resource_ts.clear()
 
     return regions
 
@@ -605,12 +609,14 @@ def _fallback_rois_from_slice(
     return regions
 
 
-def detect_resource_regions(frame, required_icons):
+def detect_resource_regions(
+    frame, required_icons, cache: ResourceCache = RESOURCE_CACHE
+):
     """Detect resource value regions on the HUD."""
 
     global _NARROW_ROIS, _LAST_REGION_SPANS
 
-    regions = locate_resource_panel(frame)
+    regions = locate_resource_panel(frame, cache)
     if "idle_villager" not in regions:
         idle_cfg = CFG.get("idle_villager_roi")
         if idle_cfg:
@@ -649,7 +655,7 @@ def detect_resource_regions(frame, required_icons):
     missing = [name for name in required_icons if name not in regions]
 
     if missing:
-        calibrated = _auto_calibrate_from_icons(frame)
+        calibrated = _auto_calibrate_from_icons(frame, cache)
         if calibrated:
             regions = calibrated
             # Reapply any custom ROI overrides on top of calibrated values
@@ -999,6 +1005,7 @@ def _read_resources(
     frame,
     required_icons,
     icons_to_read,
+    cache: ResourceCache = RESOURCE_CACHE,
     max_cache_age: float | None = None,
     conf_threshold: int | None = None,
 ):
@@ -1008,7 +1015,7 @@ def _read_resources(
     icons_to_read = list(icons_to_read)
     required_set = set(required_icons)
 
-    regions = detect_resource_regions(frame, icons_to_read)
+    regions = detect_resource_regions(frame, icons_to_read, cache)
 
     if max_cache_age is None:
         max_cache_age = _RESOURCE_CACHE_MAX_AGE
@@ -1086,10 +1093,10 @@ def _read_resources(
                 thresh_path = debug_dir / f"resource_{name}_thresh_{ts}.png"
                 cv2.imwrite(str(thresh_path), mask)
                 logger.warning("Saved threshold image to %s", thresh_path)
-            ts_cache = _LAST_RESOURCE_TS.get(name)
-            failure_count = _RESOURCE_FAILURE_COUNTS.get(name, 0)
+            ts_cache = cache.last_resource_ts.get(name)
+            failure_count = cache.resource_failure_counts.get(name, 0)
             use_cache = False
-            if name in _LAST_RESOURCE_VALUES and ts_cache is not None:
+            if name in cache.last_resource_values and ts_cache is not None:
                 age = time.time() - ts_cache
                 if age < _RESOURCE_CACHE_TTL:
                     logger.warning(
@@ -1106,17 +1113,17 @@ def _read_resources(
                     )
                     use_cache = True
             if use_cache:
-                results[name] = _LAST_RESOURCE_VALUES[name]
+                results[name] = cache.last_resource_values[name]
                 cache_hits.add(name)
             else:
                 results[name] = None
-            _RESOURCE_FAILURE_COUNTS[name] = failure_count + 1
+            cache.resource_failure_counts[name] = failure_count + 1
         else:
             value = int(digits)
             results[name] = value
-            _LAST_RESOURCE_VALUES[name] = value
-            _LAST_RESOURCE_TS[name] = time.time()
-            _RESOURCE_FAILURE_COUNTS[name] = 0
+            cache.last_resource_values[name] = value
+            cache.last_resource_ts[name] = time.time()
+            cache.resource_failure_counts[name] = 0
             logger.info("Detected %s=%d", name, value)
 
     filtered_regions = {n: regions[n] for n in resource_icons if n in regions}
@@ -1141,6 +1148,7 @@ def read_resources_from_hud(
     force_delay: float | None = None,
     max_cache_age: float | None = None,
     conf_threshold: int | None = None,
+    cache: ResourceCache = RESOURCE_CACHE,
 ):
     """Read resource values displayed on the HUD."""
 
@@ -1160,7 +1168,12 @@ def read_resources_from_hud(
         icons_to_read = list(set(required_icons).union(icons_to_read))
 
     return _read_resources(
-        frame, required_icons, icons_to_read, max_cache_age, conf_threshold
+        frame,
+        required_icons,
+        icons_to_read,
+        cache,
+        max_cache_age,
+        conf_threshold,
     )
 
 
@@ -1217,6 +1230,7 @@ def gather_hud_stats(
     optional_icons=None,
     max_cache_age: float | None = None,
     conf_threshold: int | None = None,
+    cache: ResourceCache = RESOURCE_CACHE,
 ):
     """Capture a single frame and read resources and population."""
 
@@ -1246,5 +1260,10 @@ def gather_hud_stats(
     all_icons = list(dict.fromkeys(required_icons + optional_icons))
 
     return _read_resources(
-        frame, required_icons, all_icons, max_cache_age, conf_threshold
+        frame,
+        required_icons,
+        all_icons,
+        cache,
+        max_cache_age,
+        conf_threshold,
     )

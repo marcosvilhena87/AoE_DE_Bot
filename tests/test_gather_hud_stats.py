@@ -10,9 +10,9 @@ import tools.campaign_bot as cb
 class TestGatherHudStats(TestCase):
     def setUp(self):
         # Clear caches in resources module used by campaign bot
-        cb.resources._LAST_RESOURCE_VALUES.clear()
-        cb.resources._LAST_RESOURCE_TS.clear()
-        cb.resources._RESOURCE_FAILURE_COUNTS.clear()
+        cb.resources.RESOURCE_CACHE.last_resource_values.clear()
+        cb.resources.RESOURCE_CACHE.last_resource_ts.clear()
+        cb.resources.RESOURCE_CACHE.resource_failure_counts.clear()
 
     def test_gather_reads_resources_and_population(self):
         anchor = {"left": 10, "top": 20, "width": 600, "height": 60, "asset": "assets/resources.png"}

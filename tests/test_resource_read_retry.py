@@ -58,21 +58,21 @@ import script.resources as resources
 
 class TestResourceReadRetry(TestCase):
     def setUp(self):
-        resources._LAST_RESOURCE_VALUES.clear()
-        resources._LAST_RESOURCE_TS.clear()
+        resources.RESOURCE_CACHE.last_resource_values.clear()
+        resources.RESOURCE_CACHE.last_resource_ts.clear()
         resources._LAST_READ_FROM_CACHE.clear()
-        resources._RESOURCE_FAILURE_COUNTS.clear()
+        resources.RESOURCE_CACHE.resource_failure_counts.clear()
         resources._LAST_REGION_SPANS.clear()
 
     def tearDown(self):
-        resources._LAST_RESOURCE_VALUES.clear()
-        resources._LAST_RESOURCE_TS.clear()
+        resources.RESOURCE_CACHE.last_resource_values.clear()
+        resources.RESOURCE_CACHE.last_resource_ts.clear()
         resources._LAST_READ_FROM_CACHE.clear()
-        resources._RESOURCE_FAILURE_COUNTS.clear()
+        resources.RESOURCE_CACHE.resource_failure_counts.clear()
         resources._LAST_REGION_SPANS.clear()
 
     def test_required_icon_fallback(self):
-        def fake_detect(frame, required_icons):
+        def fake_detect(frame, required_icons, cache=None):
             return {"wood_stockpile": (0, 0, 50, 50)}
 
         ocr_seq = [
@@ -104,7 +104,7 @@ class TestResourceReadRetry(TestCase):
         self.assertIn("wood_stockpile", resources._LAST_READ_FROM_CACHE)
 
     def test_retry_succeeds_after_expansion(self):
-        def fake_detect(frame, required_icons):
+        def fake_detect(frame, required_icons, cache=None):
             return {"wood_stockpile": (0, 0, 50, 50)}
 
         ocr_seq = [
@@ -128,7 +128,7 @@ class TestResourceReadRetry(TestCase):
         self.assertEqual(ocr_mock.call_count, 2)
 
     def test_sliding_window_succeeds_when_anchor_right(self):
-        def fake_detect(frame, required_icons):
+        def fake_detect(frame, required_icons, cache=None):
             return {"wood_stockpile": (10, 0, 50, 20)}
 
         frame = np.tile(np.arange(120, dtype=np.uint8), (20, 1))
@@ -159,7 +159,7 @@ class TestResourceReadRetry(TestCase):
         self.assertEqual([a for _, _, a in calls], [True, False, False, False])
 
     def test_expired_cache_used_after_consecutive_failures(self):
-        def fake_detect(frame, required_icons):
+        def fake_detect(frame, required_icons, cache=None):
             return {"wood_stockpile": (0, 0, 50, 50)}
 
         def fake_ocr(gray):
@@ -167,8 +167,8 @@ class TestResourceReadRetry(TestCase):
 
         frame = np.zeros((600, 600, 3), dtype=np.uint8)
 
-        resources._LAST_RESOURCE_VALUES["wood_stockpile"] = 999
-        resources._LAST_RESOURCE_TS["wood_stockpile"] = (
+        resources.RESOURCE_CACHE.last_resource_values["wood_stockpile"] = 999
+        resources.RESOURCE_CACHE.last_resource_ts["wood_stockpile"] = (
             time.time() - (resources._RESOURCE_CACHE_TTL + 10)
         )
 
