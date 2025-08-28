@@ -67,6 +67,10 @@ class TestResourceDebugImages(TestCase):
                  },
              ), \
             patch("script.resources._ocr_digits_better", side_effect=fake_ocr), \
+            patch(
+                "script.resources.pytesseract.image_to_data",
+                return_value={"text": [""], "conf": ["0"]},
+            ), \
             patch("script.resources.pytesseract.image_to_string", return_value=""), \
             patch("script.resources._read_population_from_roi", return_value=(0, 0)), \
             patch("script.resources.cv2.imwrite") as imwrite_mock:
@@ -119,9 +123,11 @@ class TestResourceDebugImages(TestCase):
              ), \
              patch("script.resources._ocr_digits_better", side_effect=fake_ocr), \
             patch(
-                "script.resources.pytesseract.image_to_string",
-                side_effect=[""] * 20 + ["0"],
+                "script.resources.pytesseract.image_to_data",
+                side_effect=[{"text": [""], "conf": ["0"]}] * 20
+                + [{"text": ["0"], "conf": ["90"]}],
             ), \
+            patch("script.resources.pytesseract.image_to_string", return_value=""), \
             patch("script.resources._read_population_from_roi", return_value=(0, 0)), \
             patch("script.resources.cv2.imwrite") as imwrite_mock:
             with self.assertRaises(common.ResourceReadError) as ctx:

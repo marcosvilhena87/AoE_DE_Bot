@@ -89,7 +89,10 @@ class TestGatherHudStats(TestCase):
                  "population_limit": (360, 0, 90, 52),
                  "idle_villager": (450, 0, 98, 52),
              }), \
-             patch("tools.campaign_bot.resources.pytesseract.image_to_string", return_value="600"):
+             patch(
+                 "tools.campaign_bot.resources.pytesseract.image_to_data",
+                 return_value={"text": ["600"], "conf": ["90"]},
+             ):
             res, pop = cb.gather_hud_stats()
 
         expected_res = {

@@ -1081,12 +1081,21 @@ def _read_resources(
         roi = frame[y : y + h, x : x + w]
         gray = preprocess_roi(roi)
         if name == "idle_villager":
-            text = pytesseract.image_to_string(
+            data = pytesseract.image_to_data(
                 gray,
                 config="--psm 7 -c tessedit_char_whitelist=0123456789",
+                output_type=pytesseract.Output.DICT,
             )
-            digits = "".join(filter(str.isdigit, text))
-            data = {"text": [text.strip()], "conf": []}
+            texts = [t for t in data.get("text", []) if t.strip()]
+            confidences = [
+                float(c)
+                for c in data.get("conf", [])
+                if c not in ("-1", "")
+            ]
+            if texts and confidences and all(c >= conf_threshold for c in confidences):
+                digits = "".join(filter(str.isdigit, "".join(texts)))
+            else:
+                digits = None
             mask = gray
         else:
             digits, data, mask = execute_ocr(gray, conf_threshold=conf_threshold)
