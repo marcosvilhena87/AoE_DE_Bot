@@ -1273,6 +1273,7 @@ def _read_resources(
                     f"{name} region has non-positive size"
                 )
             continue
+        failure_count = cache.resource_failure_counts.get(name, 0)
         roi = frame[y : y + h, x : x + w]
         gray = preprocess_roi(roi)
         if name == "idle_villager":
@@ -1303,8 +1304,10 @@ def _read_resources(
                 )
         if not digits or data.get("low_conf_single"):
             digits = ""
-            expand_px = CFG.get("ocr_roi_expand_px", 0)
-            if expand_px:
+            base_expand = CFG.get("ocr_roi_expand_px", 0)
+            step = CFG.get("ocr_roi_expand_step", 0)
+            expand_px = base_expand + failure_count * step
+            if expand_px > 0:
                 x0 = max(0, x - expand_px)
                 y0 = max(0, y - expand_px)
                 x1 = min(frame.shape[1], x + w + expand_px)
@@ -1387,7 +1390,6 @@ def _read_resources(
                 cv2.imwrite(str(thresh_path), mask)
                 logger.warning("Saved threshold image to %s", thresh_path)
             ts_cache = cache.last_resource_ts.get(name)
-            failure_count = cache.resource_failure_counts.get(name, 0)
             use_cache = False
             if name in cache.last_resource_values and ts_cache is not None:
                 age = time.time() - ts_cache
