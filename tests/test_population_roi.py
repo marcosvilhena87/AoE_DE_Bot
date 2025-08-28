@@ -28,6 +28,21 @@ class DummyMSS:
 
 sys.modules.setdefault("pyautogui", dummy_pg)
 sys.modules.setdefault("mss", types.SimpleNamespace(mss=lambda: DummyMSS()))
+sys.modules.setdefault(
+    "cv2",
+    types.SimpleNamespace(
+        cvtColor=lambda src, code: src,
+        resize=lambda img, *a, **k: img,
+        threshold=lambda img, *a, **k: (None, img),
+        imread=lambda *a, **k: np.zeros((1, 1), dtype=np.uint8),
+        IMREAD_GRAYSCALE=0,
+        COLOR_BGR2GRAY=0,
+        INTER_LINEAR=0,
+        THRESH_BINARY=0,
+        THRESH_OTSU=0,
+    ),
+)
+os.environ.setdefault("TESSERACT_CMD", "/usr/bin/true")
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import script.common as common
@@ -38,6 +53,7 @@ class TestPopulationROI(TestCase):
     def test_population_roi_outside_screen_raises_error(self):
         with patch("script.input_utils._screen_size", return_value=(200, 200)), \
             patch.dict(common.CFG["areas"], {"pop_box": [2.0, 2.0, 0.1, 0.1]}), \
+            patch.dict(common.CFG, {"population_limit_roi": None}, clear=False), \
             patch("script.resources.locate_resource_panel", return_value={}), \
             patch("script.screen_utils._grab_frame", return_value=np.zeros((1, 1, 3))) as grab_mock, \
             patch("script.hud.pytesseract.image_to_data") as ocr_mock:
@@ -64,6 +80,7 @@ class TestPopulationROI(TestCase):
             patch("script.resources.locate_resource_panel", return_value={}), \
             patch("script.input_utils._screen_size", return_value=(200, 200)), \
             patch.dict(common.CFG["areas"], {"pop_box": [0.1, 0.1, 0.5, 0.5]}), \
+            patch.dict(common.CFG, {"population_limit_roi": None}, clear=False), \
             patch("script.hud.cv2.cvtColor", side_effect=lambda img, code: img), \
             patch("script.hud.cv2.resize", side_effect=lambda img, *a, **k: img), \
             patch("script.hud.cv2.threshold", side_effect=lambda img, *a, **k: (None, img)), \
@@ -102,6 +119,7 @@ class TestPopulationROI(TestCase):
             patch("script.resources.locate_resource_panel", return_value={}), \
             patch("script.input_utils._screen_size", return_value=(200, 200)), \
             patch.dict(common.CFG["areas"], {"pop_box": pop_box}), \
+            patch.dict(common.CFG, {"population_limit_roi": None}, clear=False), \
             patch("script.common.HUD_ANCHOR", {"left": 50, "top": 60, "width": 10, "height": 10}), \
             patch("script.hud.cv2.cvtColor", side_effect=fake_cvtColor), \
             patch("script.hud.cv2.resize", side_effect=lambda img, *a, **k: img), \
@@ -138,6 +156,7 @@ class TestPopulationROI(TestCase):
     def test_non_positive_population_roi_raises_before_ocr(self):
         with patch("script.input_utils._screen_size", return_value=(200, 200)), \
             patch.dict(common.CFG["areas"], {"pop_box": [0.1, 0.1, -0.5, 0.2]}), \
+            patch.dict(common.CFG, {"population_limit_roi": None}, clear=False), \
             patch("script.resources.locate_resource_panel", return_value={}), \
             patch("script.screen_utils._grab_frame", return_value=np.zeros((1, 1, 3))) as grab_mock, \
             patch("script.hud.pytesseract.image_to_data") as ocr_mock, \

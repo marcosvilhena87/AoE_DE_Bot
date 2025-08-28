@@ -37,6 +37,8 @@ sys.modules.setdefault(
     types.SimpleNamespace(
         pytesseract=types.SimpleNamespace(tesseract_cmd=""),
         image_to_string=lambda *a, **k: "",
+        image_to_data=lambda *a, **k: {"text": [""], "conf": ["0"]},
+        Output=types.SimpleNamespace(DICT=0),
     ),
 )
 

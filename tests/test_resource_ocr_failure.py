@@ -96,12 +96,16 @@ class TestResourceOcrFailure(TestCase):
                 "idle_villager": (250, 0, 50, 50),
             },
         ), patch("script.resources._ocr_digits_better", side_effect=fake_ocr), patch(
+            "script.resources.pytesseract.image_to_data",
+            return_value={"text": [""], "conf": ["0"]},
+        ), patch(
             "script.resources.pytesseract.image_to_string", return_value="123"
         ), patch("script.resources._read_population_from_roi", return_value=(0, 0)):
+            icons = resources.RESOURCE_ICON_ORDER[:-1]
             result, _ = resources._read_resources(
                 frame,
-                resources.RESOURCE_ICON_ORDER,
-                resources.RESOURCE_ICON_ORDER,
+                icons,
+                icons,
             )
             self.assertEqual(result["wood_stockpile"], 123)
 

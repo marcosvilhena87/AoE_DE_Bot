@@ -41,7 +41,9 @@ class TestDetectResourceRegions(TestCase):
         frame = np.zeros((100, 100, 3), dtype=np.uint8)
         required = ["wood_stockpile", "food_stockpile"]
         with patch("script.resources.locate_resource_panel", return_value={"wood_stockpile": (0, 0, 10, 10)}), \
-             patch.object(common, "HUD_ANCHOR", None):
+             patch.object(common, "HUD_ANCHOR", None), \
+             patch("script.resources._auto_calibrate_from_icons", return_value=None), \
+             patch.dict(resources.CFG, {"food_stockpile_roi": None}, clear=False):
             with self.assertRaises(common.ResourceReadError):
                 resources.detect_resource_regions(frame, required)
 

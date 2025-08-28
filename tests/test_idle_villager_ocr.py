@@ -41,17 +41,45 @@ class TestIdleVillagerOCR(TestCase):
         resources.RESOURCE_CACHE.last_resource_ts.clear()
         resources.RESOURCE_CACHE.resource_failure_counts.clear()
 
-    def test_idle_villager_uses_digit_only_tesseract(self):
+    def test_idle_villager_high_confidence_ocr(self):
         def fake_detect(frame, required_icons, cache=None):
             return {"idle_villager": (0, 0, 50, 50)}
 
         frame = np.zeros((100, 100, 3), dtype=np.uint8)
         with patch("script.resources.detect_resource_regions", side_effect=fake_detect), \
              patch("script.screen_utils._grab_frame", return_value=frame), \
-             patch("script.resources.pytesseract.image_to_string", return_value="12") as img2str, \
-             patch("script.resources._ocr_digits_better") as ocr_mock:
+             patch(
+                 "script.resources.pytesseract.image_to_data",
+                 return_value={"text": ["1", "2"], "conf": ["90", "90"]},
+             ) as img2data, \
+             patch("script.resources.execute_ocr") as exec_mock:
             result, _ = resources.read_resources_from_hud(["idle_villager"])
 
         self.assertEqual(result["idle_villager"], 12)
-        img2str.assert_called_once_with(ANY, config="--psm 7 -c tessedit_char_whitelist=0123456789")
-        ocr_mock.assert_not_called()
+        img2data.assert_called_once_with(
+            ANY,
+            config="--psm 7 -c tessedit_char_whitelist=0123456789",
+            output_type=resources.pytesseract.Output.DICT,
+        )
+        exec_mock.assert_not_called()
+
+    def test_idle_villager_low_confidence_returns_none(self):
+        def fake_detect(frame, required_icons, cache=None):
+            return {"idle_villager": (0, 0, 50, 50)}
+
+        frame = np.zeros((100, 100, 3), dtype=np.uint8)
+        with patch("script.resources.detect_resource_regions", side_effect=fake_detect), \
+             patch("script.screen_utils._grab_frame", return_value=frame), \
+             patch(
+                 "script.resources.pytesseract.image_to_data",
+                 return_value={"text": ["1"], "conf": ["30"]},
+             ), \
+             patch(
+                 "script.resources.execute_ocr",
+                 return_value=("", {"text": [""], "conf": []}, None),
+             ):
+            result, _ = resources.read_resources_from_hud(
+                required_icons=[], icons_to_read=["idle_villager"]
+            )
+
+        self.assertIsNone(result.get("idle_villager"))
