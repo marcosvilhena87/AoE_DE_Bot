@@ -24,6 +24,8 @@
   "//ocr_bilateral": "Bilateral filter params [d, sigmaColor, sigmaSpace]; set null or [] to disable.",
   "ocr_equalize_hist": true,
   "//ocr_equalize_hist": "Apply histogram equalization; false to disable or object for CLAHE.",
+  "ocr_contrast_stretch": false,
+  "//ocr_contrast_stretch": "Rescale intensities before thresholding; true for min-max or object with {alpha,beta}.",
   "ocr_psm_list": [7],
   "ocr_zero_variance": 15,
   "tesseract_path": "C:\\Program Files\\Tesseract-OCR\\tesseract.exe",
