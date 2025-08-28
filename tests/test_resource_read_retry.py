@@ -183,3 +183,24 @@ class TestResourceReadRetry(TestCase):
 
         self.assertEqual(result["wood_stockpile"], 999)
         self.assertIn("wood_stockpile", resources._LAST_READ_FROM_CACHE)
+
+    def test_default_value_returned_after_threshold(self):
+        def fake_detect(frame, required_icons, cache=None):
+            return {"wood_stockpile": (0, 0, 50, 50)}
+
+        def fake_ocr(gray):
+            return "", {"text": [""]}, np.zeros((1, 1), dtype=np.uint8)
+
+        frame = np.zeros((600, 600, 3), dtype=np.uint8)
+
+        with patch.dict(resources.CFG, {"ocr_retry_limit": 2}, clear=False), \
+             patch("script.resources.detect_resource_regions", side_effect=fake_detect), \
+             patch("script.screen_utils._grab_frame", return_value=frame), \
+             patch("script.resources._ocr_digits_better", side_effect=fake_ocr), \
+             patch("script.resources.pytesseract.image_to_string", return_value=""), \
+             patch("script.resources.cv2.imwrite"):
+            with self.assertRaises(common.ResourceReadError):
+                resources.read_resources_from_hud(["wood_stockpile"])
+            result, _ = resources.read_resources_from_hud(["wood_stockpile"])
+
+        self.assertEqual(result["wood_stockpile"], 0)

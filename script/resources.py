@@ -918,8 +918,8 @@ def execute_ocr(gray, conf_threshold=None, allow_fallback=True):
     return digits, data, mask
 
 
-def handle_ocr_failure(frame, regions, results, required_icons):
-    """Handle OCR failures by saving debug images.
+def handle_ocr_failure(frame, regions, results, required_icons, cache=None, retry_limit=None):
+    """Handle OCR failures by saving debug images and applying fallbacks.
 
     Parameters
     ----------
@@ -931,9 +931,35 @@ def handle_ocr_failure(frame, regions, results, required_icons):
         OCR results with ``None`` for failed icons.
     required_icons : Iterable[str]
         Icons that should trigger an exception if OCR fails.
+    cache : ResourceCache, optional
+        Cache instance tracking failure counts and cached values.
+    retry_limit : int, optional
+        Number of consecutive failures before falling back to a default value.
     """
 
+    if cache is None:
+        cache = RESOURCE_CACHE
+    if retry_limit is None:
+        retry_limit = CFG.get("ocr_retry_limit", 3)
+
     failed = [name for name, v in results.items() if v is None]
+    if not failed:
+        return
+
+    # Apply fallback for resources that have exceeded the retry limit
+    for name in list(failed):
+        count = cache.resource_failure_counts.get(name, 0)
+        if count >= retry_limit:
+            fallback = cache.last_resource_values.get(name, 0)
+            results[name] = fallback
+            logger.warning(
+                "Using fallback value %s=%d after %d OCR failures",
+                name,
+                fallback,
+                count,
+            )
+            failed.remove(name)
+
     if not failed:
         return
 
@@ -1149,7 +1175,7 @@ def _read_resources(
 
     filtered_regions = {n: regions[n] for n in resource_icons if n in regions}
     required_for_ocr = [n for n in required_icons if n != "population_limit"]
-    handle_ocr_failure(frame, filtered_regions, results, required_for_ocr)
+    handle_ocr_failure(frame, filtered_regions, results, required_for_ocr, cache)
 
     cur_pop = pop_cap = None
     if "population_limit" in icons_to_read:
