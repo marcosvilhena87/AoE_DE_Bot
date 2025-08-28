@@ -391,7 +391,14 @@ def _ocr_digits_better(gray):
         gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 11, 2
     )
     adaptive = cv2.dilate(adaptive, kernel, iterations=1)
-    return _run_masks([adaptive, cv2.bitwise_not(adaptive)], 2)
+    digits, data, mask = _run_masks([adaptive, cv2.bitwise_not(adaptive)], 2)
+
+    if not digits:
+        variance = float(np.var(gray))
+        if variance < CFG.get("ocr_zero_variance", 5.0):
+            return "0", {}, mask
+
+    return digits, data, mask
 
 
 def detect_resource_regions(frame, required_icons):
