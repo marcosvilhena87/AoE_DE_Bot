@@ -800,7 +800,10 @@ def preprocess_roi(roi):
     """Convert ROI to a blurred grayscale image."""
 
     gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
-    return cv2.medianBlur(gray, 3)
+    kernel = CFG.get("ocr_blur_kernel", 3)
+    if kernel:
+        gray = cv2.medianBlur(gray, kernel)
+    return gray
 
 
 def execute_ocr(gray, conf_threshold=None, allow_fallback=True):
