@@ -512,3 +512,58 @@ class TestResourceROIs(TestCase):
 
         self.assertEqual(resources._LAST_RESOURCE_VALUES, {})
         self.assertEqual(resources._LAST_RESOURCE_TS, {})
+
+    def test_detect_regions_scales_with_resolution(self):
+        """Auto-calibrated ROIs should scale with the screen resolution."""
+
+        def _run(scale):
+            width = 200 * scale
+            height = 20 * scale
+            frame = np.zeros((height, width, 3), dtype=np.uint8)
+            positions = [p * scale for p in self.positions]
+            loc_iter = iter([(x, 0) for x in positions])
+
+            def fake_minmax(res):
+                xi, yi = next(loc_iter)
+                return 0.0, 0.95, (0, 0), (xi, yi)
+
+            icon_size = 5 * scale
+
+            with patch("script.resources.locate_resource_panel", return_value={}), \
+                patch("script.resources.input_utils._screen_size", return_value=(width, height)), \
+                patch("script.resources.cv2.cvtColor", lambda src, code: np.zeros(src.shape[:2], dtype=np.uint8)), \
+                patch("script.resources.cv2.resize", lambda img, *a, **k: img), \
+                patch("script.resources.cv2.matchTemplate", lambda *a, **k: np.zeros((100, 200), dtype=np.float32)), \
+                patch("script.resources.cv2.minMaxLoc", side_effect=fake_minmax), \
+                patch.object(screen_utils, "_load_icon_templates", lambda: None), \
+                patch.dict(
+                    screen_utils.ICON_TEMPLATES,
+                    {name: np.zeros((icon_size, icon_size), dtype=np.uint8) for name in self.icons},
+                    clear=True,
+                ), patch.dict(
+                    common.CFG["resource_panel"],
+                    {
+                        "roi_padding_left": [self.pad_left] * 6,
+                        "roi_padding_right": [self.pad_right] * 6,
+                        "icon_trim_pct": [0] * 6,
+                        "scales": [1.0],
+                        "match_threshold": 0.5,
+                        "max_width": 999,
+                        "min_width": 0,
+                        "top_pct": 0.0,
+                        "height_pct": 1.0,
+                    },
+                ), patch.dict(
+                    common.CFG["profiles"]["aoe1de"]["resource_panel"],
+                    {"icon_trim_pct": [0] * 6},
+                ), patch.object(common, "HUD_ANCHOR", None):
+                return resources.detect_resource_regions(frame, self.icons)
+
+        regions1 = _run(1)
+        regions2 = _run(2)
+
+        for name in self.icons[:-1]:
+            roi1 = regions1[name]
+            roi2 = regions2[name]
+            self.assertAlmostEqual(roi1[0] * 2, roi2[0], delta=1)
+            self.assertAlmostEqual(roi1[2] * 2, roi2[2], delta=1)
