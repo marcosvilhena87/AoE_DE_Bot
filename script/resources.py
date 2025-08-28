@@ -1078,6 +1078,15 @@ def _read_resources(
                 results[name] = None
             continue
         x, y, w, h = regions[name]
+        if w <= 0 or h <= 0:
+            logger.error(
+                "ROI for '%s' has invalid dimensions w=%d h=%d", name, w, h
+            )
+            if name in required_set:
+                raise common.ResourceReadError(
+                    f"{name} region has non-positive size"
+                )
+            continue
         roi = frame[y : y + h, x : x + w]
         gray = preprocess_roi(roi)
         if name == "idle_villager":
