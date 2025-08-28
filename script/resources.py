@@ -234,6 +234,82 @@ def compute_resource_rois(
     return regions, spans, narrow
 
 
+@dataclass
+class ResourcePanelCfg:
+    match_threshold: float
+    scales: Iterable[float]
+    pad_left: list
+    pad_right: list
+    icon_trims: list
+    max_width: int
+    min_widths: list
+    min_requireds: list
+    top_pct: float
+    height_pct: float
+    idle_roi_extra_width: int
+
+
+def _get_resource_panel_cfg():
+    """Return processed configuration values for the resource panel."""
+
+    res_cfg = CFG.get("resource_panel", {})
+    profile = CFG.get("profile")
+    profile_cfg = CFG.get("profiles", {}).get(profile, {})
+    profile_res = profile_cfg.get("resource_panel", {})
+
+    match_threshold = profile_res.get(
+        "match_threshold", res_cfg.get("match_threshold", 0.8)
+    )
+    scales = res_cfg.get("scales", CFG.get("scales", [1.0]))
+
+    pad_left = res_cfg.get("roi_padding_left", 2)
+    pad_right = res_cfg.get("roi_padding_right", 2)
+    num_icons = len(RESOURCE_ICON_ORDER)
+    pad_left = pad_left if isinstance(pad_left, (list, tuple)) else [pad_left] * num_icons
+    pad_right = pad_right if isinstance(pad_right, (list, tuple)) else [pad_right] * num_icons
+
+    icon_trims = profile_res.get(
+        "icon_trim_pct", res_cfg.get("icon_trim_pct", [0] * num_icons)
+    )
+    icon_trims = (
+        icon_trims if isinstance(icon_trims, (list, tuple)) else [icon_trims] * num_icons
+    )
+
+    max_width = res_cfg.get("max_width", 160)
+
+    min_width_cfg = res_cfg.get("min_width", 90)
+    min_widths = (
+        min_width_cfg
+        if isinstance(min_width_cfg, (list, tuple))
+        else [min_width_cfg] * num_icons
+    )
+
+    min_req_cfg = res_cfg.get("min_required_width", 0)
+    min_requireds = (
+        min_req_cfg
+        if isinstance(min_req_cfg, (list, tuple))
+        else [min_req_cfg] * num_icons
+    )
+
+    top_pct = profile_res.get("top_pct", res_cfg.get("top_pct", 0.08))
+    height_pct = profile_res.get("height_pct", res_cfg.get("height_pct", 0.84))
+
+    idle_extra = res_cfg.get("idle_roi_extra_width", 0)
+
+    return ResourcePanelCfg(
+        match_threshold,
+        scales,
+        pad_left,
+        pad_right,
+        icon_trims,
+        max_width,
+        min_widths,
+        min_requireds,
+        top_pct,
+        height_pct,
+        idle_extra,
+    )
+
 
 def locate_resource_panel(frame, cache: ResourceCache = RESOURCE_CACHE):
     """Locate the resource panel and return bounding boxes for each value."""
@@ -245,40 +321,7 @@ def locate_resource_panel(frame, cache: ResourceCache = RESOURCE_CACHE):
     x, y, w, h = box
     panel_gray = cv2.cvtColor(frame[y : y + h, x : x + w], cv2.COLOR_BGR2GRAY)
 
-    res_cfg = CFG.get("resource_panel", {})
-    profile = CFG.get("profile")
-    profile_cfg = CFG.get("profiles", {}).get(profile, {})
-    profile_res = profile_cfg.get("resource_panel", {})
-    match_threshold = profile_res.get(
-        "match_threshold", res_cfg.get("match_threshold", 0.8)
-    )
-    scales = res_cfg.get("scales", CFG.get("scales", [1.0]))
-    pad_left = res_cfg.get("roi_padding_left", 2)
-    pad_right = res_cfg.get("roi_padding_right", 2)
-    pad_left = pad_left if isinstance(pad_left, (list, tuple)) else [pad_left] * 6
-    pad_right = pad_right if isinstance(pad_right, (list, tuple)) else [pad_right] * 6
-    icon_trims = profile_res.get(
-        "icon_trim_pct",
-        res_cfg.get("icon_trim_pct", [0, 0, 0, 0, 0, 0]),
-    )
-    icon_trims = (
-        icon_trims if isinstance(icon_trims, (list, tuple)) else [icon_trims] * 6
-    )
-    max_width = res_cfg.get("max_width", 160)
-    min_width_cfg = res_cfg.get("min_width", 90)
-    min_widths = (
-        min_width_cfg
-        if isinstance(min_width_cfg, (list, tuple))
-        else [min_width_cfg] * 6
-    )
-    min_req_cfg = res_cfg.get("min_required_width", 0)
-    min_requireds = (
-        min_req_cfg
-        if isinstance(min_req_cfg, (list, tuple))
-        else [min_req_cfg] * 6
-    )
-    top_pct = profile_res.get("top_pct", res_cfg.get("top_pct", 0.08))
-    height_pct = profile_res.get("height_pct", res_cfg.get("height_pct", 0.84))
+    cfg = _get_resource_panel_cfg()
     screen_utils._load_icon_templates()
 
     detected = {}
@@ -287,13 +330,13 @@ def locate_resource_panel(frame, cache: ResourceCache = RESOURCE_CACHE):
         if icon is None:
             continue
         best = (0, None, None)
-        for scale in scales:
+        for scale in cfg.scales:
             icon_scaled = cv2.resize(icon, None, fx=scale, fy=scale)
             result = cv2.matchTemplate(panel_gray, icon_scaled, cv2.TM_CCOEFF_NORMED)
             _, max_val, _, max_loc = cv2.minMaxLoc(result)
             if max_val > best[0]:
                 best = (max_val, max_loc, icon_scaled.shape[::-1])
-        if best[0] >= match_threshold and best[1] is not None:
+        if best[0] >= cfg.match_threshold and best[1] is not None:
             bw, bh = best[2]
             detected[name] = (best[1][0], best[1][1], bw, bh)
             cache.last_icon_bounds[name] = (best[1][0], best[1][1], bw, bh)
@@ -316,20 +359,20 @@ def locate_resource_panel(frame, cache: ResourceCache = RESOURCE_CACHE):
         detected["population_limit"] = (px, yi, pw, ph)
         cache.last_icon_bounds["population_limit"] = (px, yi, pw, ph)
 
-    top = y + int(top_pct * h)
-    height = int(height_pct * h)
+    top = y + int(cfg.top_pct * h)
+    height = int(cfg.height_pct * h)
 
     regions, spans, narrow = compute_resource_rois(
         x,
         x + w,
         top,
         height,
-        pad_left,
-        pad_right,
-        icon_trims,
-        max_width,
-        min_widths,
-        min_requireds,
+        cfg.pad_left,
+        cfg.pad_right,
+        cfg.icon_trims,
+        cfg.max_width,
+        cfg.min_widths,
+        cfg.min_requireds,
         detected,
     )
 
@@ -339,7 +382,7 @@ def locate_resource_panel(frame, cache: ResourceCache = RESOURCE_CACHE):
 
     if "idle_villager" in detected:
         xi, yi, wi, hi = detected["idle_villager"]
-        extra = res_cfg.get("idle_roi_extra_width", 0)
+        extra = cfg.idle_roi_extra_width
         left = x + xi
         width = wi + extra
         right = left + width
@@ -438,41 +481,7 @@ def _auto_calibrate_from_icons(frame, cache: ResourceCache = RESOURCE_CACHE):
     screen_utils._load_icon_templates()
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-    res_cfg = CFG.get("resource_panel", {})
-    profile = CFG.get("profile")
-    profile_res = CFG.get("profiles", {}).get(profile, {}).get(
-        "resource_panel", {},
-    )
-
-    match_threshold = profile_res.get(
-        "match_threshold", res_cfg.get("match_threshold", 0.8)
-    )
-    scales = res_cfg.get("scales", CFG.get("scales", [1.0]))
-    pad_left = res_cfg.get("roi_padding_left", 2)
-    pad_right = res_cfg.get("roi_padding_right", 2)
-    pad_left = pad_left if isinstance(pad_left, (list, tuple)) else [pad_left] * 6
-    pad_right = pad_right if isinstance(pad_right, (list, tuple)) else [pad_right] * 6
-
-    icon_trims = profile_res.get(
-        "icon_trim_pct", res_cfg.get("icon_trim_pct", [0, 0, 0, 0, 0, 0])
-    )
-    icon_trims = icon_trims if isinstance(icon_trims, (list, tuple)) else [icon_trims] * 6
-
-    max_width = res_cfg.get("max_width", 160)
-    min_width_cfg = res_cfg.get("min_width", 90)
-    min_widths = (
-        min_width_cfg
-        if isinstance(min_width_cfg, (list, tuple))
-        else [min_width_cfg] * 6
-    )
-    min_req_cfg = res_cfg.get("min_required_width", 0)
-    min_requireds = (
-        min_req_cfg
-        if isinstance(min_req_cfg, (list, tuple))
-        else [min_req_cfg] * 6
-    )
-    top_pct = profile_res.get("top_pct", res_cfg.get("top_pct", 0.08))
-    height_pct = profile_res.get("height_pct", res_cfg.get("height_pct", 0.84))
+    cfg = _get_resource_panel_cfg()
 
     detected = {}
     for name in RESOURCE_ICON_ORDER:
@@ -480,13 +489,13 @@ def _auto_calibrate_from_icons(frame, cache: ResourceCache = RESOURCE_CACHE):
         if icon is None:
             continue
         best = (0, None, None)
-        for scale in scales:
+        for scale in cfg.scales:
             icon_scaled = cv2.resize(icon, None, fx=scale, fy=scale)
             result = cv2.matchTemplate(gray, icon_scaled, cv2.TM_CCOEFF_NORMED)
             _, max_val, _, max_loc = cv2.minMaxLoc(result)
             if max_val > best[0]:
                 best = (max_val, max_loc, icon_scaled.shape[::-1])
-        if best[0] >= match_threshold and best[1] is not None:
+        if best[0] >= cfg.match_threshold and best[1] is not None:
             bw, bh = best[2]
             detected[name] = (best[1][0], best[1][1], bw, bh)
             cache.last_icon_bounds[name] = (best[1][0], best[1][1], bw, bh)
@@ -507,20 +516,20 @@ def _auto_calibrate_from_icons(frame, cache: ResourceCache = RESOURCE_CACHE):
         for name, (x, y, w, h) in detected.items()
     }
 
-    top = panel_top + int(top_pct * panel_height)
-    height = int(height_pct * panel_height)
+    top = panel_top + int(cfg.top_pct * panel_height)
+    height = int(cfg.height_pct * panel_height)
 
     regions, spans, narrow = compute_resource_rois(
         panel_left,
         panel_right,
         top,
         height,
-        pad_left,
-        pad_right,
-        icon_trims,
-        max_width,
-        min_widths,
-        min_requireds,
+        cfg.pad_left,
+        cfg.pad_right,
+        cfg.icon_trims,
+        cfg.max_width,
+        cfg.min_widths,
+        cfg.min_requireds,
         detected_rel,
     )
 
@@ -530,7 +539,7 @@ def _auto_calibrate_from_icons(frame, cache: ResourceCache = RESOURCE_CACHE):
 
     if "idle_villager" in detected_rel:
         xi, yi, wi, hi = detected_rel["idle_villager"]
-        extra = res_cfg.get("idle_roi_extra_width", 0)
+        extra = cfg.idle_roi_extra_width
         left = panel_left + xi
         width = wi + extra
         right = left + width
