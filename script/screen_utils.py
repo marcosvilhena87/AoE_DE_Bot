@@ -69,7 +69,7 @@ def _grab_frame(bbox=None):
 def _load_gray(path):
     im = cv2.imread(str(path), cv2.IMREAD_GRAYSCALE)
     if im is None:
-        logger.warning("Asset não encontrado: %s", path)
+        logger.warning("Asset not found: %s", path)
         return None
     return im
 

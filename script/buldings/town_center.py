@@ -49,7 +49,7 @@ def train_villagers(target_pop: int):
             break
         if food < 50:
             logger.info(
-                "Comida insuficiente (%s) para treinar aldeões.",
+                "Insufficient food (%s) to train villagers.",
                 food,
             )
             break
@@ -58,11 +58,11 @@ def train_villagers(target_pop: int):
         if common.CURRENT_POP == common.POP_CAP:
             if select_idle_villager():
                 if build_house():
-                    logger.info("Casa construída para expandir população")
+                    logger.info("House built to increase population")
                 else:
-                    logger.warning("Falha ao construir casa para expandir população")
+                    logger.warning("Failed to build house to increase population")
             else:
-                logger.warning("Nenhum aldeão ocioso para construir casa")
+                logger.warning("No idle villager to build house")
             # Reselect the Town Center after attempting to build a house so
             # that further villager training continues from the correct
             # building.
