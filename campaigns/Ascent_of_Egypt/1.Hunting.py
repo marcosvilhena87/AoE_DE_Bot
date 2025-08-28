@@ -34,17 +34,17 @@ def main() -> None:
         the target population is.
     """
 
-    logger.info("Entre na missão da campanha (Hunting). O script inicia quando detectar a HUD…")
+    logger.info("Enter the campaign mission (Hunting). The script starts when the HUD is detected…")
 
     try:
         anchor, asset = hud.wait_hud(timeout=90)
-        logger.info("HUD detectada em %s usando '%s'.", anchor, asset)
+        logger.info("HUD detected at %s using '%s'.", anchor, asset)
     except RuntimeError as exc:  # pragma: no cover - retry branch is defensive
         logger.error(str(exc))
-        logger.info("Dando mais 25s para você ajustar a câmera/HUD (fallback)…")
+        logger.info("Giving another 25s for you to adjust the camera/HUD (fallback)…")
         time.sleep(25)
         anchor, asset = hud.wait_hud(timeout=90)
-        logger.info("HUD detectada em %s usando '%s'.", anchor, asset)
+        logger.info("HUD detected at %s using '%s'.", anchor, asset)
 
     scenario_txt = Path(__file__).with_suffix(".txt")
     info = parse_scenario_info(scenario_txt)
@@ -54,7 +54,7 @@ def main() -> None:
     common.POP_CAP = 4  # População suportada pelo Town Center inicial
     common.TARGET_POP = info.objective_villagers
 
-    logger.info("Setup concluído.")
+    logger.info("Setup complete.")
 
 
 if __name__ == "__main__":  # pragma: no cover - manual execution entry point

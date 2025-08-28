@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 
 def wait_hud(timeout=60):
-    logger.info("Aguardando HUD por até %ss...", timeout)
+    logger.info("Waiting for HUD for up to %ss...", timeout)
     t0 = time.time()
     tmpl = screen_utils.HUD_TEMPLATE
     asset = "assets/resources.png"
@@ -41,7 +41,7 @@ def wait_hud(timeout=60):
             if CFG["debug"]:
                 cv2.imwrite(f"debug_hud_{asset}.png", frame)
             x, y, w, h = box
-            logger.info("HUD detectada com template '%s'", asset)
+            logger.info("HUD detected with template '%s'", asset)
             common.HUD_ANCHOR = {
                 "left": x,
                 "top": y,
@@ -60,14 +60,14 @@ def wait_hud(timeout=60):
         asset,
     )
     logger.error(
-        "HUD não encontrada. Melhor score=%.3f no template '%s'. "
-        "Considere recapturar templates de ícones ou verificar a resolução/ESCALA 100%%.",
+        "HUD not found. Best score=%.3f on template '%s'. "
+        "Consider recapturing icon templates or checking resolution/SCALING 100%%.",
         last_score,
         asset,
     )
     raise RuntimeError(
-        f"HUD não encontrada. Melhor score={last_score:.3f} no template '{asset}'. "
-        "Considere recapturar os templates de ícones ou verificar a resolução/ESCALA 100%.",
+        f"HUD not found. Best score={last_score:.3f} on template '{asset}'. "
+        "Consider recapturing icon templates or checking resolution/SCALING 100%.",
     )
 
 
@@ -113,7 +113,7 @@ def read_population_from_hud(retries=1, conf_threshold=None, save_failed_roi=Fal
                 "Population ROI out of screen bounds: "
                 f"left={abs_left}, top={abs_top}, width={pw}, height={ph}, "
                 f"screen={screen_width}x{screen_height}. "
-                "Recalibrate areas.pop_box em config.json ou use a âncora por template."
+                "Recalibrate areas.pop_box in config.json or use template anchoring."
             )
         roi_bbox = {"left": abs_left, "top": abs_top, "width": pw, "height": ph}
 
@@ -155,7 +155,7 @@ def read_population_from_hud(retries=1, conf_threshold=None, save_failed_roi=Fal
         time.sleep(0.1)
 
     logger.warning(
-        "Falha ao ler população da HUD após %s tentativas; último texto='%s', conf=%s",
+        "Failed to read population from HUD after %s attempts; last text='%s', conf=%s",
         retries,
         last_text,
         last_confidences,
@@ -165,23 +165,23 @@ def read_population_from_hud(retries=1, conf_threshold=None, save_failed_roi=Fal
         cv2.imwrite(str(ROOT / f"debug_pop_roi_{ts}.png"), last_roi)
         cv2.imwrite(str(ROOT / f"debug_pop_thresh_{ts}.png"), last_thresh)
         logger.info(
-            "ROI salva; texto extraído: '%s'; conf=%s",
+            "ROI saved; extracted text: '%s'; conf=%s",
             last_text,
             last_confidences,
         )
     logger.info(
-        "Acionando fallback para leitura de população via resources.read_resources_from_hud"
+        "Triggering fallback to read population via resources.read_resources_from_hud"
     )
     try:
         _, (cur, limit) = resources.read_resources_from_hud(
             ["population_limit"], force_delay=0.1, conf_threshold=conf_threshold
         )
         if cur is not None and limit is not None:
-            logger.info("Fallback de população bem-sucedido: %s/%s", cur, limit)
+            logger.info("Population fallback succeeded: %s/%s", cur, limit)
             return cur, limit
     except Exception as exc:  # pragma: no cover - log but ignore any failure
-        logger.debug("Fallback falhou: %s", exc)
+        logger.debug("Fallback failed: %s", exc)
 
     raise common.PopulationReadError(
-        f"Falha ao ler população da HUD após {retries} tentativas. Texto='{last_text}', confs={last_confidences}"
+        f"Failed to read population from HUD after {retries} attempts. Text='{last_text}', confs={last_confidences}"
     )

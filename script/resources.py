@@ -207,7 +207,7 @@ def compute_resource_rois(
             width = available_width
             narrow[current] = True
             logger.warning(
-                "ROI estreita para '%s': disp=%d min=%d",
+                "Narrow ROI for '%s': available=%d min=%d",
                 current,
                 available_width,
                 min_w,
@@ -626,7 +626,7 @@ def detect_resource_regions(frame, required_icons):
                 max(20, height),
             )
             logger.debug(
-                "Custom ROI aplicada para idle_villager: %s", regions["idle_villager"]
+                "Custom ROI applied for idle_villager: %s", regions["idle_villager"]
             )
     custom_names = [
         "wood_stockpile",
@@ -645,7 +645,7 @@ def detect_resource_regions(frame, required_icons):
         width = int(cfg.get("width_pct", 0) * W)
         height = int(cfg.get("height_pct", 0) * H)
         regions[name] = (left, top, width, height)
-        logger.debug("Custom ROI aplicada para %s: %s", name, regions[name])
+        logger.debug("Custom ROI applied for %s: %s", name, regions[name])
     missing = [name for name in required_icons if name not in regions]
 
     if missing:
@@ -1207,7 +1207,7 @@ def _read_population_from_roi(roi, conf_threshold=None):
     cv2.imwrite(str(debug_dir / f"population_roi_{ts}.png"), roi)
     cv2.imwrite(str(debug_dir / f"population_thresh_{ts}.png"), thresh)
     raise common.PopulationReadError(
-        f"Falha ao ler população da HUD: texto='{text}', confs={confidences}"
+        f"Failed to read population from HUD: text='{text}', confs={confidences}"
     )
 
 

@@ -22,7 +22,7 @@ def select_idle_villager(delay: float = 0.1) -> bool:
     try:
         res_before, _ = resources.read_resources_from_hud(["idle_villager"])
     except common.ResourceReadError as exc:  # pragma: no cover - falha de OCR
-        logger.error("Falha ao ler idle_villager: %s", exc)
+        logger.error("Failed to read idle_villager: %s", exc)
     else:
         before = res_before.get("idle_villager")
 
@@ -34,7 +34,7 @@ def select_idle_villager(delay: float = 0.1) -> bool:
             ["idle_villager"], force_delay=delay
         )
     except common.ResourceReadError as exc:  # pragma: no cover - falha de OCR
-        logger.error("Falha ao ler idle_villager: %s", exc)
+        logger.error("Failed to read idle_villager: %s", exc)
     else:
         after = res_after.get("idle_villager")
 
@@ -76,7 +76,7 @@ def count_idle_villagers_via_hotkey(
     try:
         res, _ = resources.read_resources_from_hud(["idle_villager"])
     except common.ResourceReadError as exc:  # pragma: no cover - falha de OCR
-        logger.error("Falha ao ler idle_villager: %s", exc)
+        logger.error("Failed to read idle_villager: %s", exc)
         initial = 0
     else:
         initial = res.get("idle_villager")
@@ -94,7 +94,7 @@ def count_idle_villagers_via_hotkey(
                 ["idle_villager"], force_delay=delay
             )
         except common.ResourceReadError as exc:  # pragma: no cover - falha de OCR
-            logger.error("Falha ao ler idle_villager: %s", exc)
+            logger.error("Failed to read idle_villager: %s", exc)
             break
         new_val = res.get("idle_villager")
         if (
@@ -167,14 +167,14 @@ def build_house():
             return False
     if wood < wood_needed:
         logger.warning(
-            "Madeira insuficiente (%s) para construir casa.",
+            "Insufficient wood (%s) to build house.",
             wood,
         )
         return False
 
     house_key = common.CFG["keys"].get("house")
     if not house_key:
-        logger.warning("Tecla de construção de casa não configurada.")
+        logger.warning("House build key not configured.")
         return False
 
     areas = common.CFG.get("areas", {})
@@ -197,14 +197,14 @@ def build_house():
         try:
             cur, limit = hud.read_population_from_hud()
         except Exception as exc:  # pragma: no cover - falha de OCR
-            logger.warning("Falha ao ler população: %s", exc)
+            logger.warning("Failed to read population: %s", exc)
             limit = common.POP_CAP
 
         if limit > common.POP_CAP:
             common.POP_CAP = limit
             return True
 
-        logger.warning("Tentativa %s de construir casa falhou.", idx)
+        logger.warning("Attempt %s to build house failed.", idx)
         try:
             res_vals, _ = resources.read_resources_from_hud(["wood_stockpile"])
         except common.ResourceReadError as exc:
@@ -218,7 +218,7 @@ def build_house():
             return False
         if wood < wood_needed:
             logger.warning(
-                "Madeira insuficiente após tentativa (%s).", wood
+                "Insufficient wood after attempt (%s).", wood
             )
             break
 
@@ -230,7 +230,7 @@ def build_granary():
     input_utils._press_key_safe(common.CFG["keys"]["build_menu"], 0.05)
     g_key = common.CFG["keys"].get("granary")
     if not g_key:
-        logger.warning("Tecla de construção de Granary não configurada.")
+        logger.warning("Granary build key not configured.")
         return False
     areas = common.CFG.get("areas", {})
     spot = areas.get("granary_spot")
@@ -248,7 +248,7 @@ def build_storage_pit():
     input_utils._press_key_safe(common.CFG["keys"]["build_menu"], 0.05)
     s_key = common.CFG["keys"].get("storage_pit")
     if not s_key:
-        logger.warning("Tecla de construção de Storage Pit não configurada.")
+        logger.warning("Storage Pit build key not configured.")
         return False
     areas = common.CFG.get("areas", {})
     spot = areas.get("storage_spot")

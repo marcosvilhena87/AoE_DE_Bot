@@ -30,25 +30,25 @@ def main():
     screen_utils.init_sct()
     try:
         logger.info(
-            "Entre na missão da campanha (Hunting). O script inicia quando detectar a HUD…",
+            "Enter the campaign mission (Hunting). The script starts when the HUD is detected…",
         )
         try:
             anchor, asset = hud.wait_hud(timeout=90)
-            logger.info("HUD detectada em %s usando '%s'.", anchor, asset)
+            logger.info("HUD detected at %s using '%s'.", anchor, asset)
         except RuntimeError as e:
             logger.error(str(e))
-            logger.info("Dando mais 25s para você ajustar a câmera/HUD (fallback)…")
+            logger.info("Giving another 25s for you to adjust the camera/HUD (fallback)…")
             time.sleep(25)
             try:
                 anchor, asset = hud.wait_hud(timeout=90)
-                logger.info("HUD detectada em %s usando '%s'.", anchor, asset)
+                logger.info("HUD detected at %s using '%s'.", anchor, asset)
             except RuntimeError as e2:
                 logger.error(str(e2))
                 logger.warning(
-                    "HUD não detectada após tentativa extra; rotina continuará sem HUD ancorada."
+                    "HUD not detected after extra attempt; routine will continue without anchored HUD."
                 )
                 raise SystemExit(
-                    "HUD não detectada após duas tentativas; encerrando script."
+                    "HUD not detected after two attempts; exiting script."
                 )
 
         info = parse_scenario_info(args.scenario)
@@ -63,21 +63,21 @@ def main():
                 optional_icons=icon_cfg.get("optional"),
             )
             logger.info(
-                "Recursos detectados: madeira=%s, comida=%s, ouro=%s, pedra=%s",
+                "Detected resources: wood=%s, food=%s, gold=%s, stone=%s",
                 res.get("wood_stockpile"),
                 res.get("food_stockpile"),
                 res.get("gold_stockpile"),
                 res.get("stone_stockpile"),
             )
-            logger.info("População detectada: %s/%s", cur_pop, pop_cap)
+            logger.info("Detected population: %s/%s", cur_pop, pop_cap)
             logger.info(
-                "Aldeões ociosos detectados: %s", res.get("idle_villager")
+                "Detected idle villagers: %s", res.get("idle_villager")
             )
         except Exception as e:
-            logger.error("Falha ao detectar recursos ou população: %s", e)
-            raise SystemExit("Falha ao detectar recursos ou população")
+            logger.error("Failed to detect resources or population: %s", e)
+            raise SystemExit("Failed to detect resources or population")
 
-        logger.info("Setup concluído.")
+        logger.info("Setup complete.")
     finally:
         screen_utils.teardown_sct()
 
