@@ -81,6 +81,7 @@ class TestPopulationROI(TestCase):
             patch("script.input_utils._screen_size", return_value=(200, 200)), \
             patch.dict(common.CFG["areas"], {"pop_box": [0.1, 0.1, 0.5, 0.5]}), \
             patch.dict(common.CFG, {"population_limit_roi": None}, clear=False), \
+            patch("script.resources._auto_calibrate_from_icons", return_value={}), \
             patch("script.resources.cv2.cvtColor", side_effect=lambda img, code: img), \
             patch("script.resources.cv2.resize", side_effect=lambda img, *a, **k: img), \
             patch("script.resources.cv2.threshold", side_effect=lambda img, *a, **k: (None, img)), \

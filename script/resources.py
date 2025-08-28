@@ -723,16 +723,17 @@ def detect_resource_regions(
         calibrated = _auto_calibrate_from_icons(frame, cache)
         if calibrated:
             regions = calibrated
-            # Reapply any custom ROI overrides on top of calibrated values
-            for name in custom_names:
-                cfg = CFG.get(f"{name}_roi")
-                if not cfg:
-                    continue
-                left = int(cfg.get("left_pct", 0) * W)
-                top = int(cfg.get("top_pct", 0) * H)
-                width = int(cfg.get("width_pct", 0) * W)
-                height = int(cfg.get("height_pct", 0) * H)
-                regions[name] = (left, top, width, height)
+            if not CFG.get("disable_roi_overrides_on_calibration"):
+                # Reapply any custom ROI overrides on top of calibrated values
+                for name in custom_names:
+                    cfg = CFG.get(f"{name}_roi")
+                    if not cfg:
+                        continue
+                    left = int(cfg.get("left_pct", 0) * W)
+                    top = int(cfg.get("top_pct", 0) * H)
+                    width = int(cfg.get("width_pct", 0) * W)
+                    height = int(cfg.get("height_pct", 0) * H)
+                    regions[name] = (left, top, width, height)
             missing = [name for name in required_icons if name not in regions]
 
     if missing and common.HUD_ANCHOR:
@@ -821,6 +822,34 @@ def detect_resource_regions(
 
         missing = [name for name in required_icons if name not in regions]
 
+    if not missing:
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        thresh = CFG.get("roi_variance_threshold", 5.0)
+        low_variance = []
+        for name in required_icons:
+            roi = regions.get(name)
+            if not roi:
+                continue
+            x, y, w, h = roi
+            if w <= 0 or h <= 0:
+                continue
+            sub = gray[y : y + h, x : x + w]
+            if sub.size == 0 or float(np.var(sub)) < thresh:
+                low_variance.append(name)
+        if low_variance:
+            calibrated = _auto_calibrate_from_icons(frame, cache)
+            if calibrated:
+                if CFG.get("disable_roi_overrides_on_calibration"):
+                    regions = calibrated
+                else:
+                    for name in low_variance:
+                        if name in calibrated:
+                            cx, cy, cw, ch = calibrated[name]
+                            sub2 = gray[cy : cy + ch, cx : cx + cw]
+                            if sub2.size and float(np.var(sub2)) >= thresh:
+                                regions[name] = calibrated[name]
+        missing = [name for name in required_icons if name not in regions]
+
     if missing:
         raise common.ResourceReadError(
             "Resource icon(s) not located on HUD: " + ", ".join(missing)
@@ -878,14 +907,23 @@ def execute_ocr(gray, conf_threshold=None, allow_fallback=True):
             digits = ""
             low_conf = True
         elif mean_conf < conf_threshold or max_conf < conf_threshold:
-            logger.debug(
-                "Clearing low-confidence OCR result: mean=%.1f max=%.1f digits=%s",
-                mean_conf,
-                max_conf,
-                digits,
-            )
-            digits = ""
-            low_conf = True
+            if len(digits) == 1:
+                logger.warning(
+                    "Low-confidence single-digit OCR result: mean=%.1f max=%.1f digits=%s",
+                    mean_conf,
+                    max_conf,
+                    digits,
+                )
+                data["low_conf_single"] = True
+            else:
+                logger.debug(
+                    "Clearing low-confidence OCR result: mean=%.1f max=%.1f digits=%s",
+                    mean_conf,
+                    max_conf,
+                    digits,
+                )
+                digits = ""
+                low_conf = True
     if low_conf:
         alt_gray = cv2.bitwise_not(gray)
         digits2, data2, mask2 = _ocr_digits_better(alt_gray)
@@ -1195,7 +1233,8 @@ def _read_resources(
             mask = gray
         else:
             digits, data, mask = execute_ocr(gray, conf_threshold=conf_threshold)
-        if not digits:
+        if not digits or data.get("low_conf_single"):
+            digits = ""
             expand_px = CFG.get("ocr_roi_expand_px", 0)
             if expand_px:
                 x0 = max(0, x - expand_px)

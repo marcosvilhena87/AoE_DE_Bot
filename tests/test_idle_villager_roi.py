@@ -38,6 +38,7 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import script.common as common
 import script.resources as resources
 import script.units.villager as villager
+import script.screen_utils as screen_utils
 
 
 class TestIdleVillagerROI(TestCase):
@@ -75,6 +76,7 @@ class TestIdleVillagerROI(TestCase):
             patch("script.resources.cv2.matchTemplate", side_effect=fake_match), \
             patch("script.resources.cv2.minMaxLoc", side_effect=fake_minmax), \
             patch("script.resources.cv2.imread", side_effect=fake_imread), \
+            patch.dict(screen_utils.ICON_TEMPLATES, {}, clear=True), \
             patch.dict(
                 common.CFG["resource_panel"],
                 {
