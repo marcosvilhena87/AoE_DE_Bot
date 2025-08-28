@@ -3,6 +3,7 @@ import sys
 import types
 from unittest import TestCase
 from unittest.mock import patch
+import cv2
 
 import numpy as np
 
@@ -54,6 +55,23 @@ class TestPreprocessRoi(TestCase):
         gray = resources.preprocess_roi(roi)
         self.assertEqual(gray.shape, (5, 5))
         self.assertEqual(gray.dtype, np.uint8)
+
+    def test_blur_kernel_from_config(self):
+        roi = np.zeros((5, 5, 3), dtype=np.uint8)
+        with patch("script.resources.cv2.medianBlur", return_value=np.zeros((5, 5), dtype=np.uint8)) as blur_mock, \
+             patch.dict(resources.CFG, {"ocr_blur_kernel": 5}, clear=False):
+            resources.preprocess_roi(roi)
+        args, _ = blur_mock.call_args
+        self.assertEqual(args[1], 5)
+
+    def test_blur_kernel_zero_disables(self):
+        roi = np.zeros((5, 5, 3), dtype=np.uint8)
+        with patch("script.resources.cv2.medianBlur") as blur_mock, \
+             patch.dict(resources.CFG, {"ocr_blur_kernel": 0}, clear=False):
+            gray = resources.preprocess_roi(roi)
+        blur_mock.assert_not_called()
+        expected = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+        np.testing.assert_array_equal(gray, expected)
 
 
 class TestExecuteOcr(TestCase):

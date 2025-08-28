@@ -12,6 +12,8 @@
   "ocr_retry_limit": 3,
   "//ocr_retry_limit": "Consecutive OCR failures before using fallback value.",
   "ocr_kernel_size": 1,
+  "ocr_blur_kernel": 3,
+  "//ocr_blur_kernel": "Median blur kernel before OCR; increase or set 0 to disable when digits are small.",
   "ocr_psm_list": [7],
   "ocr_zero_variance": 15,
   "tesseract_path": "C:\\Program Files\\Tesseract-OCR\\tesseract.exe",
