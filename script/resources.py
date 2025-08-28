@@ -415,6 +415,9 @@ def _ocr_digits_better(gray):
             gray = cv2.bilateralFilter(gray, bilateral[0], bilateral[1], bilateral[2])
         else:
             gray = cv2.bilateralFilter(gray, 7, 60, 60)
+    top_crop = CFG.get("ocr_top_crop", 2)
+    if top_crop > 0 and gray.shape[0] > top_crop:
+        gray = gray[top_crop:, :]
     orig = gray.copy()
     equalize = CFG.get("ocr_equalize_hist", True)
     if equalize:
@@ -484,7 +487,14 @@ def _ocr_digits_better(gray):
     if not digits:
         hsv = cv2.cvtColor(cv2.cvtColor(orig, cv2.COLOR_GRAY2BGR), cv2.COLOR_BGR2HSV)
         white_mask = cv2.inRange(hsv, np.array([0, 0, 200]), np.array([180, 30, 255]))
-        digits, data, mask = _run_masks([white_mask, cv2.bitwise_not(white_mask)], 4)
+        yellow_mask = cv2.inRange(hsv, np.array([20, 100, 180]), np.array([40, 255, 255]))
+        gray_mask = cv2.inRange(hsv, np.array([0, 0, 160]), np.array([180, 50, 220]))
+        color_mask = cv2.bitwise_or(white_mask, yellow_mask)
+        color_mask = cv2.bitwise_or(color_mask, gray_mask)
+        digits, data, mask = _run_masks([color_mask, cv2.bitwise_not(color_mask)], 4)
+        if not digits:
+            closed = cv2.morphologyEx(color_mask, cv2.MORPH_CLOSE, kernel, iterations=1)
+            digits, data, mask = _run_masks([closed, cv2.bitwise_not(closed)], 6)
 
     if not digits:
         variance = float(np.var(orig))
