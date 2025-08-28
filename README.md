@@ -137,6 +137,31 @@ cannot be detected or read. Icons listed under `optional` are attempted but do
 not stop execution if they are missing. Adjust these lists to match the
 resources shown in your game profile.
 
+Campaign missions can override these lists either under `profiles` in
+`config.json` or directly when invoking `gather_hud_stats` from a scenario:
+
+```json
+"profiles": {
+  "tutorial": {
+    "hud_icons": {
+      "required": ["wood_stockpile", "food_stockpile"],
+      "optional": ["idle_villager"]
+    }
+  }
+}
+```
+
+```python
+# inside a scenario module
+res, pop = cb.gather_hud_stats(
+    required_icons=["wood_stockpile", "food_stockpile"],
+    optional_icons=["idle_villager"],
+)
+```
+
+When neither list is supplied, `gather_hud_stats` detects which icons are
+present and automatically treats missing ones as optional.
+
 ### Manual ROI overrides
 
 Automatic ROI detection may fail on unusual HUD layouts. Optional sections in

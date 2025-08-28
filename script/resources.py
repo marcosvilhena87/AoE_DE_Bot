@@ -1240,6 +1240,7 @@ def gather_hud_stats(
     frame = screen_utils._grab_frame()
 
     icon_cfg = CFG.get("hud_icons", {})
+    provided_lists = not (required_icons is None and optional_icons is None)
     if required_icons is None:
         required_icons = icon_cfg.get(
             "required",
@@ -1258,6 +1259,11 @@ def gather_hud_stats(
     required_icons = list(required_icons)
     optional_icons = list(optional_icons)
     all_icons = list(dict.fromkeys(required_icons + optional_icons))
+
+    if not provided_lists:
+        regions = detect_resource_regions(frame, all_icons, cache)
+        required_icons = [n for n in required_icons if n in regions]
+        all_icons = list(regions.keys())
 
     return _read_resources(
         frame,
