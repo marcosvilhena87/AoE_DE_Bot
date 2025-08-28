@@ -521,6 +521,90 @@ def _auto_calibrate_from_icons(frame):
     return regions
 
 
+def _fallback_rois_from_slice(
+    left,
+    width,
+    top,
+    height,
+    icon_trims,
+    right_trim,
+    required_icons,
+):
+    """Construct resource ROIs from generic slice bounds.
+
+    Parameters
+    ----------
+    left, width : int
+        Horizontal starting position and total width of the resource panel.
+    top, height : int
+        Vertical position and height for the ROI regions.
+    icon_trims : Sequence[float | int]
+        Percentage trims to apply on the left side of each icon slice.
+    right_trim : float | int
+        Percentage trim to apply on the right side of each icon slice.
+    required_icons : Sequence[str]
+        Resource icons that must be present; used to add the idle villager ROI.
+    """
+
+    global _NARROW_ROIS, _LAST_REGION_SPANS
+
+    slice_w = width / len(RESOURCE_ICON_ORDER)
+    detected = {
+        name: (int(idx * slice_w), 0, 0, 0)
+        for idx, name in enumerate(RESOURCE_ICON_ORDER)
+    }
+
+    pad_left_fallback = [
+        int(
+            round(
+                (icon_trims[idx] if idx < len(icon_trims) else icon_trims[-1])
+                * slice_w
+            )
+        )
+        for idx in range(len(RESOURCE_ICON_ORDER))
+    ]
+    pad_right_fallback = [
+        int(round(right_trim * slice_w))
+    ] * len(RESOURCE_ICON_ORDER)
+    icon_trims_zero = [0] * len(RESOURCE_ICON_ORDER)
+    min_widths = [90] * len(RESOURCE_ICON_ORDER)
+
+    regions, spans, narrow = compute_resource_rois(
+        left,
+        left + width,
+        top,
+        height,
+        pad_left_fallback,
+        pad_right_fallback,
+        icon_trims_zero,
+        width,
+        min_widths,
+        detected=detected,
+    )
+
+    _NARROW_ROIS = set(narrow.keys())
+
+    for name in RESOURCE_ICON_ORDER[:-1]:
+        if name in regions:
+            l, t, w, hgt = regions[name]
+            if w < 90:
+                w = 90
+                regions[name] = (l, t, w, hgt)
+            spans[name] = (l, l + w)
+
+    if "idle_villager" in required_icons:
+        idx_iv = RESOURCE_ICON_ORDER.index("idle_villager")
+        left_iv = left + int(idx_iv * slice_w + pad_left_fallback[idx_iv])
+        right_iv = left + int(width - pad_right_fallback[idx_iv])
+        width_iv = max(90, right_iv - left_iv)
+        regions["idle_villager"] = (left_iv, top, width_iv, height)
+        spans["idle_villager"] = (left_iv, left_iv + width_iv)
+
+    _LAST_REGION_SPANS = spans.copy()
+
+    return regions
+
+
 def detect_resource_regions(frame, required_icons):
     """Detect resource value regions on the HUD."""
 
@@ -587,7 +671,6 @@ def detect_resource_regions(frame, required_icons):
             w = common.HUD_ANCHOR["width"]
             h = common.HUD_ANCHOR["height"]
 
-            slice_w = w / 6
             res_cfg = CFG.get("resource_panel", {})
             profile = CFG.get("profile")
             profile_res = CFG.get("profiles", {}).get(profile, {}).get(
@@ -611,52 +694,15 @@ def detect_resource_regions(frame, required_icons):
             top = y + int(top_pct * h)
             height = int(height_pct * h)
 
-            detected = {
-                name: (int(idx * slice_w), 0, 0, 0)
-                for idx, name in enumerate(RESOURCE_ICON_ORDER)
-            }
-            pad_left_fallback = [
-                int(
-                    round(
-                        (icon_trims_cfg[idx] if idx < len(icon_trims_cfg) else icon_trims_cfg[-1])
-                        * slice_w
-                    )
-                )
-                for idx in range(len(RESOURCE_ICON_ORDER))
-            ]
-            pad_right_fallback = [int(round(right_trim * slice_w))] * len(
-                RESOURCE_ICON_ORDER
-            )
-            icon_trims_zero = [0] * len(RESOURCE_ICON_ORDER)
-            min_widths = [90] * len(RESOURCE_ICON_ORDER)
-            regions, spans, narrow = compute_resource_rois(
+            regions = _fallback_rois_from_slice(
                 x,
-                x + w,
+                w,
                 top,
                 height,
-                pad_left_fallback,
-                pad_right_fallback,
-                icon_trims_zero,
-                w,
-                min_widths,
-                detected=detected,
+                icon_trims_cfg,
+                right_trim,
+                required_icons,
             )
-            _NARROW_ROIS = set(narrow.keys())
-            for name in RESOURCE_ICON_ORDER[:-1]:
-                if name in regions:
-                    l, t, width, hgt = regions[name]
-                    if width < 90:
-                        width = 90
-                        regions[name] = (l, t, width, hgt)
-                    spans[name] = (l, l + width)
-            if "idle_villager" in required_icons:
-                idx_iv = RESOURCE_ICON_ORDER.index("idle_villager")
-                left_iv = x + int(idx_iv * slice_w + pad_left_fallback[idx_iv])
-                right_iv = x + int(w - pad_right_fallback[idx_iv])
-                width_iv = max(90, right_iv - left_iv)
-                regions["idle_villager"] = (left_iv, top, width_iv, height)
-                spans["idle_villager"] = (left_iv, left_iv + width_iv)
-            _LAST_REGION_SPANS = spans.copy()
         else:
             # Fallback: estimate resource bar from HUD anchor
             W, H = input_utils._screen_size()
@@ -690,55 +736,17 @@ def detect_resource_regions(frame, required_icons):
                 "anchor_right_trim_pct", res_cfg.get("anchor_right_trim_pct", 0.02)
             )
 
-            slice_w = panel_w / 6
             top = y + int(top_pct * panel_h)
             height = int(height_pct * panel_h)
-            detected = {
-                name: (int(idx * slice_w), 0, 0, 0)
-                for idx, name in enumerate(RESOURCE_ICON_ORDER)
-            }
-            pad_left_fallback = [
-                int(
-                    round(
-                        (icon_trims[idx] if idx < len(icon_trims) else icon_trims[-1])
-                        * slice_w
-                    )
-                )
-                for idx in range(len(RESOURCE_ICON_ORDER))
-            ]
-            pad_right_fallback = [int(round(right_trim * slice_w))] * len(
-                RESOURCE_ICON_ORDER
-            )
-            icon_trims_zero = [0] * len(RESOURCE_ICON_ORDER)
-            min_widths = [90] * len(RESOURCE_ICON_ORDER)
-            regions, spans, narrow = compute_resource_rois(
+            regions = _fallback_rois_from_slice(
                 x,
-                x + panel_w,
+                panel_w,
                 top,
                 height,
-                pad_left_fallback,
-                pad_right_fallback,
-                icon_trims_zero,
-                panel_w,
-                min_widths,
-                detected=detected,
+                icon_trims,
+                right_trim,
+                required_icons,
             )
-            if "idle_villager" in required_icons:
-                idx_iv = RESOURCE_ICON_ORDER.index("idle_villager")
-                left_iv = x + int(idx_iv * slice_w + pad_left_fallback[idx_iv])
-                right_iv = x + int(panel_w - pad_right_fallback[idx_iv])
-                width_iv = max(90, right_iv - left_iv)
-                regions["idle_villager"] = (left_iv, top, width_iv, height)
-                spans["idle_villager"] = (left_iv, left_iv + width_iv)
-            _NARROW_ROIS = set(narrow.keys())
-            for name in RESOURCE_ICON_ORDER[:-1]:
-                if name in regions:
-                    l, t, width, hgt = regions[name]
-                    if width < 90:
-                        width = 90
-                        regions[name] = (l, t, width, hgt)
-                    spans[name] = (l, l + width)
-            _LAST_REGION_SPANS = spans.copy()
 
         missing = [name for name in required_icons if name not in regions]
 
