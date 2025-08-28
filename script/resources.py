@@ -188,6 +188,11 @@ def compute_resource_rois(
 
         left = cur_right + pad_l
         right = next_left - pad_r
+
+        # Clamp ROI boundaries to the panel limits after applying padding
+        left = max(panel_left, left)
+        right = min(panel_right, right)
+
         if right <= left:
             logger.warning(
                 "Skipping ROI for icon '%s' due to non-positive span (left=%d, right=%d)",
