@@ -49,11 +49,14 @@ except ModuleNotFoundError:  # pragma: no cover - fallback stub
             adaptiveThreshold=lambda src, maxValue, adaptiveMethod, thresholdType, blockSize, C: src,
             dilate=lambda src, kernel, iterations=1: src,
             equalizeHist=lambda src: src,
+            inRange=lambda src, lower, upper: np.zeros(src.shape[:2], dtype=np.uint8),
             countNonZero=lambda src: int(np.count_nonzero(src)),
             ADAPTIVE_THRESH_GAUSSIAN_C=0,
             ADAPTIVE_THRESH_MEAN_C=0,
             IMREAD_GRAYSCALE=0,
             COLOR_BGR2GRAY=0,
+            COLOR_GRAY2BGR=0,
+            COLOR_BGR2HSV=0,
             INTER_LINEAR=0,
             THRESH_BINARY=0,
             THRESH_OTSU=0,
@@ -158,6 +161,35 @@ class TestResourceOcrFailure(TestCase):
             patch("script.resources.cv2.imwrite"), \
             self.assertRaises(common.ResourceReadError):
             resources.read_resources_from_hud(["wood_stockpile"])
+        self.assertGreaterEqual(img2str_mock.call_count, 1)
+
+    def test_low_confidence_single_digit_triggers_retry(self):
+        def fake_grab_frame(bbox=None):
+            if bbox:
+                return np.zeros((bbox["height"], bbox["width"], 3), dtype=np.uint8)
+            return np.zeros((600, 600, 3), dtype=np.uint8)
+
+        def fake_detect(frame, required_icons, cache=None):
+            return {"wood_stockpile": (0, 0, 50, 50)}
+
+        ocr_seq = [
+            ("7", {"text": ["7"], "conf": ["10"]}, np.zeros((1, 1), dtype=np.uint8)),
+            ("", {"text": [""], "conf": [""]}, np.zeros((1, 1), dtype=np.uint8)),
+            ("", {"text": [""], "conf": [""]}, np.zeros((1, 1), dtype=np.uint8)),
+        ]
+
+        def fake_ocr(gray):
+            return ocr_seq.pop(0) if ocr_seq else ("", {"text": [""], "conf": [""]}, np.zeros((1, 1), dtype=np.uint8))
+
+        with patch("script.resources.detect_resource_regions", side_effect=fake_detect), \
+            patch("script.screen_utils._grab_frame", side_effect=fake_grab_frame), \
+            patch("script.resources._ocr_digits_better", side_effect=fake_ocr) as ocr_mock, \
+            patch("script.resources.pytesseract.image_to_string", return_value="") as img2str_mock, \
+            patch("script.resources.cv2.imwrite"), \
+            self.assertRaises(common.ResourceReadError):
+            resources.read_resources_from_hud(["wood_stockpile"])
+
+        self.assertGreaterEqual(ocr_mock.call_count, 2)
         self.assertGreaterEqual(img2str_mock.call_count, 1)
 
     def test_zero_confidence_triggers_failure(self):
