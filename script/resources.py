@@ -1484,6 +1484,11 @@ def _read_population_from_roi(roi, conf_threshold=None, save_debug=True):
         the value from configuration is used.
     save_debug : bool, optional
         When ``True`` failed OCR attempts will write debug images to disk.
+    
+    Notes
+    -----
+    ``pytesseract`` may assign a confidence of ``-1`` to whitespace characters;
+    such negative confidence values are ignored when validating OCR output.
     """
 
     if conf_threshold is None:
@@ -1501,7 +1506,8 @@ def _read_population_from_roi(roi, conf_threshold=None, save_debug=True):
         output_type=pytesseract.Output.DICT,
     )
     text = "".join(data.get("text", [])).replace(" ", "")
-    confidences = [int(c) for c in data.get("conf", []) if c != "-1"]
+    # ``pytesseract`` uses ``-1`` confidence for whitespace; filter out negatives
+    confidences = [c for c in map(int, data.get("conf", [])) if c >= 0]
     parts = [p for p in text.split("/") if p]
     if len(parts) >= 2 and (not confidences or min(confidences) >= conf_threshold):
         cur = int("".join(filter(str.isdigit, parts[0])) or 0)
