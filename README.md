@@ -196,6 +196,11 @@ reviewed to tune template and padding values. Enable the optional
 `ocr_debug` flag in `config.json` to dump the intermediate masks used during
 OCR. Remove the images once calibration succeeds to keep the folder tidy.
 
+Repeated OCR failures can flood this directory with images. To limit spam,
+the bot only writes new debug files if the set of failing resources changes or
+at least `ocr_debug_cooldown` seconds have elapsed since the last dump (default
+2s).
+
 ## Calibration helper
 
 To calibrate the `areas.pop_box` fractions interactively, run:
