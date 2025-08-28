@@ -437,6 +437,16 @@ def _ocr_digits_better(gray):
         else:
             gray = cv2.equalizeHist(gray)
 
+    contrast = CFG.get("ocr_contrast_stretch")
+    if contrast:
+        if isinstance(contrast, dict):
+            alpha = contrast.get("alpha", 0)
+            beta = contrast.get("beta", 255)
+            norm_type = getattr(cv2, contrast.get("norm_type", "NORM_MINMAX"), cv2.NORM_MINMAX)
+            gray = cv2.normalize(gray, None, alpha=alpha, beta=beta, norm_type=norm_type)
+        else:
+            gray = cv2.normalize(gray, None, 0, 255, cv2.NORM_MINMAX)
+
     kernel_size = CFG.get("ocr_kernel_size", 2)
     kernel = np.ones((kernel_size, kernel_size), np.uint8)
     psms = list(

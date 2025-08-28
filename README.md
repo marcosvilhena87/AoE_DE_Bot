@@ -38,6 +38,9 @@ Two fields in `config.json` allow adjusting how resource numbers are read:
   consider lowering this to `45–50`.
 * `ocr_kernel_size` – size of the square kernel used for morphological dilation
   before running OCR (default `2`).
+* `ocr_contrast_stretch` – rescale grayscale intensities before thresholding;
+  set `true` for default min–max stretching or provide an object with
+  `alpha`/`beta` limits (default `false`).
 * `ocr_psm_list` – list of Tesseract [page segmentation modes](https://tesseract-ocr.github.io/tessdoc/ImproveQuality.html#page-segmentation-method)
   tried in order when extracting digits (default `[6, 7, 8, 10, 13]`).
 
