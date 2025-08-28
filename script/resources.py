@@ -976,6 +976,14 @@ def handle_ocr_failure(frame, regions, results, required_icons, cache=None, retr
     required_failed = [f for f in failed if f in required_set]
     optional_failed = [f for f in failed if f not in required_set]
 
+    def _annotate(names):
+        return [
+            f"{n} (narrow ROI span)" if n in _NARROW_ROIS else n for n in names
+        ]
+
+    annotated_required = _annotate(required_failed)
+    annotated_optional = _annotate(optional_failed)
+
     h_full, w_full = frame.shape[:2]
     debug_dir = ROOT / "debug"
     debug_dir.mkdir(exist_ok=True)
@@ -1009,7 +1017,7 @@ def handle_ocr_failure(frame, regions, results, required_icons, cache=None, retr
     if required_failed:
         logger.error(
             "Resource panel OCR failed for %s; panel saved to %s; rois: %s",
-            ", ".join(required_failed),
+            ", ".join(annotated_required),
             panel_path,
             ", ".join(roi_logs),
         )
@@ -1018,14 +1026,14 @@ def handle_ocr_failure(frame, regions, results, required_icons, cache=None, retr
         failed_regions = {k: regions[k] for k in required_failed}
         raise common.ResourceReadError(
             "OCR failed to read resource values for "
-            + ", ".join(required_failed)
+            + ", ".join(annotated_required)
             + f" (regions={failed_regions}, tesseract_cmd={tess_path}, debug_images={paths_str})",
         )
 
     if optional_failed:
         logger.warning(
             "Resource panel OCR failed for optional %s; panel saved to %s; rois: %s",
-            ", ".join(optional_failed),
+            ", ".join(annotated_optional),
             panel_path,
             ", ".join(roi_logs),
         )

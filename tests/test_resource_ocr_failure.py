@@ -240,6 +240,21 @@ class TestResourceOcrFailure(TestCase):
         self.assertEqual(gold, "0")
         self.assertEqual(stone, "0")
 
+    def test_narrow_roi_failure_includes_note(self):
+        frame = np.zeros((20, 20, 3), dtype=np.uint8)
+        regions = {"wood_stockpile": (0, 0, 10, 10)}
+        results = {"wood_stockpile": None}
+        with patch("script.resources.cv2.imwrite"), \
+            patch("script.resources.logger.error") as err_mock, \
+            patch("script.resources.pytesseract.pytesseract.tesseract_cmd", "/usr/bin/true"), \
+            patch.object(resources, "_NARROW_ROIS", {"wood_stockpile"}):
+            with self.assertRaises(common.ResourceReadError) as ctx:
+                resources.handle_ocr_failure(
+                    frame, regions, results, ["wood_stockpile"]
+                )
+        self.assertIn("narrow ROI span", err_mock.call_args[0][1])
+        self.assertIn("narrow ROI span", str(ctx.exception))
+
 
 class TestGatherHudStatsSliding(TestCase):
     def setUp(self):
