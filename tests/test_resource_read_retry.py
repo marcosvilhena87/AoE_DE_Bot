@@ -154,9 +154,9 @@ class TestResourceReadRetry(TestCase):
             result, _ = resources.read_resources_from_hud(["wood_stockpile"])
 
         self.assertEqual(result["wood_stockpile"], 789)
-        self.assertEqual(len(calls), 4)
+        self.assertEqual(len(calls), 5)
         self.assertEqual(len({(x, w) for x, w, _ in calls}), len(calls))
-        self.assertEqual([a for _, _, a in calls], [True, False, False, False])
+        self.assertEqual([a for _, _, a in calls], [True, True, False, False, False])
 
     def test_expired_cache_used_after_consecutive_failures(self):
         def fake_detect(frame, required_icons, cache=None):
