@@ -29,11 +29,14 @@ class DummyMSS:
 sys.modules.setdefault("pyautogui", dummy_pg)
 sys.modules.setdefault("mss", types.SimpleNamespace(mss=lambda: DummyMSS()))
 
+os.environ.setdefault("TESSERACT_CMD", "/bin/true")
+
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import script.common as common
 import script.buldings.town_center as tc
 import script.units.villager as villager
 import script.config_utils as config_utils
+import script.hud as hud
 
 
 class TestInternalPopulation(TestCase):
@@ -62,3 +65,15 @@ class TestInternalPopulation(TestCase):
             self.assertEqual(common.POP_CAP, 8)
             build_house_mock.assert_called_once()
             read_pop_mock.assert_not_called()
+
+    def test_population_fallback_error_included(self):
+        with patch(
+            "script.resources.read_population_from_roi",
+            side_effect=common.PopulationReadError("primary fail"),
+        ), patch(
+            "script.resources.read_resources_from_hud",
+            side_effect=common.ResourceReadError("fallback fail"),
+        ), patch("script.resources.locate_resource_panel", return_value={}):
+            with self.assertRaises(common.PopulationReadError) as ctx:
+                hud.read_population_from_hud()
+        self.assertIn("fallback fail", str(ctx.exception))
