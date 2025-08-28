@@ -410,7 +410,9 @@ def _ocr_digits_better(gray):
 
     kernel_size = CFG.get("ocr_kernel_size", 2)
     kernel = np.ones((kernel_size, kernel_size), np.uint8)
-    psms = CFG.get("ocr_psm_list", [6, 7, 8, 10, 13])
+    psms = list(
+        dict.fromkeys(CFG.get("ocr_psm_list", []) + [6, 7, 8, 10, 13])
+    )
 
     debug = CFG.get("ocr_debug")
     debug_dir = ROOT / "debug" if debug else None
