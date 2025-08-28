@@ -81,6 +81,7 @@ class TestResourceDebugImages(TestCase):
         self.assertGreaterEqual(imwrite_mock.call_count, 2)
         self.assertTrue(any("resource_panel_fail" in p for p in paths))
         self.assertTrue(any("resource_wood_stockpile_roi" in p for p in paths))
+        self.assertTrue(any("ocr_fail_roi" in p for p in paths))
         self.assertTrue(all(str(debug_dir) in p for p in paths))
 
     def test_roi_images_written_when_single_resource_missing(self):
@@ -139,4 +140,5 @@ class TestResourceDebugImages(TestCase):
         debug_dir = common.ROOT / "debug"
         self.assertTrue(any("resource_food_stockpile_roi" in p for p in paths))
         self.assertTrue(any("resource_food_stockpile_thresh" in p for p in paths))
+        self.assertTrue(any("ocr_fail_roi" in p for p in paths))
         self.assertTrue(all(str(debug_dir) in p for p in paths))
