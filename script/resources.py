@@ -37,6 +37,11 @@ class ResourceCache:
     last_resource_values: dict = field(default_factory=dict)
     last_resource_ts: dict = field(default_factory=dict)
     resource_failure_counts: dict = field(default_factory=dict)
+    # Track when debug images were last written for each resource
+    last_debug_image_ts: dict = field(default_factory=dict)
+    # Track the last failure set and timestamp for throttling debug output
+    last_debug_failure_set: set = field(default_factory=set)
+    last_debug_failure_ts: float | None = None
 
 
 # Shared cache instance used by default
@@ -52,6 +57,9 @@ _NARROW_ROIS = set()
 _RESOURCE_CACHE_TTL = CFG.get("resource_cache_ttl", 1.5)
 # Optional hard limit on cache age before rejection
 _RESOURCE_CACHE_MAX_AGE = CFG.get("resource_cache_max_age")
+
+# Minimum seconds between debug image dumps for identical failures
+_RESOURCE_DEBUG_COOLDOWN = CFG.get("ocr_debug_cooldown", 2.0)
 
 # Track last set of regions returned to invalidate cached values
 _LAST_REGION_BOUNDS = None
@@ -1067,69 +1075,91 @@ def handle_ocr_failure(
 
     annotated_required = _annotate(required_failed)
     annotated_optional = _annotate(optional_failed)
-
-    h_full, w_full = frame.shape[:2]
-    debug_dir = ROOT / "debug"
-    debug_dir.mkdir(exist_ok=True)
-    ts = int(time.time() * 1000)
+    failure_set = set(failed)
+    now = time.time()
+    save_debug = True
+    if (
+        failure_set == cache.last_debug_failure_set
+        and cache.last_debug_failure_ts is not None
+        and now - cache.last_debug_failure_ts < _RESOURCE_DEBUG_COOLDOWN
+    ):
+        save_debug = False
 
     panel_path = None
-    if failed:
-        annotated = frame.copy()
-        for name, (x, y, w, h) in regions.items():
-            if name in failed:
-                cv2.rectangle(annotated, (x, y), (x + w, y + h), (0, 0, 255), 1)
-        panel_path = debug_dir / f"resource_panel_fail_{ts}.png"
-        cv2.imwrite(str(panel_path), annotated)
-
     roi_paths = []
     roi_logs = []
-    debug_targets = set(failed)
-    if debug_success:
-        debug_targets.update(regions.keys())
-    for name in debug_targets:
-        x, y, w, h = regions[name]
-        x1, y1 = max(x, 0), max(y, 0)
-        x2, y2 = min(x + w, w_full), min(y + h, h_full)
-        roi = frame[y1:y2, x1:x2]
-        if roi.shape[0] != h or roi.shape[1] != w:
-            padded = np.zeros((h, w, 3), dtype=frame.dtype)
-            pad_y = y1 - y
-            pad_x = x1 - x
-            padded[pad_y:pad_y + roi.shape[0], pad_x:pad_x + roi.shape[1]] = roi
-            roi = padded
-        roi_path = debug_dir / f"resource_{name}_roi_{ts}.png"
-        cv2.imwrite(str(roi_path), roi)
 
-        gray = mask = None
-        if debug_images and name in debug_images:
-            gray, mask = debug_images[name]
-        else:
-            gray = preprocess_roi(roi)
-            _, mask = cv2.threshold(
-                gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU
+    if save_debug:
+        cache.last_debug_failure_set = failure_set
+        cache.last_debug_failure_ts = now
+
+        h_full, w_full = frame.shape[:2]
+        debug_dir = ROOT / "debug"
+        debug_dir.mkdir(exist_ok=True)
+        ts = int(time.time() * 1000)
+
+        if failed:
+            annotated = frame.copy()
+            for name, (x, y, w, h) in regions.items():
+                if name in failed:
+                    cv2.rectangle(annotated, (x, y), (x + w, y + h), (0, 0, 255), 1)
+            panel_path = debug_dir / f"resource_panel_fail_{ts}.png"
+            cv2.imwrite(str(panel_path), annotated)
+
+        debug_targets = set(failed)
+        if debug_success:
+            debug_targets.update(regions.keys())
+        for name in debug_targets:
+            x, y, w, h = regions[name]
+            x1, y1 = max(x, 0), max(y, 0)
+            x2, y2 = min(x + w, w_full), min(y + h, h_full)
+            roi = frame[y1:y2, x1:x2]
+            if roi.shape[0] != h or roi.shape[1] != w:
+                padded = np.zeros((h, w, 3), dtype=frame.dtype)
+                pad_y = y1 - y
+                pad_x = x1 - x
+                padded[pad_y:pad_y + roi.shape[0], pad_x:pad_x + roi.shape[1]] = roi
+                roi = padded
+            roi_path = debug_dir / f"resource_{name}_roi_{ts}.png"
+            cv2.imwrite(str(roi_path), roi)
+
+            gray = mask = None
+            if debug_images and name in debug_images:
+                gray, mask = debug_images[name]
+            else:
+                gray = preprocess_roi(roi)
+                _, mask = cv2.threshold(
+                    gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU
+                )
+
+            gray_path = debug_dir / f"resource_{name}_gray_{ts}.png"
+            cv2.imwrite(str(gray_path), gray)
+            if mask is not None:
+                thresh_path = debug_dir / f"resource_{name}_thresh_{ts}.png"
+                cv2.imwrite(str(thresh_path), mask)
+
+            cache.last_debug_image_ts[name] = now
+            roi_paths.append(str(roi_path))
+            roi_logs.append(
+                f"{name}: (x={x}, y={y}, w={w}, h={h}) -> {roi_path}"
             )
 
-        gray_path = debug_dir / f"resource_{name}_gray_{ts}.png"
-        cv2.imwrite(str(gray_path), gray)
-        if mask is not None:
-            thresh_path = debug_dir / f"resource_{name}_thresh_{ts}.png"
-            cv2.imwrite(str(thresh_path), mask)
-
-        roi_paths.append(str(roi_path))
-        roi_logs.append(
-            f"{name}: (x={x}, y={y}, w={w}, h={h}) -> {roi_path}"
-        )
-
     if required_failed:
-        logger.error(
-            "Resource panel OCR failed for %s; panel saved to %s; rois: %s",
-            ", ".join(annotated_required),
-            panel_path,
-            ", ".join(roi_logs),
-        )
+        if save_debug:
+            logger.error(
+                "Resource panel OCR failed for %s; panel saved to %s; rois: %s",
+                ", ".join(annotated_required),
+                panel_path,
+                ", ".join(roi_logs),
+            )
+            paths_str = ", ".join([str(panel_path)] + roi_paths)
+        else:
+            logger.error(
+                "Resource panel OCR failed for %s; debug images throttled",
+                ", ".join(annotated_required),
+            )
+            paths_str = "throttled"
         tess_path = pytesseract.pytesseract.tesseract_cmd
-        paths_str = ", ".join([str(panel_path)] + roi_paths)
         failed_regions = {k: regions[k] for k in required_failed}
         raise common.ResourceReadError(
             "OCR failed to read resource values for "
@@ -1138,12 +1168,18 @@ def handle_ocr_failure(
         )
 
     if optional_failed:
-        logger.warning(
-            "Resource panel OCR failed for optional %s; panel saved to %s; rois: %s",
-            ", ".join(annotated_optional),
-            panel_path,
-            ", ".join(roi_logs),
-        )
+        if save_debug:
+            logger.warning(
+                "Resource panel OCR failed for optional %s; panel saved to %s; rois: %s",
+                ", ".join(annotated_optional),
+                panel_path,
+                ", ".join(roi_logs),
+            )
+        else:
+            logger.warning(
+                "Resource panel OCR failed for optional %s; debug images throttled",
+                ", ".join(annotated_optional),
+            )
 
 
 def _extract_population(frame, regions, results, pop_required, conf_threshold=None):

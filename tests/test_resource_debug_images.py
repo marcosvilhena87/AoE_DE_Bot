@@ -1,6 +1,8 @@
 import os
 import sys
 import types
+import tempfile
+from pathlib import Path
 from unittest import TestCase
 from unittest.mock import patch
 
@@ -142,3 +144,22 @@ class TestResourceDebugImages(TestCase):
         self.assertTrue(any("resource_food_stockpile_thresh" in p for p in paths))
         self.assertTrue(any("ocr_fail_roi" in p for p in paths))
         self.assertTrue(all(str(debug_dir) in p for p in paths))
+
+    def test_debug_images_throttled(self):
+        frame = np.zeros((20, 20, 3), dtype=np.uint8)
+        regions = {"wood_stockpile": (0, 0, 10, 10)}
+        results = {"wood_stockpile": None}
+        cache = resources.ResourceCache()
+
+        with tempfile.TemporaryDirectory() as tmpdir, \
+             patch("script.resources.ROOT", Path(tmpdir)), \
+             patch("script.resources._RESOURCE_DEBUG_COOLDOWN", 60):
+
+            resources.handle_ocr_failure(frame, regions, results, [], cache=cache)
+            debug_dir = Path(tmpdir) / "debug"
+            initial = {p.name for p in debug_dir.iterdir()}
+
+            resources.handle_ocr_failure(frame, regions, results, [], cache=cache)
+            after = {p.name for p in debug_dir.iterdir()}
+
+        self.assertEqual(initial, after)
