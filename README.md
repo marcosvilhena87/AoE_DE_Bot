@@ -8,7 +8,8 @@
    - setting the `tesseract_path` value in `config.json`, or
    - setting the `TESSERACT_CMD` environment variable to the executable path.
 
-If neither option is provided, `pytesseract` will attempt to find `tesseract` on the system `PATH`.
+If the supplied path is missing or invalid, the bot searches for `tesseract` on the system `PATH`. A warning is logged when
+falling back to the `PATH` entry. Only when no executable can be located will an error be raised.
 
 ## Configuration notes
 
