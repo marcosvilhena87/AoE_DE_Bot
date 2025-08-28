@@ -955,7 +955,15 @@ def execute_ocr(gray, conf_threshold=None, allow_fallback=True):
     return digits, data, mask
 
 
-def handle_ocr_failure(frame, regions, results, required_icons, cache=None, retry_limit=None):
+def handle_ocr_failure(
+    frame,
+    regions,
+    results,
+    required_icons,
+    cache=None,
+    retry_limit=None,
+    debug_images=None,
+):
     """Handle OCR failures by saving debug images and applying fallbacks.
 
     Parameters
@@ -972,6 +980,8 @@ def handle_ocr_failure(frame, regions, results, required_icons, cache=None, retr
         Cache instance tracking failure counts and cached values.
     retry_limit : int, optional
         Number of consecutive failures before falling back to a default value.
+    debug_images : dict, optional
+        Mapping of icon names to ``(gray, thresh)`` images for debug output.
     """
 
     if cache is None:
@@ -979,8 +989,9 @@ def handle_ocr_failure(frame, regions, results, required_icons, cache=None, retr
     if retry_limit is None:
         retry_limit = CFG.get("ocr_retry_limit", 3)
 
+    debug_success = CFG.get("ocr_debug_success")
     failed = [name for name, v in results.items() if v is None]
-    if not failed:
+    if not failed and not debug_success:
         return
 
     # Apply fallback for resources that have exceeded the retry limit
@@ -997,7 +1008,7 @@ def handle_ocr_failure(frame, regions, results, required_icons, cache=None, retr
             )
             failed.remove(name)
 
-    if not failed:
+    if not failed and not debug_success:
         return
 
     required_set = set(required_icons)
@@ -1017,16 +1028,21 @@ def handle_ocr_failure(frame, regions, results, required_icons, cache=None, retr
     debug_dir.mkdir(exist_ok=True)
     ts = int(time.time() * 1000)
 
-    annotated = frame.copy()
-    for name, (x, y, w, h) in regions.items():
-        if name in failed:
-            cv2.rectangle(annotated, (x, y), (x + w, y + h), (0, 0, 255), 1)
-    panel_path = debug_dir / f"resource_panel_fail_{ts}.png"
-    cv2.imwrite(str(panel_path), annotated)
+    panel_path = None
+    if failed:
+        annotated = frame.copy()
+        for name, (x, y, w, h) in regions.items():
+            if name in failed:
+                cv2.rectangle(annotated, (x, y), (x + w, y + h), (0, 0, 255), 1)
+        panel_path = debug_dir / f"resource_panel_fail_{ts}.png"
+        cv2.imwrite(str(panel_path), annotated)
 
     roi_paths = []
     roi_logs = []
-    for name in failed:
+    debug_targets = set(failed)
+    if debug_success:
+        debug_targets.update(regions.keys())
+    for name in debug_targets:
         x, y, w, h = regions[name]
         x1, y1 = max(x, 0), max(y, 0)
         x2, y2 = min(x + w, w_full), min(y + h, h_full)
@@ -1039,8 +1055,26 @@ def handle_ocr_failure(frame, regions, results, required_icons, cache=None, retr
             roi = padded
         roi_path = debug_dir / f"resource_{name}_roi_{ts}.png"
         cv2.imwrite(str(roi_path), roi)
+
+        gray = mask = None
+        if debug_images and name in debug_images:
+            gray, mask = debug_images[name]
+        else:
+            gray = preprocess_roi(roi)
+            _, mask = cv2.threshold(
+                gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU
+            )
+
+        gray_path = debug_dir / f"resource_{name}_gray_{ts}.png"
+        cv2.imwrite(str(gray_path), gray)
+        if mask is not None:
+            thresh_path = debug_dir / f"resource_{name}_thresh_{ts}.png"
+            cv2.imwrite(str(thresh_path), mask)
+
         roi_paths.append(str(roi_path))
-        roi_logs.append(f"{name}:{regions[name]} -> {roi_path}")
+        roi_logs.append(
+            f"{name}: (x={x}, y={y}, w={w}, h={h}) -> {roi_path}"
+        )
 
     if required_failed:
         logger.error(
@@ -1117,6 +1151,7 @@ def _read_resources(
     resource_icons = [n for n in icons_to_read if n != "population_limit"]
     results = {}
     cache_hits = set()
+    debug_images = {}
     for name in resource_icons:
         if name not in regions:
             if name in required_set:
@@ -1182,6 +1217,7 @@ def _read_resources(
                         break
                 if digits:
                     break
+        debug_images[name] = (gray, mask)
         if CFG.get("ocr_debug"):
             debug_dir = ROOT / "debug"
             debug_dir.mkdir(exist_ok=True)
@@ -1238,7 +1274,14 @@ def _read_resources(
 
     filtered_regions = {n: regions[n] for n in resource_icons if n in regions}
     required_for_ocr = [n for n in required_icons if n != "population_limit"]
-    handle_ocr_failure(frame, filtered_regions, results, required_for_ocr, cache)
+    handle_ocr_failure(
+        frame,
+        filtered_regions,
+        results,
+        required_for_ocr,
+        cache,
+        debug_images=debug_images,
+    )
 
     cur_pop = pop_cap = None
     if "population_limit" in icons_to_read:
