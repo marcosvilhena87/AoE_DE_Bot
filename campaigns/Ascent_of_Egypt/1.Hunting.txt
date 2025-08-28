@@ -1,5 +1,5 @@
 Starting Age:  Stone Age
-Starting resources: 140 food, 80 wood
+Starting resources: 80 wood, 140 food, 0 gold, 0 stone
 Population limit: 50
 Starting units: 3 Villagers
 Starting buildings: 1 Town Center
