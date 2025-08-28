@@ -11,6 +11,7 @@
   "//ocr_conf_threshold": "Minimum OCR confidence (0-100); default 60. Tight ROIs may require 45-50.",
   "ocr_kernel_size": 1,
   "ocr_psm_list": [7],
+  "ocr_zero_variance": 15,
   "tesseract_path": "C:\\Program Files\\Tesseract-OCR\\tesseract.exe",
   "resource_cache_ttl": 1.5,
   "resource_cache_max_age": null,
@@ -26,16 +27,16 @@
     "resource_panel": {
         "match_threshold": 0.8,
         "scales": [0.9, 0.95, 1.0, 1.05, 1.1],
-        "roi_padding_left": [0,0,0,0,0,0],
-        "roi_padding_right": [0,0,0,0,0,0],
-        "max_width": 999,
-        "min_width": [1, 1, 1, 1, 1, 1],
+        "roi_padding_left": [0, 0, 0, 0, 0, 0],
+        "roi_padding_right": [0, 0, 0, 0, 0, 0],
+        "max_width": 160,
+        "min_width": [5, 5, 5, 5, 5, 4],
         "min_required_width": 0,
         "idle_roi_extra_width": 24,
-        "top_pct": 0.20,
-        "height_pct": 0.60,
-        "icon_trim_pct": [0,0,0,0,0,0],
-        "right_trim_pct": 0.00,
+        "top_pct": 0.06,
+        "height_pct": 0.88,
+        "icon_trim_pct": [0.25, 0.25, 0.25, 0.25, 0.20, 0.00],
+        "right_trim_pct": 0.02,
         "debug_failed_ocr": true
       },
   "hud_icons": {
@@ -49,40 +50,40 @@
     ],
     "optional": []
   },
-  "wood_stockpile_roi": {
-    "top_pct": 0.112,
-    "height_pct": 0.025,
-    "left_pct": 0.186,
-    "width_pct": 0.03
-  },
-  "food_stockpile_roi": {
-    "top_pct": 0.112,
-    "height_pct": 0.025,
-    "left_pct": 0.233,
-    "width_pct": 0.03
-  },
-  "gold_stockpile_roi": {
-    "top_pct": 0.112,
-    "height_pct": 0.025,
-    "left_pct": 0.28,
-    "width_pct": 0.03
-  },
-  "stone_stockpile_roi": {
-    "top_pct": 0.112,
-    "height_pct": 0.025,
-    "left_pct": 0.327,
-    "width_pct": 0.03
-  },
-  "population_limit_roi": {
-    "top_pct": 0.112,
-    "height_pct": 0.025,
-    "left_pct": 0.374,
-    "width_pct": 0.03
-  },
   "idle_villager_roi": {
     "top_pct": 0.10,
     "height_pct": 0.06,
     "left_pct": 0.84,
+    "width_pct": 0.05
+  },
+  "wood_stockpile_roi": {
+    "top_pct": 0.06,
+    "height_pct": 0.88,
+    "left_pct": 0.05,
+    "width_pct": 0.05
+  },
+  "food_stockpile_roi": {
+    "top_pct": 0.06,
+    "height_pct": 0.88,
+    "left_pct": 0.15,
+    "width_pct": 0.05
+  },
+  "gold_stockpile_roi": {
+    "top_pct": 0.06,
+    "height_pct": 0.88,
+    "left_pct": 0.25,
+    "width_pct": 0.05
+  },
+  "stone_stockpile_roi": {
+    "top_pct": 0.06,
+    "height_pct": 0.88,
+    "left_pct": 0.35,
+    "width_pct": 0.05
+  },
+  "population_limit_roi": {
+    "top_pct": 0.06,
+    "height_pct": 0.88,
+    "left_pct": 0.45,
     "width_pct": 0.05
   },
   "profiles": {

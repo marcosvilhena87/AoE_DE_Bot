@@ -357,6 +357,8 @@ def locate_resource_panel(frame, cache: ResourceCache = RESOURCE_CACHE):
 def _ocr_digits_better(gray):
     gray = cv2.resize(gray, None, fx=2, fy=2, interpolation=cv2.INTER_LINEAR)
     gray = cv2.bilateralFilter(gray, 7, 60, 60)
+    orig = gray.copy()
+    gray = cv2.equalizeHist(gray)
 
     kernel_size = CFG.get("ocr_kernel_size", 2)
     kernel = np.ones((kernel_size, kernel_size), np.uint8)
@@ -384,9 +386,19 @@ def _ocr_digits_better(gray):
         results.sort(key=lambda r: len(r[0]), reverse=True)
         return results[0]
 
+    def _is_nearly_empty(mask, tol=0.01):
+        if mask.size == 0:
+            return True
+        ratio = cv2.countNonZero(mask) / mask.size
+        return ratio < tol or ratio > 1 - tol
+
     thresh = cv2.adaptiveThreshold(
         gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2
     )
+    if _is_nearly_empty(thresh):
+        _otsu_ret, thresh = cv2.threshold(
+            gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU
+        )
     primary = _run_masks([thresh, cv2.bitwise_not(thresh)], 0)
     if primary[0]:
         return primary
@@ -395,11 +407,15 @@ def _ocr_digits_better(gray):
         gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 11, 2
     )
     adaptive = cv2.dilate(adaptive, kernel, iterations=1)
+    if _is_nearly_empty(adaptive):
+        _otsu_ret, adaptive = cv2.threshold(
+            gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU
+        )
     digits, data, mask = _run_masks([adaptive, cv2.bitwise_not(adaptive)], 2)
 
     if not digits:
-        variance = float(np.var(gray))
-        if variance < CFG.get("ocr_zero_variance", 5.0):
+        variance = float(np.var(orig))
+        if variance < CFG.get("ocr_zero_variance", 15.0):
             return "0", {}, mask
 
     return digits, data, mask
