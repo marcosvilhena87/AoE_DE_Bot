@@ -56,7 +56,7 @@ class TestPopulationROI(TestCase):
             patch.dict(common.CFG, {"population_limit_roi": None}, clear=False), \
             patch("script.resources.locate_resource_panel", return_value={}), \
             patch("script.screen_utils._grab_frame", return_value=np.zeros((1, 1, 3))) as grab_mock, \
-            patch("script.hud.pytesseract.image_to_data") as ocr_mock:
+            patch("script.resources.pytesseract.image_to_data") as ocr_mock:
             with self.assertRaises(common.PopulationReadError) as ctx:
                 hud.read_population_from_hud(
                     retries=1, conf_threshold=common.CFG["ocr_conf_threshold"]
@@ -81,11 +81,11 @@ class TestPopulationROI(TestCase):
             patch("script.input_utils._screen_size", return_value=(200, 200)), \
             patch.dict(common.CFG["areas"], {"pop_box": [0.1, 0.1, 0.5, 0.5]}), \
             patch.dict(common.CFG, {"population_limit_roi": None}, clear=False), \
-            patch("script.hud.cv2.cvtColor", side_effect=lambda img, code: img), \
-            patch("script.hud.cv2.resize", side_effect=lambda img, *a, **k: img), \
-            patch("script.hud.cv2.threshold", side_effect=lambda img, *a, **k: (None, img)), \
+            patch("script.resources.cv2.cvtColor", side_effect=lambda img, code: img), \
+            patch("script.resources.cv2.resize", side_effect=lambda img, *a, **k: img), \
+            patch("script.resources.cv2.threshold", side_effect=lambda img, *a, **k: (None, img)), \
             patch(
-                "script.hud.pytesseract.image_to_data",
+                "script.resources.pytesseract.image_to_data",
                 return_value={"text": ["xx"], "conf": ["70"]},
             ):
             with self.assertRaises(common.PopulationReadError):
@@ -121,11 +121,11 @@ class TestPopulationROI(TestCase):
             patch.dict(common.CFG["areas"], {"pop_box": pop_box}), \
             patch.dict(common.CFG, {"population_limit_roi": None}, clear=False), \
             patch("script.common.HUD_ANCHOR", {"left": 50, "top": 60, "width": 10, "height": 10}), \
-            patch("script.hud.cv2.cvtColor", side_effect=fake_cvtColor), \
-            patch("script.hud.cv2.resize", side_effect=lambda img, *a, **k: img), \
-            patch("script.hud.cv2.threshold", side_effect=lambda img, *a, **k: (None, img)), \
+            patch("script.resources.cv2.cvtColor", side_effect=fake_cvtColor), \
+            patch("script.resources.cv2.resize", side_effect=lambda img, *a, **k: img), \
+            patch("script.resources.cv2.threshold", side_effect=lambda img, *a, **k: (None, img)), \
             patch(
-                "script.hud.pytesseract.image_to_data",
+                "script.resources.pytesseract.image_to_data",
                 return_value={"text": ["12/34"], "conf": ["70"]},
             ):
             hud.read_population_from_hud(
@@ -159,8 +159,8 @@ class TestPopulationROI(TestCase):
             patch.dict(common.CFG, {"population_limit_roi": None}, clear=False), \
             patch("script.resources.locate_resource_panel", return_value={}), \
             patch("script.screen_utils._grab_frame", return_value=np.zeros((1, 1, 3))) as grab_mock, \
-            patch("script.hud.pytesseract.image_to_data") as ocr_mock, \
-            patch("script.hud.time.sleep") as sleep_mock:
+            patch("script.resources.pytesseract.image_to_data") as ocr_mock, \
+            patch("script.resources.time.sleep") as sleep_mock:
             with self.assertRaises(common.PopulationReadError) as ctx:
                 hud.read_population_from_hud(
                     retries=1, conf_threshold=common.CFG["ocr_conf_threshold"]

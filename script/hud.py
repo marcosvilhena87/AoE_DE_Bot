@@ -11,7 +11,6 @@ import time
 from pathlib import Path
 
 import cv2
-import pytesseract
 
 from .template_utils import find_template
 from .config_utils import load_config
@@ -117,71 +116,26 @@ def read_population_from_hud(retries=1, conf_threshold=None, save_failed_roi=Fal
             )
         roi_bbox = {"left": abs_left, "top": abs_top, "width": pw, "height": ph}
 
-    last_roi = None
-    last_thresh = None
-    last_text = ""
-    last_confidences = []
-
-    for attempt in range(retries):
-        roi = screen_utils._grab_frame(roi_bbox)
-        if roi.size == 0:
-            logger.warning("Population ROI has zero size")
-            continue
-        gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
-        gray = cv2.resize(gray, None, fx=2, fy=2, interpolation=cv2.INTER_LINEAR)
-        _, thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-        data = pytesseract.image_to_data(
-            thresh,
-            config="--psm 7 -c tessedit_char_whitelist=0123456789/",
-            output_type=pytesseract.Output.DICT,
-        )
-        text = "".join(data.get("text", [])).replace(" ", "")
-        confidences = [int(c) for c in data.get("conf", []) if c != "-1"]
-        last_roi = roi
-        last_thresh = thresh
-        last_text = text
-        last_confidences = confidences
-        parts = [p for p in text.split("/") if p]
-        if len(parts) >= 2 and (not confidences or min(confidences) >= conf_threshold):
-            cur = int("".join(filter(str.isdigit, parts[0])) or 0)
-            limit = int("".join(filter(str.isdigit, parts[1])) or 0)
-            return cur, limit
-        logger.debug(
-            "OCR attempt %s failed: text='%s', conf=%s",
-            attempt + 1,
-            text,
-            confidences,
-        )
-        time.sleep(0.1)
-
-    logger.warning(
-        "Failed to read population from HUD after %s attempts; last text='%s', conf=%s",
-        retries,
-        last_text,
-        last_confidences,
-    )
-    if (CFG.get("debug") or save_failed_roi) and last_roi is not None:
-        ts = int(time.time() * 1000)
-        cv2.imwrite(str(ROOT / f"debug_pop_roi_{ts}.png"), last_roi)
-        cv2.imwrite(str(ROOT / f"debug_pop_thresh_{ts}.png"), last_thresh)
-        logger.info(
-            "ROI saved; extracted text: '%s'; conf=%s",
-            last_text,
-            last_confidences,
-        )
-    logger.info(
-        "Triggering fallback to read population via resources.read_resources_from_hud"
-    )
     try:
-        _, (cur, limit) = resources.read_resources_from_hud(
-            ["population_limit"], force_delay=0.1, conf_threshold=conf_threshold
+        return resources.read_population_from_roi(
+            roi_bbox,
+            retries=retries,
+            conf_threshold=conf_threshold,
+            save_failed_roi=save_failed_roi,
         )
-        if cur is not None and limit is not None:
-            logger.info("Population fallback succeeded: %s/%s", cur, limit)
-            return cur, limit
-    except Exception as exc:  # pragma: no cover - log but ignore any failure
-        logger.debug("Fallback failed: %s", exc)
+    except common.PopulationReadError:
+        logger.info(
+            "Triggering fallback to read population via resources.read_resources_from_hud"
+        )
+        try:
+            _, (cur, limit) = resources.read_resources_from_hud(
+                ["population_limit"], force_delay=0.1, conf_threshold=conf_threshold
+            )
+            if cur is not None and limit is not None:
+                logger.info("Population fallback succeeded: %s/%s", cur, limit)
+                return cur, limit
+        except Exception as exc:  # pragma: no cover - log but ignore any failure
+            logger.debug("Fallback failed: %s", exc)
 
-    raise common.PopulationReadError(
-        f"Failed to read population from HUD after {retries} attempts. Text='{last_text}', confs={last_confidences}"
-    )
+        raise
+

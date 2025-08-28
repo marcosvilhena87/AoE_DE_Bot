@@ -1348,7 +1348,49 @@ def read_resources_from_hud(
     )
 
 
-def _read_population_from_roi(roi, conf_threshold=None):
+def read_population_from_roi(
+    roi_bbox,
+    retries: int = 1,
+    conf_threshold: int | None = None,
+    save_failed_roi: bool = False,
+):
+    """Read population values from the screen using the provided ROI bbox.
+
+    Parameters
+    ----------
+    roi_bbox : dict
+        Bounding box with ``left``, ``top``, ``width`` and ``height`` keys.
+    retries : int, optional
+        Number of OCR attempts before giving up.
+    conf_threshold : int | None, optional
+        Minimum confidence accepted for OCR characters. When ``None`` the
+        configuration value is used.
+    save_failed_roi : bool, optional
+        Force saving of the failed ROI even when debugging is disabled.
+    """
+
+    last_exc = None
+    for attempt in range(retries):
+        roi = screen_utils._grab_frame(roi_bbox)
+        try:
+            return _read_population_from_roi(
+                roi,
+                conf_threshold=conf_threshold,
+                save_debug=(
+                    attempt == retries - 1
+                    and (CFG.get("debug") or save_failed_roi)
+                ),
+            )
+        except common.PopulationReadError as exc:
+            last_exc = exc
+            if attempt < retries - 1:
+                logger.debug("OCR attempt %s failed: %s", attempt + 1, exc)
+                time.sleep(0.1)
+
+    raise last_exc
+
+
+def _read_population_from_roi(roi, conf_threshold=None, save_debug=True):
     """Read current and capacity population values from a ROI.
 
     Parameters
@@ -1358,6 +1400,8 @@ def _read_population_from_roi(roi, conf_threshold=None):
     conf_threshold : int | None, optional
         Minimum confidence value accepted for OCR characters. When ``None``
         the value from configuration is used.
+    save_debug : bool, optional
+        When ``True`` failed OCR attempts will write debug images to disk.
     """
 
     if conf_threshold is None:
@@ -1385,11 +1429,13 @@ def _read_population_from_roi(roi, conf_threshold=None):
     logger.warning(
         "OCR failed for population; text='%s', conf=%s", text, confidences
     )
-    debug_dir = ROOT / "debug"
-    debug_dir.mkdir(exist_ok=True)
-    ts = int(time.time() * 1000)
-    cv2.imwrite(str(debug_dir / f"population_roi_{ts}.png"), roi)
-    cv2.imwrite(str(debug_dir / f"population_thresh_{ts}.png"), thresh)
+
+    if save_debug:
+        debug_dir = ROOT / "debug"
+        debug_dir.mkdir(exist_ok=True)
+        ts = int(time.time() * 1000)
+        cv2.imwrite(str(debug_dir / f"population_roi_{ts}.png"), roi)
+        cv2.imwrite(str(debug_dir / f"population_thresh_{ts}.png"), thresh)
     raise common.PopulationReadError(
         f"Failed to read population from HUD: text='{text}', confs={confidences}"
     )
