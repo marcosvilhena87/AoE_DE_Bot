@@ -401,6 +401,126 @@ def _ocr_digits_better(gray):
     return digits, data, mask
 
 
+def _auto_calibrate_from_icons(frame):
+    """Locate resource icons directly on the frame to derive ROI regions.
+
+    This acts as a fallback when the resource panel template cannot be
+    matched. Icon templates are searched across the full frame and the spans
+    between successive icons are converted into numeric regions via
+    :func:`compute_resource_rois`.
+    """
+
+    screen_utils._load_icon_templates()
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+    res_cfg = CFG.get("resource_panel", {})
+    profile = CFG.get("profile")
+    profile_res = CFG.get("profiles", {}).get(profile, {}).get(
+        "resource_panel", {},
+    )
+
+    match_threshold = profile_res.get(
+        "match_threshold", res_cfg.get("match_threshold", 0.8)
+    )
+    scales = res_cfg.get("scales", CFG.get("scales", [1.0]))
+    pad_left = res_cfg.get("roi_padding_left", 2)
+    pad_right = res_cfg.get("roi_padding_right", 2)
+    pad_left = pad_left if isinstance(pad_left, (list, tuple)) else [pad_left] * 6
+    pad_right = pad_right if isinstance(pad_right, (list, tuple)) else [pad_right] * 6
+
+    icon_trims = profile_res.get(
+        "icon_trim_pct", res_cfg.get("icon_trim_pct", [0, 0, 0, 0, 0, 0])
+    )
+    icon_trims = icon_trims if isinstance(icon_trims, (list, tuple)) else [icon_trims] * 6
+
+    max_width = res_cfg.get("max_width", 160)
+    min_width_cfg = res_cfg.get("min_width", 90)
+    min_widths = (
+        min_width_cfg
+        if isinstance(min_width_cfg, (list, tuple))
+        else [min_width_cfg] * 6
+    )
+    min_req_cfg = res_cfg.get("min_required_width", 0)
+    min_requireds = (
+        min_req_cfg
+        if isinstance(min_req_cfg, (list, tuple))
+        else [min_req_cfg] * 6
+    )
+    top_pct = profile_res.get("top_pct", res_cfg.get("top_pct", 0.08))
+    height_pct = profile_res.get("height_pct", res_cfg.get("height_pct", 0.84))
+
+    detected = {}
+    for name in RESOURCE_ICON_ORDER:
+        icon = screen_utils.ICON_TEMPLATES.get(name)
+        if icon is None:
+            continue
+        best = (0, None, None)
+        for scale in scales:
+            icon_scaled = cv2.resize(icon, None, fx=scale, fy=scale)
+            result = cv2.matchTemplate(gray, icon_scaled, cv2.TM_CCOEFF_NORMED)
+            _, max_val, _, max_loc = cv2.minMaxLoc(result)
+            if max_val > best[0]:
+                best = (max_val, max_loc, icon_scaled.shape[::-1])
+        if best[0] >= match_threshold and best[1] is not None:
+            bw, bh = best[2]
+            detected[name] = (best[1][0], best[1][1], bw, bh)
+            _LAST_ICON_BOUNDS[name] = (best[1][0], best[1][1], bw, bh)
+        elif name in _LAST_ICON_BOUNDS:
+            detected[name] = _LAST_ICON_BOUNDS[name]
+
+    if len(detected) < 2:
+        return {}
+
+    panel_left = min(x for x, _y, _w, _h in detected.values())
+    panel_top = min(y for _x, y, _w, _h in detected.values())
+    panel_right = max(x + w for x, _y, w, _h in detected.values())
+    panel_bottom = max(y + h for _x, y, _w, h in detected.values())
+    panel_height = panel_bottom - panel_top
+
+    detected_rel = {
+        name: (x - panel_left, y - panel_top, w, h)
+        for name, (x, y, w, h) in detected.items()
+    }
+
+    top = panel_top + int(top_pct * panel_height)
+    height = int(height_pct * panel_height)
+
+    regions, spans, narrow = compute_resource_rois(
+        panel_left,
+        panel_right,
+        top,
+        height,
+        pad_left,
+        pad_right,
+        icon_trims,
+        max_width,
+        min_widths,
+        min_requireds,
+        detected_rel,
+    )
+
+    global _NARROW_ROIS, _LAST_REGION_SPANS, _LAST_REGION_BOUNDS, _LAST_RESOURCE_VALUES, _LAST_RESOURCE_TS
+    _NARROW_ROIS = set(narrow.keys())
+    _LAST_REGION_SPANS = spans.copy()
+
+    if "idle_villager" in detected_rel:
+        xi, yi, wi, hi = detected_rel["idle_villager"]
+        extra = res_cfg.get("idle_roi_extra_width", 0)
+        left = panel_left + xi
+        width = wi + extra
+        right = left + width
+        if right > panel_right:
+            width = panel_right - left
+        regions["idle_villager"] = (panel_left + xi, panel_top + yi, width, hi)
+
+    if _LAST_REGION_BOUNDS != regions:
+        _LAST_REGION_BOUNDS = regions.copy()
+        _LAST_RESOURCE_VALUES.clear()
+        _LAST_RESOURCE_TS.clear()
+
+    return regions
+
+
 def detect_resource_regions(frame, required_icons):
     """Detect resource value regions on the HUD."""
 
@@ -443,6 +563,22 @@ def detect_resource_regions(frame, required_icons):
         regions[name] = (left, top, width, height)
         logger.debug("Custom ROI aplicada para %s: %s", name, regions[name])
     missing = [name for name in required_icons if name not in regions]
+
+    if missing:
+        calibrated = _auto_calibrate_from_icons(frame)
+        if calibrated:
+            regions = calibrated
+            # Reapply any custom ROI overrides on top of calibrated values
+            for name in custom_names:
+                cfg = CFG.get(f"{name}_roi")
+                if not cfg:
+                    continue
+                left = int(cfg.get("left_pct", 0) * W)
+                top = int(cfg.get("top_pct", 0) * H)
+                width = int(cfg.get("width_pct", 0) * W)
+                height = int(cfg.get("height_pct", 0) * H)
+                regions[name] = (left, top, width, height)
+            missing = [name for name in required_icons if name not in regions]
 
     if missing and common.HUD_ANCHOR:
         if common.HUD_ANCHOR.get("asset") == "assets/resources.png":

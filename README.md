@@ -156,6 +156,20 @@ also include `top_pct` and `height_pct`:
 When present, these overrides take precedence and allow OCR to proceed even
 when the resource bar cannot be located automatically.
 
+### Automatic calibration and debug images
+
+If no custom ROIs are supplied, the bot attempts to calibrate them
+automatically. It locates the resource icons on the screen and derives the
+numeric regions from the gaps between icons. This allows the same
+configuration to operate at different resolutions.
+
+Whenever icon detection or OCR fails, diagnostic images are written to the
+`debug/` directory in the project root. Files like
+`resource_panel_fail_<timestamp>.png` contain the annotated HUD and can be
+reviewed to tune template and padding values. Enable the optional
+`ocr_debug` flag in `config.json` to dump the intermediate masks used during
+OCR. Remove the images once calibration succeeds to keep the folder tidy.
+
 ## Calibration helper
 
 To calibrate the `areas.pop_box` fractions interactively, run:
