@@ -876,7 +876,7 @@ def preprocess_roi(roi):
     return gray
 
 
-def execute_ocr(gray, conf_threshold=None, allow_fallback=True):
+def execute_ocr(gray, conf_threshold=None, allow_fallback=True, roi=None):
     """Run OCR on a preprocessed grayscale image.
 
     Parameters
@@ -993,18 +993,43 @@ def execute_ocr(gray, conf_threshold=None, allow_fallback=True):
         with open(text_path, "w", encoding="utf-8") as f:
             f.write("\n".join(data.get("text", [])))
         if mask_path is not None:
-            logger.warning(
-                "OCR returned no digits; mask saved to %s; ROI saved to %s; text output saved to %s",
-                mask_path,
-                roi_path,
-                text_path,
-            )
+            if roi is not None:
+                x, y, w, h = roi
+                logger.warning(
+                    "OCR returned no digits at ROI (%d, %d, %d, %d); mask saved to %s; ROI saved to %s; text output saved to %s",
+                    x,
+                    y,
+                    w,
+                    h,
+                    mask_path,
+                    roi_path,
+                    text_path,
+                )
+            else:
+                logger.warning(
+                    "OCR returned no digits; mask saved to %s; ROI saved to %s; text output saved to %s",
+                    mask_path,
+                    roi_path,
+                    text_path,
+                )
         else:
-            logger.warning(
-                "OCR returned no digits; ROI saved to %s; text output saved to %s",
-                roi_path,
-                text_path,
-            )
+            if roi is not None:
+                x, y, w, h = roi
+                logger.warning(
+                    "OCR returned no digits at ROI (%d, %d, %d, %d); ROI saved to %s; text output saved to %s",
+                    x,
+                    y,
+                    w,
+                    h,
+                    roi_path,
+                    text_path,
+                )
+            else:
+                logger.warning(
+                    "OCR returned no digits; ROI saved to %s; text output saved to %s",
+                    roi_path,
+                    text_path,
+                )
     return digits, data, mask
 
 
@@ -1268,7 +1293,14 @@ def _read_resources(
                 digits = None
             mask = gray
         else:
-            digits, data, mask = execute_ocr(gray, conf_threshold=conf_threshold)
+            try:
+                digits, data, mask = execute_ocr(
+                    gray, conf_threshold=conf_threshold, roi=(x, y, w, h)
+                )
+            except TypeError:
+                digits, data, mask = execute_ocr(
+                    gray, conf_threshold=conf_threshold
+                )
         if not digits or data.get("low_conf_single"):
             digits = ""
             expand_px = CFG.get("ocr_roi_expand_px", 0)
@@ -1279,9 +1311,16 @@ def _read_resources(
                 y1 = min(frame.shape[0], y + h + expand_px)
                 roi_expanded = frame[y0:y1, x0:x1]
                 gray_expanded = preprocess_roi(roi_expanded)
-                digits_exp, data_exp, mask_exp = execute_ocr(
-                    gray_expanded, conf_threshold=conf_threshold
-                )
+                try:
+                    digits_exp, data_exp, mask_exp = execute_ocr(
+                        gray_expanded,
+                        conf_threshold=conf_threshold,
+                        roi=(x0, y0, x1 - x0, y1 - y0),
+                    )
+                except TypeError:
+                    digits_exp, data_exp, mask_exp = execute_ocr(
+                        gray_expanded, conf_threshold=conf_threshold
+                    )
                 if digits_exp:
                     digits, data, mask = digits_exp, data_exp, mask_exp
                     roi, gray = roi_expanded, gray_expanded
@@ -1305,11 +1344,19 @@ def _read_resources(
                     cand_x = max(span_left, min(cand_x, span_right - cand_w))
                     roi_retry = frame[y : y + h, cand_x : cand_x + cand_w]
                     gray_retry = preprocess_roi(roi_retry)
-                    digits_retry, data_retry, mask_retry = execute_ocr(
-                        gray_retry,
-                        conf_threshold=conf_threshold,
-                        allow_fallback=False,
-                    )
+                    try:
+                        digits_retry, data_retry, mask_retry = execute_ocr(
+                            gray_retry,
+                            conf_threshold=conf_threshold,
+                            allow_fallback=False,
+                            roi=(cand_x, y, cand_w, h),
+                        )
+                    except TypeError:
+                        digits_retry, data_retry, mask_retry = execute_ocr(
+                            gray_retry,
+                            conf_threshold=conf_threshold,
+                            allow_fallback=False,
+                        )
                     if digits_retry:
                         digits, data, mask = digits_retry, data_retry, mask_retry
                         roi, gray = roi_retry, gray_retry
