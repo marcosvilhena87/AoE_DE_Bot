@@ -494,24 +494,24 @@ class TestResourceROIs(TestCase):
         self.assertEqual(result, {"wood_stockpile"})
 
     def test_cache_cleared_on_region_change(self):
-        resources._LAST_ICON_BOUNDS.clear()
+        resources.RESOURCE_CACHE.last_icon_bounds.clear()
         resources._LAST_REGION_BOUNDS = None
-        resources._LAST_RESOURCE_VALUES.clear()
-        resources._LAST_RESOURCE_TS.clear()
+        resources.RESOURCE_CACHE.last_resource_values.clear()
+        resources.RESOURCE_CACHE.last_resource_ts.clear()
 
         self.positions = [0, 30, 60, 90, 120, 150]
         self._locate_regions()
 
-        resources._LAST_RESOURCE_VALUES["wood_stockpile"] = 111
-        resources._LAST_RESOURCE_TS["wood_stockpile"] = 1.0
-        self.assertTrue(resources._LAST_RESOURCE_VALUES)
-        self.assertTrue(resources._LAST_RESOURCE_TS)
+        resources.RESOURCE_CACHE.last_resource_values["wood_stockpile"] = 111
+        resources.RESOURCE_CACHE.last_resource_ts["wood_stockpile"] = 1.0
+        self.assertTrue(resources.RESOURCE_CACHE.last_resource_values)
+        self.assertTrue(resources.RESOURCE_CACHE.last_resource_ts)
 
         self.positions = [5, 35, 65, 95, 125, 155]
         self._locate_regions()
 
-        self.assertEqual(resources._LAST_RESOURCE_VALUES, {})
-        self.assertEqual(resources._LAST_RESOURCE_TS, {})
+        self.assertEqual(resources.RESOURCE_CACHE.last_resource_values, {})
+        self.assertEqual(resources.RESOURCE_CACHE.last_resource_ts, {})
 
     def test_detect_regions_scales_with_resolution(self):
         """Auto-calibrated ROIs should scale with the screen resolution."""
