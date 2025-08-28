@@ -307,9 +307,9 @@ class TestGatherHudStatsSliding(TestCase):
             )
 
         self.assertEqual(res["wood_stockpile"], 789)
-        self.assertEqual(len(calls), 4)
+        self.assertEqual(len(calls), 5)
         self.assertEqual(len({(x, w) for x, w, _ in calls}), len(calls))
-        self.assertEqual([a for _, _, a in calls], [True, False, False, False])
+        self.assertEqual([a for _, _, a in calls], [True, True, False, False, False])
 
 
 class TestResourceOcrRois(TestCase):

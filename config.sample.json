@@ -13,6 +13,8 @@
   "//ocr_conf_threshold": "Minimum OCR confidence (0-100); default 60. Tight ROIs may require 45-50.",
   "ocr_retry_limit": 3,
   "//ocr_retry_limit": "Consecutive OCR failures before using fallback value.",
+  "ocr_roi_expand_px": 2,
+  "//ocr_roi_expand_px": "Pixel margin to expand OCR ROI after a miss.",
   "ocr_kernel_size": 1,
   "ocr_blur_kernel": 3,
   "//ocr_blur_kernel": "Median blur kernel before OCR; increase or set 0 to disable when digits are small.",

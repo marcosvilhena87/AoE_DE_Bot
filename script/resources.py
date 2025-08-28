@@ -1189,6 +1189,24 @@ def _read_resources(
         else:
             digits, data, mask = execute_ocr(gray, conf_threshold=conf_threshold)
         if not digits:
+            expand_px = CFG.get("ocr_roi_expand_px", 0)
+            if expand_px:
+                x0 = max(0, x - expand_px)
+                y0 = max(0, y - expand_px)
+                x1 = min(frame.shape[1], x + w + expand_px)
+                y1 = min(frame.shape[0], y + h + expand_px)
+                roi_expanded = frame[y0:y1, x0:x1]
+                gray_expanded = preprocess_roi(roi_expanded)
+                digits_exp, data_exp, mask_exp = execute_ocr(
+                    gray_expanded, conf_threshold=conf_threshold
+                )
+                if digits_exp:
+                    digits, data, mask = digits_exp, data_exp, mask_exp
+                    roi, gray = roi_expanded, gray_expanded
+                    x, y = x0, y0
+                    w, h = x1 - x0, y1 - y0
+
+        if not digits:
             span_left, span_right = _LAST_REGION_SPANS.get(name, (x, x + w))
             span_width = span_right - span_left
             cand_widths = [min(w, span_width)]
