@@ -42,6 +42,11 @@ sys.modules.setdefault(
         bitwise_not=lambda src: src,
         threshold=lambda src, *a, **k: (None, src),
         rectangle=lambda img, pt1, pt2, color, thickness: img,
+        bilateralFilter=lambda src, d, sigmaColor, sigmaSpace: src,
+        adaptiveThreshold=lambda src, maxValue, adaptiveMethod, thresholdType, blockSize, C: src,
+        dilate=lambda src, kernel, iterations=1: src,
+        ADAPTIVE_THRESH_GAUSSIAN_C=0,
+        ADAPTIVE_THRESH_MEAN_C=0,
         IMREAD_GRAYSCALE=0,
         COLOR_BGR2GRAY=0,
         INTER_LINEAR=0,
@@ -175,6 +180,16 @@ class TestResourceOcrFailure(TestCase):
 
         self.assertNotIn("food_stockpile", first)
         self.assertNotIn("food_stockpile", second)
+
+    def test_zero_roi_returns_zero(self):
+        gray = np.full((20, 20), 128, dtype=np.uint8)
+        with patch(
+            "script.resources.pytesseract.image_to_data",
+            return_value={"text": [""], "conf": ["-1"]},
+        ):
+            digits, data, _ = resources._ocr_digits_better(gray)
+        self.assertEqual(digits, "0")
+        self.assertEqual(data, {})
 
 
 class TestGatherHudStatsSliding(TestCase):
