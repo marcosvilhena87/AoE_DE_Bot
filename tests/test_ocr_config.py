@@ -41,6 +41,7 @@ class TestOcrConfig(TestCase):
         gray = np.zeros((10, 10), dtype=np.uint8)
         kernels = []
         psms = []
+        expected_psms = list(dict.fromkeys([4, 5] + [6, 7, 8, 10, 13]))
 
         def fake_dilate(src, kernel, iterations=1):
             kernels.append(kernel.shape)
@@ -50,7 +51,7 @@ class TestOcrConfig(TestCase):
 
         def fake_image_to_data(image, config="", output_type=None):
             call_count[0] += 1
-            if call_count[0] <= 4:
+            if call_count[0] <= len(expected_psms) * 2:
                 return {"text": [""]}
             m = re.search(r"--psm (\d+)", config)
             if m:
@@ -65,5 +66,5 @@ class TestOcrConfig(TestCase):
             resources._ocr_digits_better(gray)
 
         self.assertIn((3, 3), kernels)
-        self.assertEqual(sorted(set(psms)), [4, 5])
+        self.assertEqual(sorted(set(psms)), sorted(expected_psms))
 
