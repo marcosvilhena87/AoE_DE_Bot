@@ -204,3 +204,29 @@ class TestResourceReadRetry(TestCase):
             result, _ = resources.read_resources_from_hud(["wood_stockpile"])
 
         self.assertEqual(result["wood_stockpile"], 0)
+
+    def test_expand_increases_after_consecutive_failures(self):
+        def fake_detect(frame, required_icons, cache=None):
+            return {"wood_stockpile": (10, 10, 50, 50)}
+
+        frame = np.zeros((100, 100, 3), dtype=np.uint8)
+        rois = []
+
+        def fake_execute(gray, conf_threshold=None, allow_fallback=True, roi=None):
+            if roi is not None:
+                rois.append((roi, allow_fallback))
+            return "", {"text": [""]}, np.zeros((1, 1), dtype=np.uint8)
+
+        with patch("script.resources.detect_resource_regions", side_effect=fake_detect), \
+             patch("script.screen_utils._grab_frame", return_value=frame), \
+             patch("script.resources.preprocess_roi", side_effect=lambda r: r[..., 0] if r.ndim == 3 else r), \
+             patch("script.resources.execute_ocr", side_effect=fake_execute), \
+             patch("script.resources.pytesseract.image_to_string", return_value=""), \
+             patch("script.resources.cv2.imwrite"):
+            resources.read_resources_from_hud([], ["wood_stockpile"])
+            resources.read_resources_from_hud([], ["wood_stockpile"])
+
+        expanded = [r for r, allow in rois if allow and r[2] > 50]
+        self.assertEqual(len(expanded), 2)
+        self.assertLess(expanded[1][0], expanded[0][0])
+        self.assertGreater(expanded[1][2], expanded[0][2])
