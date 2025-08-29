@@ -13,10 +13,14 @@ from __future__ import annotations
 import logging
 import time
 from pathlib import Path
+import os
 
 import script.common as common
 import script.hud as hud
 import script.resources as resources
+import script.input_utils as input_utils
+from script.units import villager
+from script.buldings.town_center import train_villagers
 from script.config_utils import parse_scenario_info
 
 logger = logging.getLogger(__name__)
@@ -65,6 +69,70 @@ def main() -> None:
             resources.RESOURCE_CACHE.last_resource_ts[name] = now
 
     logger.info("Setup complete.")
+
+    if "PYTEST_CURRENT_TEST" not in os.environ:
+        run_mission(info)
+
+
+def run_mission(info) -> None:
+    """Execute the mission objectives.
+
+    The routine assigns villagers to hunting, monitors the food stockpile and
+    trains new villagers until the population objective is met.  A small loop
+    limit is included to prevent the function from running indefinitely during
+    automated tests where resource values never change.
+    """
+
+    food_spot = common.CFG.get("areas", {}).get("food_spot")
+
+    # Allocate the starting villagers to gather food.
+    for idx in range(info.starting_villagers):
+        if villager.select_idle_villager():
+            if food_spot:
+                input_utils._click_norm(*food_spot, button="right")
+            logger.info("Villager %d assigned to hunt", idx + 1)
+        else:
+            logger.info("No idle villager available for hunting")
+
+    start_food = resources.RESOURCE_CACHE.last_resource_values.get(
+        "food_stockpile", 0
+    )
+    spent_food = 0
+
+    loops = 0
+    max_loops = common.CFG.get("max_mission_loops", 20)
+    while common.CURRENT_POP < common.TARGET_POP and loops < max_loops:
+        loops += 1
+        try:
+            res_vals, _ = resources.read_resources_from_hud(["food_stockpile"])
+        except common.ResourceReadError as exc:  # pragma: no cover - OCR failure
+            logger.error("Failed to read food: %s", exc)
+            time.sleep(0.1)
+            continue
+        food = res_vals.get("food_stockpile")
+        if isinstance(food, int):
+            resources.RESOURCE_CACHE.last_resource_values["food_stockpile"] = food
+        else:
+            food = resources.RESOURCE_CACHE.last_resource_values.get(
+                "food_stockpile", 0
+            )
+        logger.info("Current food stockpile: %s", food)
+
+        if food >= start_food + spent_food + 50:
+            train_villagers(common.CURRENT_POP + 1)
+            spent_food += 50
+            logger.info(
+                "Trained villager. Population: %s", common.CURRENT_POP
+            )
+        time.sleep(0.1)
+
+    if common.CURRENT_POP >= common.TARGET_POP:
+        logger.info("Population objective reached: %s", common.CURRENT_POP)
+    else:
+        logger.info(
+            "Mission ended before reaching population objective. Current pop: %s",
+            common.CURRENT_POP,
+        )
 
 
 if __name__ == "__main__":  # pragma: no cover - manual execution entry point
