@@ -14,13 +14,13 @@ logger = logging.getLogger(__name__)
 
 
 def detect_hud(frame):
-    """Locate the resource panel and return its bounding box."""
+    """Locate the resource panel and return its bounding box and score."""
 
     from . import find_template
 
     tmpl = screen_utils.HUD_TEMPLATE
     if tmpl is None:
-        return None
+        return None, 0.0
 
     def _save_debug(img, heatmap):
         debug_dir = ROOT / "debug"
@@ -52,11 +52,11 @@ def detect_hud(frame):
                     score,
                 )
                 _save_debug(frame, heat)
-                return None
+                return None, score
         else:
-            return None
+            return None, score
 
-    return box
+    return box, score
 
 
 def compute_resource_rois(
@@ -238,7 +238,7 @@ def _get_resource_panel_cfg():
 def locate_resource_panel(frame, cache_obj: cache.ResourceCache = cache.RESOURCE_CACHE):
     """Locate the resource panel and return bounding boxes for each value."""
 
-    box = detect_hud(frame)
+    box, _score = detect_hud(frame)
     if not box:
         return {}
 
