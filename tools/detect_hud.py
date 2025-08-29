@@ -9,8 +9,8 @@ import script.resources as resources
 
 def main():
     frame = screen_utils._grab_frame()
-    box = resources.detect_hud(frame)
-    print(box)
+    box, score = resources.detect_hud(frame)
+    print(box, score)
 
 
 if __name__ == "__main__":
