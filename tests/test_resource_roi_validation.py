@@ -105,10 +105,13 @@ class TestResourceRoiValidation(TestCase):
             )
             return calibrated
 
-        with patch("script.resources.locate_resource_panel", return_value=misaligned), \
-            patch("script.resources._auto_calibrate_from_icons", side_effect=fake_auto_calibrate) as mock_calib, \
-            patch.dict(resources.CFG, {"wood_stockpile_roi": None}, clear=False):
-            regions = resources.detect_resource_regions(frame, ["wood_stockpile"])
+        with patch(
+            "script.resources.panel._auto_calibrate_from_icons",
+            side_effect=fake_auto_calibrate,
+        ) as mock_calib:
+            regions = resources._recalibrate_low_variance(
+                frame, misaligned, ["wood_stockpile"], resources.RESOURCE_CACHE
+            )
 
         self.assertTrue(mock_calib.called)
         self.assertEqual(regions["wood_stockpile"], calibrated["wood_stockpile"])

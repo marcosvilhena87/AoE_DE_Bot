@@ -474,15 +474,12 @@ def _auto_calibrate_from_icons(frame, cache_obj: cache.ResourceCache = cache.RES
     return regions
 
 
-def detect_resource_regions(
-    frame, required_icons, cache_obj: cache.ResourceCache = cache.RESOURCE_CACHE
-):
-    """Detect resource value regions on the HUD."""
+def _apply_custom_rois(frame, regions, names=None, include_idle=True):
+    """Apply ROI overrides defined in the configuration."""
 
     from . import input_utils
 
-    regions = locate_resource_panel(frame, cache_obj)
-    if "idle_villager" not in regions:
+    if include_idle and "idle_villager" not in regions:
         idle_cfg = CFG.get("idle_villager_roi")
         if idle_cfg:
             W, H = input_utils._screen_size()
@@ -499,15 +496,18 @@ def detect_resource_regions(
             logger.debug(
                 "Custom ROI applied for idle_villager: %s", regions["idle_villager"]
             )
-    custom_names = [
-        "wood_stockpile",
-        "food_stockpile",
-        "gold_stockpile",
-        "stone_stockpile",
-        "population_limit",
-    ]
+
+    if names is None:
+        names = [
+            "wood_stockpile",
+            "food_stockpile",
+            "gold_stockpile",
+            "stone_stockpile",
+            "population_limit",
+        ]
+
     W, H = input_utils._screen_size()
-    for name in custom_names:
+    for name in names:
         cfg = CFG.get(f"{name}_roi")
         if not cfg:
             continue
@@ -517,6 +517,79 @@ def detect_resource_regions(
         height = int(cfg.get("height_pct", 0) * H)
         regions[name] = (left, top, width, height)
         logger.debug("Custom ROI applied for %s: %s", name, regions[name])
+
+    return regions
+
+
+def _recalibrate_low_variance(frame, regions, required_icons, cache_obj):
+    """Recalibrate ROIs that exhibit low variance."""
+
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    thresh = CFG.get("roi_variance_threshold", 5.0)
+    low_variance = []
+    for name in required_icons:
+        roi = regions.get(name)
+        if not roi:
+            continue
+        x, y, w, h = roi
+        if w <= 0 or h <= 0:
+            continue
+        sub = gray[y : y + h, x : x + w]
+        if sub.size == 0 or float(np.var(sub)) < thresh:
+            low_variance.append(name)
+
+    if low_variance:
+        calibrated = _auto_calibrate_from_icons(frame, cache_obj)
+        if calibrated:
+            if CFG.get("disable_roi_overrides_on_calibration"):
+                regions = calibrated
+            else:
+                for name in low_variance:
+                    if name in calibrated:
+                        cx, cy, cw, ch = calibrated[name]
+                        sub2 = gray[cy : cy + ch, cx : cx + cw]
+                        if sub2.size and float(np.var(sub2)) >= thresh:
+                            regions[name] = calibrated[name]
+
+    return regions
+
+
+def _remove_overlaps(regions, required_icons):
+    """Trim overlapping ROIs to ensure distinct regions."""
+
+    ordered = [
+        name for name in RESOURCE_ICON_ORDER if name in regions and name in required_icons
+    ]
+    for prev, curr in zip(ordered, ordered[1:]):
+        l1, t1, w1, h1 = regions[prev]
+        l2, t2, w2, h2 = regions[curr]
+        overlap = (l1 + w1) - l2
+        if overlap > 0:
+            new_w1 = l2 - l1
+            if new_w1 <= 0:
+                logger.warning(
+                    "ROI '%s' removed due to complete overlap with '%s'", prev, curr
+                )
+                del regions[prev]
+            else:
+                regions[prev] = (l1, t1, new_w1, h1)
+                logger.debug(
+                    "ROI for '%s' reduced by %dpx to avoid overlap with '%s'",
+                    prev,
+                    overlap,
+                    curr,
+                )
+
+    return regions
+
+
+def detect_resource_regions(
+    frame, required_icons, cache_obj: cache.ResourceCache = cache.RESOURCE_CACHE
+):
+    """Detect resource value regions on the HUD."""
+
+    regions = locate_resource_panel(frame, cache_obj)
+    regions = _apply_custom_rois(frame, regions)
     missing = [name for name in required_icons if name not in regions]
 
     if missing:
@@ -524,15 +597,7 @@ def detect_resource_regions(
         if calibrated:
             regions = calibrated
             if not CFG.get("disable_roi_overrides_on_calibration"):
-                for name in custom_names:
-                    cfg = CFG.get(f"{name}_roi")
-                    if not cfg:
-                        continue
-                    left = int(cfg.get("left_pct", 0) * W)
-                    top = int(cfg.get("top_pct", 0) * H)
-                    width = int(cfg.get("width_pct", 0) * W)
-                    height = int(cfg.get("height_pct", 0) * H)
-                    regions[name] = (left, top, width, height)
+                regions = _apply_custom_rois(frame, regions, include_idle=False)
             missing = [name for name in required_icons if name not in regions]
 
     if missing and common.HUD_ANCHOR:
@@ -575,6 +640,7 @@ def detect_resource_regions(
                 required_icons,
             )
         else:
+            from . import input_utils
             W, H = input_utils._screen_size()
             margin = int(0.01 * W)
             panel_w = int(568 / 1920 * W)
@@ -621,59 +687,14 @@ def detect_resource_regions(
         missing = [name for name in required_icons if name not in regions]
 
     if not missing:
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        thresh = CFG.get("roi_variance_threshold", 5.0)
-        low_variance = []
-        for name in required_icons:
-            roi = regions.get(name)
-            if not roi:
-                continue
-            x, y, w, h = roi
-            if w <= 0 or h <= 0:
-                continue
-            sub = gray[y : y + h, x : x + w]
-            if sub.size == 0 or float(np.var(sub)) < thresh:
-                low_variance.append(name)
-        if low_variance:
-            calibrated = _auto_calibrate_from_icons(frame, cache_obj)
-            if calibrated:
-                if CFG.get("disable_roi_overrides_on_calibration"):
-                    regions = calibrated
-                else:
-                    for name in low_variance:
-                        if name in calibrated:
-                            cx, cy, cw, ch = calibrated[name]
-                            sub2 = gray[cy : cy + ch, cx : cx + cw]
-                            if sub2.size and float(np.var(sub2)) >= thresh:
-                                regions[name] = calibrated[name]
+        regions = _recalibrate_low_variance(frame, regions, required_icons, cache_obj)
         missing = [name for name in required_icons if name not in regions]
 
     if missing:
         raise common.ResourceReadError(
             "Resource icon(s) not located on HUD: " + ", ".join(missing)
         )
-    ordered = [
-        name for name in RESOURCE_ICON_ORDER if name in regions and name in required_icons
-    ]
-    for prev, curr in zip(ordered, ordered[1:]):
-        l1, t1, w1, h1 = regions[prev]
-        l2, t2, w2, h2 = regions[curr]
-        overlap = (l1 + w1) - l2
-        if overlap > 0:
-            new_w1 = l2 - l1
-            if new_w1 <= 0:
-                logger.warning(
-                    "ROI '%s' removed due to complete overlap with '%s'", prev, curr
-                )
-                del regions[prev]
-            else:
-                regions[prev] = (l1, t1, new_w1, h1)
-                logger.debug(
-                    "ROI for '%s' reduced by %dpx to avoid overlap with '%s'",
-                    prev,
-                    overlap,
-                    curr,
-                )
+    regions = _remove_overlaps(regions, required_icons)
 
     return regions
 
@@ -686,5 +707,8 @@ __all__ = [
     "detect_resource_regions",
     "_auto_calibrate_from_icons",
     "_fallback_rois_from_slice",
+    "_apply_custom_rois",
+    "_recalibrate_low_variance",
+    "_remove_overlaps",
     "ResourcePanelCfg",
 ]

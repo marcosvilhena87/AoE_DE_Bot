@@ -55,6 +55,9 @@ locate_resource_panel = panel.locate_resource_panel
 _auto_calibrate_from_icons = panel._auto_calibrate_from_icons
 _fallback_rois_from_slice = panel._fallback_rois_from_slice
 detect_resource_regions = panel.detect_resource_regions
+_apply_custom_rois = panel._apply_custom_rois
+_recalibrate_low_variance = panel._recalibrate_low_variance
+_remove_overlaps = panel._remove_overlaps
 
 # OCR functions
 preprocess_roi = ocr.preprocess_roi
@@ -482,6 +485,9 @@ __all__ = [
     "_get_resource_panel_cfg",
     "locate_resource_panel",
     "detect_resource_regions",
+    "_apply_custom_rois",
+    "_recalibrate_low_variance",
+    "_remove_overlaps",
     "preprocess_roi",
     "execute_ocr",
     "handle_ocr_failure",
