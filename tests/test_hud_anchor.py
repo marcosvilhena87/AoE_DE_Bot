@@ -106,9 +106,9 @@ class TestHudAnchor(TestCase):
         ]
         expected_shapes = [
             (52, 90),
-            (52, 90),
-            (52, 90),
-            (52, 90),
+            (51, 90),
+            (51, 90),
+            (51, 90),
         ]
         self.assertEqual(roi_shapes, expected_shapes)
         self.assertEqual(grab_calls, [None])
@@ -183,9 +183,9 @@ class TestHudAnchorTools(TestCase):
         ]
         expected_shapes = [
             (52, 90),
-            (52, 90),
-            (52, 90),
-            (52, 90),
+            (51, 90),
+            (51, 90),
+            (51, 90),
         ]
         self.assertEqual(roi_shapes, expected_shapes)
         self.assertEqual(grab_calls, [None])

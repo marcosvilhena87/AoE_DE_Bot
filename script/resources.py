@@ -931,14 +931,13 @@ def execute_ocr(gray, conf_threshold=None, allow_fallback=True, roi=None):
                 )
                 data["low_conf_single"] = True
             else:
-                logger.debug(
-                    "Clearing low-confidence OCR result: mean=%.1f max=%.1f digits=%s",
+                logger.warning(
+                    "Low-confidence multi-digit OCR result: mean=%.1f max=%.1f digits=%s",
                     mean_conf,
                     max_conf,
                     digits,
                 )
-                digits = ""
-                low_conf = True
+                data["low_conf_multi"] = True
     if low_conf:
         alt_gray = cv2.bitwise_not(gray)
         digits2, data2, mask2 = _ocr_digits_better(alt_gray)
@@ -1048,6 +1047,7 @@ def handle_ocr_failure(
     cache=None,
     retry_limit=None,
     debug_images=None,
+    low_confidence=None,
 ):
     """Handle OCR failures by saving debug images and applying fallbacks.
 
@@ -1067,6 +1067,8 @@ def handle_ocr_failure(
         Number of consecutive failures before falling back to a default value.
     debug_images : dict, optional
         Mapping of icon names to ``(gray, thresh)`` images for debug output.
+    low_confidence : Iterable[str], optional
+        Icons that yielded low-confidence OCR results.
     """
 
     if cache is None:
@@ -1074,7 +1076,25 @@ def handle_ocr_failure(
     if retry_limit is None:
         retry_limit = CFG.get("ocr_retry_limit", 3)
 
+    if low_confidence is None:
+        low_confidence = set()
+
     debug_success = CFG.get("ocr_debug_success")
+
+    for name in list(low_confidence):
+        count = cache.resource_failure_counts.get(name, 0) + 1
+        cache.resource_failure_counts[name] = count
+        if count >= retry_limit:
+            fallback = cache.last_resource_values.get(name, 0)
+            results[name] = fallback
+            logger.warning(
+                "Using fallback value %s=%d after %d low-confidence OCR results",
+                name,
+                fallback,
+                count,
+            )
+            low_confidence.remove(name)
+
     failed = [name for name, v in results.items() if v is None]
     if not failed and not debug_success:
         return
@@ -1265,6 +1285,7 @@ def _read_resources(
     results = {}
     cache_hits = set()
     debug_images = {}
+    low_confidence = set()
     for name in resource_icons:
         if name not in regions:
             if name in required_set:
@@ -1433,9 +1454,12 @@ def _read_resources(
         else:
             value = int(digits)
             results[name] = value
-            cache.last_resource_values[name] = value
-            cache.last_resource_ts[name] = time.time()
-            cache.resource_failure_counts[name] = 0
+            if not data.get("low_conf_multi"):
+                cache.last_resource_values[name] = value
+                cache.last_resource_ts[name] = time.time()
+                cache.resource_failure_counts[name] = 0
+            else:
+                low_confidence.add(name)
             logger.info("Detected %s=%d", name, value)
 
     filtered_regions = {n: regions[n] for n in resource_icons if n in regions}
@@ -1447,6 +1471,7 @@ def _read_resources(
         required_for_ocr,
         cache,
         debug_images=debug_images,
+        low_confidence=low_confidence,
     )
 
     cur_pop = pop_cap = None
