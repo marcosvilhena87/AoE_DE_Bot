@@ -76,7 +76,7 @@ class TestIdleVillagerOCR(TestCase):
              ), \
              patch(
                  "script.resources.execute_ocr",
-                 return_value=("", {"text": [""], "conf": []}, None),
+                 return_value=("", {"text": [""], "conf": []}, None, True),
              ):
             result, _ = resources.read_resources_from_hud(
                 required_icons=[], icons_to_read=["idle_villager"]

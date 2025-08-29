@@ -161,10 +161,10 @@ class TestResourceOcrFailure(TestCase):
             patch("script.screen_utils._grab_frame", side_effect=fake_grab_frame), \
             patch("script.resources._ocr_digits_better", side_effect=fake_ocr) as ocr_mock, \
             patch("script.resources.pytesseract.image_to_string", return_value="") as img2str_mock, \
-            patch("script.resources.cv2.imwrite"), \
-            self.assertRaises(common.ResourceReadError):
-            resources.read_resources_from_hud(["wood_stockpile"])
+            patch("script.resources.cv2.imwrite"):
+            result, _ = resources.read_resources_from_hud(["wood_stockpile"])
 
+        self.assertEqual(result["wood_stockpile"], 123)
         self.assertGreaterEqual(ocr_mock.call_count, 2)
         img2str_mock.assert_called()
 
@@ -190,10 +190,10 @@ class TestResourceOcrFailure(TestCase):
             patch("script.screen_utils._grab_frame", side_effect=fake_grab_frame), \
             patch("script.resources._ocr_digits_better", side_effect=fake_ocr) as ocr_mock, \
             patch("script.resources.pytesseract.image_to_string", return_value="") as img2str_mock, \
-            patch("script.resources.cv2.imwrite"), \
-            self.assertRaises(common.ResourceReadError):
-            resources.read_resources_from_hud(["wood_stockpile"])
+            patch("script.resources.cv2.imwrite"):
+            result, _ = resources.read_resources_from_hud(["wood_stockpile"])
 
+        self.assertEqual(result["wood_stockpile"], 7)
         self.assertGreaterEqual(ocr_mock.call_count, 2)
         self.assertGreaterEqual(img2str_mock.call_count, 1)
 
@@ -214,9 +214,9 @@ class TestResourceOcrFailure(TestCase):
             patch("script.screen_utils._grab_frame", side_effect=fake_grab_frame), \
             patch("script.resources._ocr_digits_better", side_effect=fake_ocr), \
             patch("script.resources.pytesseract.image_to_string", return_value="") as img2str_mock, \
-            patch("script.resources.cv2.imwrite"), \
-            self.assertRaises(common.ResourceReadError):
-            resources.read_resources_from_hud(["wood_stockpile"])
+            patch("script.resources.cv2.imwrite"):
+            result, _ = resources.read_resources_from_hud(["wood_stockpile"])
+        self.assertEqual(result["wood_stockpile"], 7)
         self.assertGreaterEqual(img2str_mock.call_count, 1)
 
     def test_cached_value_used_for_optional_failure(self):
@@ -364,8 +364,8 @@ class TestGatherHudStatsSliding(TestCase):
             x = int(round(mean - (w - 1) / 2))
             calls.append((x, w, allow_fallback))
             if mean > 80:
-                return "789", {"text": ["789"]}, None
-            return "", {"text": [""]}, None
+                return "789", {"text": ["789"]}, None, False
+            return "", {"text": [""]}, None, False
 
         with patch(
             "script.resources.detect_resource_regions", side_effect=fake_detect

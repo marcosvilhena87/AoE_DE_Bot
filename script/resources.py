@@ -956,11 +956,15 @@ def execute_ocr(
     digits = ""
     data = {}
     mask = None
+    best_digits = ""
+    best_data = {}
+    best_mask = None
+    best_score = -1.0
 
     while True:
         digits, data, mask = _ocr_digits_better(gray)
         if digits == "0" and data.get("zero_variance"):
-            return digits, data, mask
+            return digits, data, mask, False
 
         confidences = [
             int(c)
@@ -968,9 +972,11 @@ def execute_ocr(
             if c not in ("-1", "") and int(c) >= 0
         ]
         low_conf = False
+        score = -1.0
         if digits and confidences:
             mean_conf = sum(confidences) / len(confidences)
             max_conf = max(confidences)
+            score = mean_conf
             if mean_conf == 0 or max_conf == 0:
                 logger.debug(
                     "Discarding zero-confidence OCR result: mean=%.1f max=%.1f digits=%s",
@@ -978,7 +984,6 @@ def execute_ocr(
                     max_conf,
                     digits,
                 )
-                digits = ""
                 low_conf = True
             elif mean_conf < conf_threshold or max_conf < conf_threshold:
                 if len(digits) == 1:
@@ -997,8 +1002,9 @@ def execute_ocr(
                         digits,
                     )
                     data["low_conf_multi"] = True
-                digits = ""
                 low_conf = True
+        if low_conf and score > best_score:
+            best_digits, best_data, best_mask, best_score = digits, data, mask, score
         if low_conf:
             alt_gray = cv2.bitwise_not(gray)
             digits2, data2, mask2 = _ocr_digits_better(alt_gray)
@@ -1008,9 +1014,11 @@ def execute_ocr(
                 if c not in ("-1", "") and int(c) >= 0
             ]
             low_conf2 = False
+            score2 = -1.0
             if digits2 and confidences2:
                 mean_conf2 = sum(confidences2) / len(confidences2)
                 max_conf2 = max(confidences2)
+                score2 = mean_conf2
                 if mean_conf2 == 0 or max_conf2 == 0:
                     logger.debug(
                         "Discarding zero-confidence OCR result (second attempt): "
@@ -1019,7 +1027,6 @@ def execute_ocr(
                         max_conf2,
                         digits2,
                     )
-                    digits2 = ""
                     low_conf2 = True
                 elif mean_conf2 < conf_threshold or max_conf2 < conf_threshold:
                     logger.debug(
@@ -1029,13 +1036,21 @@ def execute_ocr(
                         max_conf2,
                         digits2,
                     )
-                    digits2 = ""
+                    if len(digits2) == 1:
+                        data2["low_conf_single"] = True
+                    else:
+                        data2["low_conf_multi"] = True
                     low_conf2 = True
-            if digits2:
-                return digits2, data2, mask2
-            digits, data, mask = digits2, data2, mask2
-            low_conf = low_conf2
-
+            if low_conf2 and score2 > best_score:
+                best_digits, best_data, best_mask, best_score = (
+                    digits2,
+                    data2,
+                    mask2,
+                    score2,
+                )
+            if digits2 and not low_conf2:
+                return digits2, data2, mask2, False
+            digits, data, mask = "", {}, None
         if digits:
             break
 
@@ -1059,6 +1074,9 @@ def execute_ocr(
             digits = fallback
             data = {"text": [text.strip()], "conf": []}
             mask = gray
+            return digits, data, mask, True
+    if not digits and best_digits:
+        return best_digits, best_data, best_mask, True
     if not digits:
         debug_dir = ROOT / "debug"
         debug_dir.mkdir(exist_ok=True)
@@ -1110,7 +1128,8 @@ def execute_ocr(
                     roi_path,
                     text_path,
                 )
-    return digits, data, mask
+        return digits, data, mask, True
+    return digits, data, mask, False
 
 
 def handle_ocr_failure(
@@ -1428,22 +1447,22 @@ def _read_resources(
             else:
                 digits = None
             mask = gray
+            low_conf = False
         else:
             try:
-                digits, data, mask = execute_ocr(
+                digits, data, mask, low_conf = execute_ocr(
                     gray,
                     conf_threshold=res_conf_threshold,
                     roi=(x, y, w, h),
                     resource=name,
                 )
             except TypeError:
-                digits, data, mask = execute_ocr(
+                digits, data, mask, low_conf = execute_ocr(
                     gray,
                     conf_threshold=res_conf_threshold,
                     resource=name,
                 )
-        if not digits or data.get("low_conf_single"):
-            digits = ""
+        if not digits:
             base_expand = CFG.get("ocr_roi_expand_px", 0)
             step = CFG.get("ocr_roi_expand_step", 0)
             growth = CFG.get("ocr_roi_expand_growth", 1.0)
@@ -1473,19 +1492,19 @@ def _read_resources(
                 if top_crop > 0 and gray_expanded.shape[0] > top_crop:
                     gray_expanded = gray_expanded[top_crop:, :]
                 try:
-                    digits_exp, data_exp, mask_exp = execute_ocr(
+                    digits_exp, data_exp, mask_exp, low_conf = execute_ocr(
                         gray_expanded,
                         conf_threshold=res_conf_threshold,
                         roi=(x0, y0, x1 - x0, y1 - y0),
                         resource=name,
                     )
                 except TypeError:
-                    digits_exp, data_exp, mask_exp = execute_ocr(
+                    digits_exp, data_exp, mask_exp, low_conf = execute_ocr(
                         gray_expanded,
                         conf_threshold=res_conf_threshold,
                         resource=name,
                     )
-                if digits_exp and not data_exp.get("low_conf_single"):
+                if digits_exp:
                     digits, data, mask = digits_exp, data_exp, mask_exp
                     roi, gray = roi_expanded, gray_expanded
                     x, y = x0, y0
@@ -1511,7 +1530,7 @@ def _read_resources(
                     if top_crop > 0 and gray_retry.shape[0] > top_crop:
                         gray_retry = gray_retry[top_crop:, :]
                     try:
-                        digits_retry, data_retry, mask_retry = execute_ocr(
+                        digits_retry, data_retry, mask_retry, low_conf = execute_ocr(
                             gray_retry,
                             conf_threshold=res_conf_threshold,
                             allow_fallback=False,
@@ -1519,13 +1538,13 @@ def _read_resources(
                             resource=name,
                         )
                     except TypeError:
-                        digits_retry, data_retry, mask_retry = execute_ocr(
+                        digits_retry, data_retry, mask_retry, low_conf = execute_ocr(
                             gray_retry,
                             conf_threshold=res_conf_threshold,
                             allow_fallback=False,
                             resource=name,
                         )
-                    if digits_retry and not data_retry.get("low_conf_single"):
+                    if digits_retry:
                         digits, data, mask = digits_retry, data_retry, mask_retry
                         roi, gray = roi_retry, gray_retry
                         x, w = cand_x, cand_w
@@ -1581,7 +1600,7 @@ def _read_resources(
         else:
             value = int(digits)
             results[name] = value
-            if not data.get("low_conf_multi"):
+            if not low_conf:
                 cache.last_resource_values[name] = value
                 cache.last_resource_ts[name] = time.time()
                 cache.resource_failure_counts[name] = 0
