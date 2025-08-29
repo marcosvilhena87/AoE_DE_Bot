@@ -31,11 +31,14 @@ The `resource_panel` uses a span-based ROI builder that measures the gap between
 
 ### OCR tuning
 
-Two fields in `config.json` allow adjusting how resource numbers are read:
+Configuration options in `config.json` allow adjusting how resource numbers are read:
 
-* `ocr_conf_threshold` – minimum confidence (0–100) required to accept OCR
+* `ocr_conf_threshold` – global minimum confidence (0–100) required to accept OCR
   digits. The default is `60`; when regions of interest are especially tight,
   consider lowering this to `45–50`.
+* `<resource>_ocr_conf_threshold` – optional per-resource overrides (for example,
+  `wood_stockpile_ocr_conf_threshold`) applied before falling back to the global
+  threshold.
 * `ocr_kernel_size` – size of the square kernel used for morphological dilation
   before running OCR (default `2`).
 * `ocr_contrast_stretch` – rescale grayscale intensities before thresholding;
