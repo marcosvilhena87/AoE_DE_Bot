@@ -21,7 +21,9 @@ This campaign is pretty straightforward, since no enemies are present. The only 
 Tutorial
 HUNTING
 To assign a villager to hunt, click the villager, and then right-click the animal to hunt. For example, to hunt a gazelle, right-click it. The villager hunts the animal, gathers food, and deposits it at the Town Center where it is added to your stockpile (as shown in the upper-left corner of the game screen).
+
 CREATING VILLAGERS
 Villagers cost 50 food. To create a villager, select a Town Center, and then click on the Create Villager button in the lower left corner of the game screen. After a brief training period, the villager appears beside the Town Center.
+
 BUILDING HOUSES
 Houses cost 30 wood and each House supports four villagers. The Town Center also supports four villagers. To build a House, select a villager, click the Build House button in the building panel in the lower-left corner of the game screen, and then click a location on the map. The House is shown in red if you cannot build in a particular location.
