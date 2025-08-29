@@ -878,6 +878,29 @@ def detect_resource_regions(
         raise common.ResourceReadError(
             "Resource icon(s) not located on HUD: " + ", ".join(missing)
         )
+    # Ensure ROIs do not overlap by trimming earlier regions as needed
+    ordered = [
+        name for name in RESOURCE_ICON_ORDER if name in regions and name in required_icons
+    ]
+    for prev, curr in zip(ordered, ordered[1:]):
+        l1, t1, w1, h1 = regions[prev]
+        l2, t2, w2, h2 = regions[curr]
+        overlap = (l1 + w1) - l2
+        if overlap > 0:
+            new_w1 = l2 - l1
+            if new_w1 <= 0:
+                logger.warning(
+                    "ROI '%s' removed due to complete overlap with '%s'", prev, curr
+                )
+                del regions[prev]
+            else:
+                regions[prev] = (l1, t1, new_w1, h1)
+                logger.debug(
+                    "ROI for '%s' reduced by %dpx to avoid overlap with '%s'",
+                    prev,
+                    overlap,
+                    curr,
+                )
 
     return regions
 
