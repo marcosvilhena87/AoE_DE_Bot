@@ -423,9 +423,6 @@ def _ocr_digits_better(gray):
             gray = cv2.bilateralFilter(gray, bilateral[0], bilateral[1], bilateral[2])
         else:
             gray = cv2.bilateralFilter(gray, 7, 60, 60)
-    top_crop = CFG.get("ocr_top_crop", 2)
-    if top_crop > 0 and gray.shape[0] > top_crop:
-        gray = gray[top_crop:, :]
     orig = gray.copy()
     equalize = CFG.get("ocr_equalize_hist", True)
     if equalize:
@@ -1286,6 +1283,12 @@ def _read_resources(
         failure_count = cache.resource_failure_counts.get(name, 0)
         roi = frame[y : y + h, x : x + w]
         gray = preprocess_roi(roi)
+        top_crop = CFG.get("ocr_top_crop", 2)
+        overrides = CFG.get("ocr_top_crop_overrides", {})
+        if name in overrides:
+            top_crop = overrides[name]
+        if top_crop > 0 and gray.shape[0] > top_crop:
+            gray = gray[top_crop:, :]
         if name == "idle_villager":
             data = pytesseract.image_to_data(
                 gray,
@@ -1324,6 +1327,8 @@ def _read_resources(
                 y1 = min(frame.shape[0], y + h + expand_px)
                 roi_expanded = frame[y0:y1, x0:x1]
                 gray_expanded = preprocess_roi(roi_expanded)
+                if top_crop > 0 and gray_expanded.shape[0] > top_crop:
+                    gray_expanded = gray_expanded[top_crop:, :]
                 try:
                     digits_exp, data_exp, mask_exp = execute_ocr(
                         gray_expanded,
@@ -1357,6 +1362,8 @@ def _read_resources(
                     cand_x = max(span_left, min(cand_x, span_right - cand_w))
                     roi_retry = frame[y : y + h, cand_x : cand_x + cand_w]
                     gray_retry = preprocess_roi(roi_retry)
+                    if top_crop > 0 and gray_retry.shape[0] > top_crop:
+                        gray_retry = gray_retry[top_crop:, :]
                     try:
                         digits_retry, data_retry, mask_retry = execute_ocr(
                             gray_retry,
