@@ -95,7 +95,7 @@ class TestNarrowROIExpansion(TestCase):
             patch.object(
                 resources,
                 "execute_ocr",
-                return_value=("123", {"text": ["123"]}, np.zeros((1, 1), dtype=np.uint8)),
+                return_value=("123", {"text": ["123"]}, np.zeros((1, 1), dtype=np.uint8), False),
             ) as ocr_mock:
             results, _ = resources._read_resources(
                 frame, ["stone_stockpile"], ["stone_stockpile"]

@@ -145,8 +145,8 @@ class TestResourceReadRetry(TestCase):
             x = int(round(mean - (w - 1) / 2))
             calls.append((x, w, allow_fallback))
             if mean > 80:
-                return "789", {"text": ["789"]}, None
-            return "", {"text": [""]}, None
+                return "789", {"text": ["789"]}, None, False
+            return "", {"text": [""]}, None, False
 
         with patch("script.resources.detect_resource_regions", side_effect=fake_detect), \
              patch("script.screen_utils._grab_frame", return_value=frame), \
@@ -220,7 +220,7 @@ class TestResourceReadRetry(TestCase):
         ):
             if roi is not None:
                 rois.append((roi, allow_fallback))
-            return "", {"text": [""]}, np.zeros((1, 1), dtype=np.uint8)
+            return "", {"text": [""]}, np.zeros((1, 1), dtype=np.uint8), False
 
         with patch("script.resources.detect_resource_regions", side_effect=fake_detect), \
              patch("script.screen_utils._grab_frame", return_value=frame), \

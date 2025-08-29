@@ -50,6 +50,9 @@ Configuration options in `config.json` allow adjusting how resource numbers are 
   `alpha`/`beta` limits (default `false`).
 * `ocr_psm_list` – list of Tesseract [page segmentation modes](https://tesseract-ocr.github.io/tessdoc/ImproveQuality.html#page-segmentation-method)
   tried in order when extracting digits (default `[6, 7, 8, 10, 13]`).
+* `execute_ocr` returns a `(digits, data, mask, low_conf)` tuple. When no attempt
+  meets the confidence threshold, the highest-confidence digits are returned with
+  `low_conf=True` so callers can decide whether to accept or retry the value.
 
 ## Capturing `assets/resources.png`
 
