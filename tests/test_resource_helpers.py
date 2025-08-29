@@ -181,3 +181,24 @@ class TestHandleOcrFailure(TestCase):
             )
         self.assertEqual(results["wood_stockpile"], 99)
         self.assertEqual(warn_mock.call_count, 1)
+
+
+class TestValidateStartingResources(TestCase):
+    def test_deviation_raises_error(self):
+        with self.assertRaises(ValueError):
+            resources.validate_starting_resources(
+                {"wood_stockpile": 50},
+                {"wood_stockpile": 80},
+                tolerance=10,
+                raise_on_error=True,
+            )
+
+    def test_logs_warning_without_raise(self):
+        with patch("script.resources.logger.warning") as warn_mock:
+            resources.validate_starting_resources(
+                {"wood_stockpile": 50},
+                {"wood_stockpile": 80},
+                tolerance=10,
+                raise_on_error=False,
+            )
+            warn_mock.assert_called_once()
