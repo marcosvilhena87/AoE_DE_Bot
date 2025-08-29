@@ -99,8 +99,8 @@
   "stone_stockpile_roi": {
     "top_pct": 0.111,
     "height_pct": 0.025,
-    "left_pct": 0.323,
-    "width_pct": 0.043
+    "left_pct": 0.327,
+    "width_pct": 0.045
   },
   "population_limit_roi": {
     "top_pct": 0.111,
