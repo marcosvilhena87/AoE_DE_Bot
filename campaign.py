@@ -69,12 +69,57 @@ def main():
                 required_icons=required,
                 optional_icons=optional,
             )
-            resources.validate_starting_resources(
-                res,
-                non_zero,
-                tolerance=10,
-                raise_on_error=True,
-            )
+            try:
+                resources.validate_starting_resources(
+                    res,
+                    non_zero,
+                    tolerance=10,
+                    raise_on_error=True,
+                )
+            except ValueError as e:
+                logger.warning("Starting resource validation failed: %s", e)
+                # Retry OCR once more and attempt to save ROI diagnostics
+                res, (cur_pop, pop_cap) = resources.gather_hud_stats(
+                    force_delay=0.2,
+                    required_icons=required,
+                    optional_icons=optional,
+                )
+                frame = screen_utils._grab_frame()
+                rois = getattr(resources, "_LAST_REGION_BOUNDS", {})
+                try:
+                    resources.validate_starting_resources(
+                        res,
+                        non_zero,
+                        tolerance=10,
+                        raise_on_error=True,
+                        frame=frame,
+                        rois=rois,
+                    )
+                except ValueError as e2:
+                    logger.error(
+                        "Second resource validation failed: %s", e2
+                    )
+                    max_dev = 0
+                    for k, v in non_zero.items():
+                        actual = res.get(k)
+                        if actual is None:
+                            max_dev = float("inf")
+                            break
+                        max_dev = max(max_dev, abs(actual - v))
+                    if max_dev <= 20:
+                        logger.warning(
+                            "Resource readings close to expected; continuing."
+                        )
+                        resources.validate_starting_resources(
+                            res,
+                            non_zero,
+                            tolerance=10,
+                            raise_on_error=False,
+                            frame=frame,
+                            rois=rois,
+                        )
+                    else:
+                        raise
             logger.info(
                 "Detected resources: wood=%s, food=%s, gold=%s, stone=%s",
                 res.get("wood_stockpile"),
