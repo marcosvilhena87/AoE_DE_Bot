@@ -212,3 +212,24 @@ class TestValidateStartingResources(TestCase):
                 raise_on_error=False,
             )
             warn_mock.assert_called_once()
+
+    def test_deviation_saves_roi_image(self):
+        frame = np.zeros((10, 10, 3), dtype=np.uint8)
+        rois = {"wood_stockpile": (0, 0, 5, 5)}
+        ts = 1.234
+        expected_ts = int(ts * 1000)
+        expected_path = resources.ROOT / "debug" / f"resource_roi_wood_stockpile_{expected_ts}.png"
+        with patch("script.resources.cv2.imwrite") as imwrite_mock, \
+             patch("script.resources.time.time", return_value=ts), \
+             patch("script.resources.logger.error"):
+            with self.assertRaises(ValueError) as ctx:
+                resources.validate_starting_resources(
+                    {"wood_stockpile": 50},
+                    {"wood_stockpile": 80},
+                    tolerance=10,
+                    raise_on_error=True,
+                    frame=frame,
+                    rois=rois,
+                )
+        imwrite_mock.assert_called_once()
+        self.assertIn(str(expected_path), str(ctx.exception))
