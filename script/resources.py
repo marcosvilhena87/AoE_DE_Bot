@@ -927,83 +927,104 @@ def execute_ocr(
         else:
             conf_threshold = CFG.get("ocr_conf_threshold", 60)
 
-    digits, data, mask = _ocr_digits_better(gray)
-    if digits == "0" and data.get("zero_variance"):
-        return digits, data, mask
+    min_conf = CFG.get("ocr_conf_min", 0)
+    decay = CFG.get("ocr_conf_decay", 1.0)
 
-    confidences = [
-        int(c)
-        for c in data.get("conf", [])
-        if c not in ("-1", "") and int(c) >= 0
-    ]
-    low_conf = False
-    if digits and confidences:
-        mean_conf = sum(confidences) / len(confidences)
-        max_conf = max(confidences)
-        if mean_conf == 0 or max_conf == 0:
-            logger.debug(
-                "Discarding zero-confidence OCR result: mean=%.1f max=%.1f digits=%s",
-                mean_conf,
-                max_conf,
-                digits,
-            )
-            digits = ""
-            low_conf = True
-        elif mean_conf < conf_threshold or max_conf < conf_threshold:
-            if len(digits) == 1:
-                logger.warning(
-                    "Low-confidence single-digit OCR result: mean=%.1f max=%.1f digits=%s",
-                    mean_conf,
-                    max_conf,
-                    digits,
-                )
-                data["low_conf_single"] = True
-            else:
-                logger.warning(
-                    "Low-confidence multi-digit OCR result: mean=%.1f max=%.1f digits=%s",
-                    mean_conf,
-                    max_conf,
-                    digits,
-                )
-                data["low_conf_multi"] = True
-            digits = ""
-            low_conf = True
-    if low_conf:
-        alt_gray = cv2.bitwise_not(gray)
-        digits2, data2, mask2 = _ocr_digits_better(alt_gray)
-        confidences2 = [
+    digits = ""
+    data = {}
+    mask = None
+
+    while True:
+        digits, data, mask = _ocr_digits_better(gray)
+        if digits == "0" and data.get("zero_variance"):
+            return digits, data, mask
+
+        confidences = [
             int(c)
-            for c in data2.get("conf", [])
+            for c in data.get("conf", [])
             if c not in ("-1", "") and int(c) >= 0
         ]
-        low_conf2 = False
-        if digits2 and confidences2:
-            mean_conf2 = sum(confidences2) / len(confidences2)
-            max_conf2 = max(confidences2)
-            if mean_conf2 == 0 or max_conf2 == 0:
+        low_conf = False
+        if digits and confidences:
+            mean_conf = sum(confidences) / len(confidences)
+            max_conf = max(confidences)
+            if mean_conf == 0 or max_conf == 0:
                 logger.debug(
-                    "Discarding zero-confidence OCR result (second attempt): "
-                    "mean=%.1f max=%.1f digits=%s",
-                    mean_conf2,
-                    max_conf2,
-                    digits2,
+                    "Discarding zero-confidence OCR result: mean=%.1f max=%.1f digits=%s",
+                    mean_conf,
+                    max_conf,
+                    digits,
                 )
-                digits2 = ""
-                low_conf2 = True
-            elif mean_conf2 < conf_threshold or max_conf2 < conf_threshold:
-                logger.debug(
-                    "Clearing low-confidence OCR result (second attempt): "
-                    "mean=%.1f max=%.1f digits=%s",
-                    mean_conf2,
-                    max_conf2,
-                    digits2,
-                )
-                digits2 = ""
-                low_conf2 = True
-        if digits2:
-            return digits2, data2, mask2
-        digits, data, mask = digits2, data2, mask2
-        low_conf = low_conf2
+                digits = ""
+                low_conf = True
+            elif mean_conf < conf_threshold or max_conf < conf_threshold:
+                if len(digits) == 1:
+                    logger.warning(
+                        "Low-confidence single-digit OCR result: mean=%.1f max=%.1f digits=%s",
+                        mean_conf,
+                        max_conf,
+                        digits,
+                    )
+                    data["low_conf_single"] = True
+                else:
+                    logger.warning(
+                        "Low-confidence multi-digit OCR result: mean=%.1f max=%.1f digits=%s",
+                        mean_conf,
+                        max_conf,
+                        digits,
+                    )
+                    data["low_conf_multi"] = True
+                digits = ""
+                low_conf = True
+        if low_conf:
+            alt_gray = cv2.bitwise_not(gray)
+            digits2, data2, mask2 = _ocr_digits_better(alt_gray)
+            confidences2 = [
+                int(c)
+                for c in data2.get("conf", [])
+                if c not in ("-1", "") and int(c) >= 0
+            ]
+            low_conf2 = False
+            if digits2 and confidences2:
+                mean_conf2 = sum(confidences2) / len(confidences2)
+                max_conf2 = max(confidences2)
+                if mean_conf2 == 0 or max_conf2 == 0:
+                    logger.debug(
+                        "Discarding zero-confidence OCR result (second attempt): "
+                        "mean=%.1f max=%.1f digits=%s",
+                        mean_conf2,
+                        max_conf2,
+                        digits2,
+                    )
+                    digits2 = ""
+                    low_conf2 = True
+                elif mean_conf2 < conf_threshold or max_conf2 < conf_threshold:
+                    logger.debug(
+                        "Clearing low-confidence OCR result (second attempt): "
+                        "mean=%.1f max=%.1f digits=%s",
+                        mean_conf2,
+                        max_conf2,
+                        digits2,
+                    )
+                    digits2 = ""
+                    low_conf2 = True
+            if digits2:
+                return digits2, data2, mask2
+            digits, data, mask = digits2, data2, mask2
+            low_conf = low_conf2
+
+        if digits:
+            break
+
+        new_threshold = int(round(conf_threshold * decay))
+        new_threshold = max(new_threshold, min_conf)
+        if new_threshold < conf_threshold:
+            logger.debug(
+                "Lowering OCR confidence threshold from %d to %d", conf_threshold, new_threshold
+            )
+            conf_threshold = new_threshold
+            continue
+        break
 
     if not digits and allow_fallback:
         text = pytesseract.image_to_string(

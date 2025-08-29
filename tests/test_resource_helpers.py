@@ -110,7 +110,8 @@ class TestExecuteOcr(TestCase):
         data = {"text": ["12"], "conf": ["80", "20"]}
         with patch("script.resources._ocr_digits_better", return_value=("12", data, None)), \
              patch("script.resources.pytesseract.image_to_string", return_value="") as img2str_mock, \
-             patch("script.resources.logger.warning") as warn_mock:
+             patch("script.resources.logger.warning") as warn_mock, \
+             patch.dict(resources.CFG, {"ocr_conf_decay": 1.0}, clear=False):
             digits, data_out, _ = resources.execute_ocr(gray, conf_threshold=60)
         self.assertEqual(digits, "")
         self.assertTrue(data_out.get("low_conf_multi"))
@@ -156,6 +157,21 @@ class TestExecuteOcr(TestCase):
         self.assertIsNone(mask)
         img2str_mock.assert_not_called()
         warn_mock.assert_not_called()
+
+    def test_execute_ocr_accepts_after_threshold_decay(self):
+        gray = np.zeros((5, 5), dtype=np.uint8)
+        side_effect = [
+            ("12", {"text": ["12"], "conf": ["40", "40"]}, None)
+            for _ in range(4)
+        ]
+        with patch("script.resources._ocr_digits_better", side_effect=side_effect) as ocr_mock, \
+             patch("script.resources.pytesseract.image_to_string", return_value="") as img2str_mock, \
+             patch.dict(resources.CFG, {"ocr_conf_min": 30, "ocr_conf_decay": 0.5}, clear=False):
+            digits, data_out, _ = resources.execute_ocr(gray, conf_threshold=60)
+        self.assertEqual(digits, "12")
+        self.assertNotIn("low_conf_multi", data_out)
+        img2str_mock.assert_not_called()
+        self.assertGreaterEqual(ocr_mock.call_count, 3)
 
 
 class TestHandleOcrFailure(TestCase):
