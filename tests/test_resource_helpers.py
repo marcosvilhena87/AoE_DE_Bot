@@ -127,6 +127,22 @@ class TestExecuteOcr(TestCase):
         img2str_mock.assert_called_once()
         self.assertGreaterEqual(warn_mock.call_count, 1)
 
+    def test_execute_ocr_warns_low_min_confidence(self):
+        gray = np.zeros((5, 5), dtype=np.uint8)
+        data = {"text": ["78"], "conf": ["80", "30"]}
+        with patch("script.resources._ocr_digits_better", return_value=("78", data, None)), \
+             patch("script.resources.pytesseract.image_to_string", return_value="") as img2str_mock, \
+             patch("script.resources.logger.warning") as warn_mock, \
+             patch.dict(resources.CFG, {"ocr_conf_decay": 1.0}, clear=False):
+            digits, data_out, _, low_conf = resources.execute_ocr(
+                gray, conf_threshold=45, resource="wood_stockpile"
+            )
+        self.assertEqual(digits, "78")
+        self.assertTrue(low_conf)
+        self.assertTrue(data_out.get("low_conf_multi"))
+        img2str_mock.assert_called_once()
+        self.assertGreaterEqual(warn_mock.call_count, 1)
+
     def test_execute_ocr_accepts_low_conf_single_digit(self):
         gray = np.zeros((5, 5), dtype=np.uint8)
         data = {"text": ["0"], "conf": ["10"]}

@@ -39,6 +39,10 @@ Configuration options in `config.json` allow adjusting how resource numbers are 
 * `<resource>_ocr_conf_threshold` – optional per-resource overrides (for example,
   `wood_stockpile_ocr_conf_threshold`) applied before falling back to the global
   threshold.
+* When display scaling, non-native resolutions, or streaming artifacts lower OCR
+  accuracy, reduce the relevant `<resource>_ocr_conf_threshold` values in small
+  steps (e.g., `58` → `50` → `45`). After each change, inspect `execute_ocr`
+  debug output to ensure obviously incorrect digits are still flagged.
 * `ocr_conf_min` / `ocr_conf_decay` – after a failed OCR attempt, the confidence
   threshold is multiplied by `ocr_conf_decay` (default `0.8`) until it reaches
   `ocr_conf_min` (default `25–30`). This adaptive decay allows accepting digits

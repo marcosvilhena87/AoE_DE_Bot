@@ -976,31 +976,39 @@ def execute_ocr(
         if digits and confidences:
             mean_conf = sum(confidences) / len(confidences)
             max_conf = max(confidences)
+            min_conf_val = min(confidences)
             score = mean_conf
-            if mean_conf == 0 or max_conf == 0:
+            if mean_conf == 0 or max_conf == 0 or min_conf_val == 0:
                 logger.debug(
-                    "Discarding zero-confidence OCR result: mean=%.1f max=%.1f digits=%s",
+                    "Discarding zero-confidence OCR result: mean=%.1f max=%.1f min=%.1f digits=%s",
                     mean_conf,
                     max_conf,
+                    min_conf_val,
                     digits,
                 )
                 low_conf = True
-            elif mean_conf < conf_threshold or max_conf < conf_threshold:
+            elif (
+                mean_conf < conf_threshold
+                or max_conf < conf_threshold
+                or min_conf_val < conf_threshold
+            ):
                 if len(digits) == 1:
                     logger.warning(
-                        "Low-confidence single-digit OCR for %s: mean=%.1f max=%.1f digits=%s",
+                        "Low-confidence single-digit OCR for %s: mean=%.1f max=%.1f min=%.1f digits=%s",
                         resource,
                         mean_conf,
                         max_conf,
+                        min_conf_val,
                         digits,
                     )
                     data["low_conf_single"] = True
                 else:
                     logger.warning(
-                        "Low-confidence multi-digit OCR for %s: mean=%.1f max=%.1f digits=%s",
+                        "Low-confidence multi-digit OCR for %s: mean=%.1f max=%.1f min=%.1f digits=%s",
                         resource,
                         mean_conf,
                         max_conf,
+                        min_conf_val,
                         digits,
                     )
                     data["low_conf_multi"] = True
@@ -1020,22 +1028,29 @@ def execute_ocr(
             if digits2 and confidences2:
                 mean_conf2 = sum(confidences2) / len(confidences2)
                 max_conf2 = max(confidences2)
+                min_conf2 = min(confidences2)
                 score2 = mean_conf2
-                if mean_conf2 == 0 or max_conf2 == 0:
+                if mean_conf2 == 0 or max_conf2 == 0 or min_conf2 == 0:
                     logger.debug(
                         "Discarding zero-confidence OCR result (second attempt): "
-                        "mean=%.1f max=%.1f digits=%s",
+                        "mean=%.1f max=%.1f min=%.1f digits=%s",
                         mean_conf2,
                         max_conf2,
+                        min_conf2,
                         digits2,
                     )
                     low_conf2 = True
-                elif mean_conf2 < conf_threshold or max_conf2 < conf_threshold:
+                elif (
+                    mean_conf2 < conf_threshold
+                    or max_conf2 < conf_threshold
+                    or min_conf2 < conf_threshold
+                ):
                     logger.debug(
                         "Clearing low-confidence OCR result (second attempt): "
-                        "mean=%.1f max=%.1f digits=%s",
+                        "mean=%.1f max=%.1f min=%.1f digits=%s",
                         mean_conf2,
                         max_conf2,
+                        min_conf2,
                         digits2,
                     )
                     if len(digits2) == 1:
