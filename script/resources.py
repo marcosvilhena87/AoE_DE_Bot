@@ -414,6 +414,10 @@ def locate_resource_panel(frame, cache: ResourceCache = RESOURCE_CACHE):
 
 
 def _ocr_digits_better(gray):
+    variance = float(np.var(gray))
+    if variance < CFG.get("ocr_zero_variance", 15.0):
+        return "0", {"zero_variance": True}, None
+
     gray = cv2.resize(gray, None, fx=2, fy=2, interpolation=cv2.INTER_LINEAR)
     bilateral = CFG.get("ocr_bilateral", [7, 60, 60])
     if bilateral:
@@ -517,7 +521,7 @@ def _ocr_digits_better(gray):
     if not digits:
         variance = float(np.var(orig))
         if variance < CFG.get("ocr_zero_variance", 15.0):
-            return "0", {}, mask
+            return "0", {"zero_variance": True}, mask
 
     return digits, data, mask
 
@@ -924,6 +928,8 @@ def execute_ocr(
             conf_threshold = CFG.get("ocr_conf_threshold", 60)
 
     digits, data, mask = _ocr_digits_better(gray)
+    if digits == "0" and data.get("zero_variance"):
+        return digits, data, mask
 
     confidences = [
         int(c)

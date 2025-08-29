@@ -39,6 +39,7 @@ import script.resources as resources
 class TestOcrConfig(TestCase):
     def test_custom_kernel_and_psm_list(self):
         gray = np.zeros((10, 10), dtype=np.uint8)
+        gray[0, 0] = 255
         kernels = []
         psms = []
         expected_psms = list(dict.fromkeys([4, 5] + [6, 7, 8, 10, 13]))

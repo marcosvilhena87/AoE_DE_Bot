@@ -110,6 +110,59 @@ class TestGatherHudStats(TestCase):
         self.assertEqual(pop_shapes, [(52, 90)])
         self.assertEqual(grab_calls, [None])
 
+    def test_stone_stockpile_start_zero(self):
+        anchor = {"left": 10, "top": 20, "width": 600, "height": 60, "asset": "assets/resources.png"}
+        cb.HUD_ANCHOR = anchor.copy()
+
+        call_count = [0]
+
+        def fake_grab_frame(bbox=None):
+            return np.zeros((200, 800, 3), dtype=np.uint8)
+
+        def fake_ocr(gray):
+            call_count[0] += 1
+            if call_count[0] == 1:
+                return "100", {"text": ["100"]}, None
+            if call_count[0] == 2:
+                return "200", {"text": ["200"]}, None
+            if call_count[0] == 3:
+                return "300", {"text": ["300"]}, None
+            if call_count[0] == 4:
+                return "0", {"zero_variance": True}, None
+            return "600", {"text": ["600"]}, None
+
+        def fake_pop(roi, conf_threshold=None):
+            return 123, 200
+
+        with patch("tools.campaign_bot.locate_resource_panel", return_value={}), \
+             patch("tools.campaign_bot._grab_frame", side_effect=fake_grab_frame), \
+             patch("tools.campaign_bot._ocr_digits_better", side_effect=fake_ocr), \
+             patch("tools.campaign_bot._read_population_from_roi", side_effect=fake_pop), \
+             patch("tools.campaign_bot.resources.detect_resource_regions", return_value={
+                 "wood_stockpile": (0, 0, 90, 52),
+                 "food_stockpile": (90, 0, 90, 52),
+                 "gold_stockpile": (180, 0, 90, 52),
+                 "stone_stockpile": (270, 0, 90, 52),
+                 "population_limit": (360, 0, 90, 52),
+                 "idle_villager": (450, 0, 98, 52),
+             }), \
+             patch(
+                 "tools.campaign_bot.resources.pytesseract.image_to_data",
+                 return_value={"text": ["600"], "conf": ["90"]},
+             ):
+            res, pop = cb.gather_hud_stats()
+
+        expected_res = {
+            "wood_stockpile": 100,
+            "food_stockpile": 200,
+            "gold_stockpile": 300,
+            "stone_stockpile": 0,
+            "idle_villager": 600,
+            "population_limit": 123,
+        }
+        self.assertEqual(res, expected_res)
+        self.assertEqual(pop, (123, 200))
+
     def test_missing_icons_become_optional(self):
         anchor = {"left": 10, "top": 20, "width": 600, "height": 60, "asset": "assets/resources.png"}
         cb.HUD_ANCHOR = anchor.copy()

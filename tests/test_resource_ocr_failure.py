@@ -257,7 +257,7 @@ class TestResourceOcrFailure(TestCase):
         ):
             digits, data, _ = resources._ocr_digits_better(gray)
         self.assertEqual(digits, "0")
-        self.assertEqual(data, {})
+        self.assertTrue(data.get("zero_variance"))
 
     def test_gold_and_stone_zero_digits_return_zero(self):
         def make_gold_roi():

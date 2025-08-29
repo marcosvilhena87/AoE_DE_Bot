@@ -141,6 +141,22 @@ class TestExecuteOcr(TestCase):
         self.assertEqual(digits, "789")
         img2str_mock.assert_not_called()
 
+    def test_execute_ocr_zero_variance_shortcut(self):
+        gray = np.zeros((5, 5), dtype=np.uint8)
+        with patch(
+            "script.resources._ocr_digits_better",
+            return_value=("0", {"zero_variance": True}, None),
+        ), patch("script.resources.pytesseract.image_to_string") as img2str_mock, patch(
+            "script.resources.logger.warning"
+        ) as warn_mock:
+            digits, data_out, mask = resources.execute_ocr(gray, conf_threshold=60)
+        self.assertEqual(digits, "0")
+        self.assertFalse(data_out.get("low_conf_single"))
+        self.assertFalse(data_out.get("low_conf_multi"))
+        self.assertIsNone(mask)
+        img2str_mock.assert_not_called()
+        warn_mock.assert_not_called()
+
 
 class TestHandleOcrFailure(TestCase):
     def test_handle_ocr_failure_raises(self):
