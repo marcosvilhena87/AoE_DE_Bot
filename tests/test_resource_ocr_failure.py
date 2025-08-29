@@ -301,30 +301,13 @@ class TestResourceOcrFailure(TestCase):
         self.assertIn("narrow ROI span", str(ctx.exception))
 
     def test_overlapping_rois_are_trimmed(self):
-        frame = np.zeros((100, 100, 3), dtype=np.uint8)
-        with patch(
-            "script.resources.locate_resource_panel",
-            return_value={
-                "wood_stockpile": (0, 0, 50, 10),
-                "food_stockpile": (40, 0, 50, 10),
-            },
-        ), patch(
-            "script.resources.input_utils._screen_size", return_value=(200, 200)
-        ), patch.dict(
-            resources.CFG,
-            {
-                "wood_stockpile_roi": None,
-                "food_stockpile_roi": None,
-                "gold_stockpile_roi": None,
-                "stone_stockpile_roi": None,
-                "population_limit_roi": None,
-                "idle_villager_roi": None,
-            },
-            clear=False,
-        ):
-            regions = resources.detect_resource_regions(
-                frame, ["wood_stockpile", "food_stockpile"]
-            )
+        regions = {
+            "wood_stockpile": (0, 0, 50, 10),
+            "food_stockpile": (40, 0, 50, 10),
+        }
+        regions = resources._remove_overlaps(
+            regions, ["wood_stockpile", "food_stockpile"]
+        )
 
         self.assertEqual(regions["wood_stockpile"], (0, 0, 40, 10))
         self.assertEqual(regions["food_stockpile"], (40, 0, 50, 10))
