@@ -1340,12 +1340,28 @@ def _read_resources(
             digits = ""
             base_expand = CFG.get("ocr_roi_expand_px", 0)
             step = CFG.get("ocr_roi_expand_step", 0)
-            expand_px = base_expand + failure_count * step
+            growth = CFG.get("ocr_roi_expand_growth", 1.0)
+            expand_px = int(
+                round(
+                    base_expand
+                    + step * ((failure_count + 1) ** growth - 1)
+                )
+            )
             if expand_px > 0:
                 x0 = max(0, x - expand_px)
                 y0 = max(0, y - expand_px)
                 x1 = min(frame.shape[1], x + w + expand_px)
                 y1 = min(frame.shape[0], y + h + expand_px)
+                logger.debug(
+                    "Expanding ROI for %s after %d failures by %dpx to x=%d y=%d w=%d h=%d",
+                    name,
+                    failure_count,
+                    expand_px,
+                    x0,
+                    y0,
+                    x1 - x0,
+                    y1 - y0,
+                )
                 roi_expanded = frame[y0:y1, x0:x1]
                 gray_expanded = preprocess_roi(roi_expanded)
                 if top_crop > 0 and gray_expanded.shape[0] > top_crop:
