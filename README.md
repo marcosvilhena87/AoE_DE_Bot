@@ -39,6 +39,10 @@ Configuration options in `config.json` allow adjusting how resource numbers are 
 * `<resource>_ocr_conf_threshold` – optional per-resource overrides (for example,
   `wood_stockpile_ocr_conf_threshold`) applied before falling back to the global
   threshold.
+* `ocr_conf_min` / `ocr_conf_decay` – after a failed OCR attempt, the confidence
+  threshold is multiplied by `ocr_conf_decay` (default `0.8`) until it reaches
+  `ocr_conf_min` (default `25–30`). This adaptive decay allows accepting digits
+  that repeatedly fail the initial threshold.
 * `ocr_kernel_size` – size of the square kernel used for morphological dilation
   before running OCR (default `2`).
 * `ocr_contrast_stretch` – rescale grayscale intensities before thresholding;
