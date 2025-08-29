@@ -45,6 +45,8 @@ sys.modules.setdefault(
 )
 os.environ.setdefault("TESSERACT_CMD", "/usr/bin/true")
 
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+import campaign
 import tools.campaign_bot as cb
 
 
@@ -215,3 +217,30 @@ class TestGatherHudStats(TestCase):
 
         self.assertEqual(res, {"wood_stockpile": 100})
         self.assertEqual(pop, (None, None))
+
+    def test_zero_start_resources_optional(self):
+        info = types.SimpleNamespace(
+            starting_resources={
+                "wood_stockpile": 100,
+                "food_stockpile": 100,
+                "gold_stockpile": 0,
+                "stone_stockpile": 0,
+            },
+            starting_villagers=3,
+            objective_villagers=5,
+        )
+
+        with patch("campaign.parse_scenario_info", return_value=info), \
+             patch("campaign.argparse.ArgumentParser.parse_args", return_value=types.SimpleNamespace(scenario="dummy")), \
+             patch("campaign.screen_utils.init_sct"), \
+             patch("campaign.screen_utils.teardown_sct"), \
+             patch("campaign.hud.wait_hud", return_value=({}, "assets/resources.png")), \
+             patch("campaign.resources.gather_hud_stats", return_value=({}, (0, 0))) as gh, \
+             patch("campaign.resources.validate_starting_resources"):
+            campaign.main()
+
+        args, kwargs = gh.call_args
+        required = kwargs.get("required_icons")
+        optional = kwargs.get("optional_icons")
+        self.assertNotIn("stone_stockpile", required)
+        self.assertIn("stone_stockpile", optional)

@@ -60,14 +60,18 @@ def main():
         common.TARGET_POP = info.objective_villagers
         try:
             icon_cfg = common.CFG.get("hud_icons", {})
+            non_zero = {k: v for k, v in info.starting_resources.items() if v}
+            zero_icons = [k for k, v in info.starting_resources.items() if v == 0]
+            required = [i for i in icon_cfg.get("required") if i not in zero_icons]
+            optional = icon_cfg.get("optional", []) + zero_icons
             res, (cur_pop, pop_cap) = resources.gather_hud_stats(
                 force_delay=0.1,
-                required_icons=icon_cfg.get("required"),
-                optional_icons=icon_cfg.get("optional"),
+                required_icons=required,
+                optional_icons=optional,
             )
             resources.validate_starting_resources(
                 res,
-                info.starting_resources,
+                non_zero,
                 tolerance=10,
                 raise_on_error=True,
             )
