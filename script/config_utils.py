@@ -130,6 +130,8 @@ class ScenarioInfo:
     starting_villagers: int = 0
     population_limit: int = 0
     objective_villagers: int = 0
+    # Expected starting resources keyed by resource name used in OCR routines
+    starting_resources: dict[str, int] | None = None
 
 
 def parse_scenario_info(path: str | Path) -> ScenarioInfo:
@@ -152,6 +154,13 @@ def parse_scenario_info(path: str | Path) -> ScenarioInfo:
                     m = re.search(r"(\d+)\s+villagers", line, re.IGNORECASE)
                     if m:
                         info.starting_villagers = int(m.group(1))
+                elif lower.startswith("starting resources"):
+                    res = {}
+                    for name in ("wood", "food", "gold", "stone"):
+                        m = re.search(rf"(\d+)\s+{name}", line, re.IGNORECASE)
+                        if m:
+                            res[f"{name}_stockpile"] = int(m.group(1))
+                    info.starting_resources = res or None
                 elif lower.startswith("objectives"):
                     in_objectives = True
                     continue

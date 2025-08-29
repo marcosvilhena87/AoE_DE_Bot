@@ -62,6 +62,12 @@ def main():
                 required_icons=icon_cfg.get("required"),
                 optional_icons=icon_cfg.get("optional"),
             )
+            resources.validate_starting_resources(
+                res,
+                info.starting_resources,
+                tolerance=10,
+                raise_on_error=True,
+            )
             logger.info(
                 "Detected resources: wood=%s, food=%s, gold=%s, stone=%s",
                 res.get("wood_stockpile"),

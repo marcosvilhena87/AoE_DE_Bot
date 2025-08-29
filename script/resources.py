@@ -1685,3 +1685,51 @@ def gather_hud_stats(
         max_cache_age,
         conf_threshold,
     )
+
+
+def validate_starting_resources(
+    current: dict[str, int],
+    expected: dict[str, int] | None,
+    *,
+    tolerance: int = 10,
+    raise_on_error: bool = False,
+) -> None:
+    """Validate OCR resource readings against expected starting values.
+
+    Parameters
+    ----------
+    current:
+        Mapping of resource names to the values read via OCR.
+    expected:
+        Mapping of expected starting resource values. When ``None`` or empty,
+        the function performs no validation.
+    tolerance:
+        Acceptable absolute difference before flagging a deviation.
+    raise_on_error:
+        If ``True`` a :class:`ValueError` is raised when a deviation is
+        detected; otherwise a warning is logged.
+    """
+
+    if not expected:
+        return
+
+    for name, exp in expected.items():
+        actual = current.get(name)
+        if actual is None:
+            msg = f"Missing OCR reading for '{name}'"
+            if raise_on_error:
+                logger.error(msg)
+                raise ValueError(msg)
+            logger.warning(msg)
+            continue
+
+        if abs(actual - exp) > tolerance:
+            msg = (
+                f"{name} reading {actual} deviates from expected {exp} "
+                f"(±{tolerance})"
+            )
+            if raise_on_error:
+                logger.error(msg)
+                raise ValueError(msg)
+            logger.warning(msg)
+

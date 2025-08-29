@@ -45,6 +45,15 @@ class TestInternalPopulation(TestCase):
         self.assertEqual(info.starting_villagers, 3)
         self.assertEqual(info.population_limit, 50)
         self.assertEqual(info.objective_villagers, 7)
+        self.assertEqual(
+            info.starting_resources,
+            {
+                "wood_stockpile": 80,
+                "food_stockpile": 140,
+                "gold_stockpile": 0,
+                "stone_stockpile": 0,
+            },
+        )
 
     def test_train_villagers_updates_population_without_ocr(self):
         common.CURRENT_POP = 3
