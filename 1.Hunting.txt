@@ -1,0 +1,29 @@
+Starting Age:  Stone Age
+Starting resources: 80 wood, 140 food, 0 gold, 0 stone
+Population limit: 50
+Starting units: 3 Villagers
+Starting buildings: 1 Town Center
+
+Objectives
+Grow your tribe to 7 villagers.
+
+Hints
+You must hunt gazelles and elephants to increase your stockpile of food in order to create new villagers.
+As your population grows, you must build new Houses to accommodate the new units or else you will not be able to create anymore new ones.
+Villagers can move around gazelles and herd them closer to the Town Center before hunting them. This decreases the distance the villagers must travel to carry the meat to the Town Center (where it is added to your stockpile).
+When you hunt elephants, you must use a different tactic than when you hunt gazelles. Elephants will attack the villagers that are hunting them so instead of moving around the elephants like you'd do with gazelles, you must select a villager, shoot the elephant, run away and then (when he's almost out of range) turn your villager around and shoot him again. If you repeat this process, you can lure the elephant to your drop off point where you can easily kill the elephant with multiple villagers, and you reduce the distance your villagers must walk.
+Food from dead animals deteriorates over time, so it is more efficient to assign more than one villager to gather the meat from a kill.
+Beware of Crocodiles—they tend to eat unwary villagers who wander near the shore. Crocodiles and other predators can be hunted and provide food like gazelles but at a much lower return rate.
+
+Strategy
+This campaign is pretty straightforward, since no enemies are present. The only thing the player should look out for are Alligators lurking around near the coastal areas of the map. Contrary to the scenario instructions, the player only needs to create six Villagers, as one is already available. A total of 300 food is required, and a house needs to be built. Bring the Villager to the west and walk through the large herd of Gazelles. Try to judge how far the player wants the prey to be from the Town Center before hitting with a spear twice. Have the hunter collect the meat and create Villagers as the food comes in. As soon as the player has finished, build a House with one Villager while continuing to hunt. Create the required Villagers and the task will be complete.
+
+Tutorial
+HUNTING
+To assign a villager to hunt, click the villager, and then right-click the animal to hunt. For example, to hunt a gazelle, right-click it. The villager hunts the animal, gathers food, and deposits it at the Town Center where it is added to your stockpile (as shown in the upper-left corner of the game screen).
+
+CREATING VILLAGERS
+Villagers cost 50 food. To create a villager, select a Town Center, and then click on the Create Villager button in the lower left corner of the game screen. After a brief training period, the villager appears beside the Town Center.
+
+BUILDING HOUSES
+Houses cost 30 wood and each House supports four villagers. The Town Center also supports four villagers. To build a House, select a villager, click the Build House button in the building panel in the lower-left corner of the game screen, and then click a location on the map. The House is shown in red if you cannot build in a particular location.
