@@ -88,7 +88,9 @@ class TestExecuteOcr(TestCase):
         gray = np.zeros((5, 5), dtype=np.uint8)
         with patch("script.resources._ocr_digits_better", return_value=("", {}, None)), \
              patch("script.resources.pytesseract.image_to_string", return_value="456"):
-            digits, data, mask, low_conf = resources.execute_ocr(gray)
+            digits, data, mask, low_conf = resources.execute_ocr(
+                gray, resource="wood_stockpile"
+            )
         self.assertEqual(digits, "456")
         self.assertTrue(low_conf)
         self.assertEqual(data["text"], ["456"])
@@ -100,7 +102,9 @@ class TestExecuteOcr(TestCase):
         with patch("script.resources._ocr_digits_better", return_value=("123", data, None)), \
              patch("script.resources.pytesseract.image_to_string", return_value="") as img2str_mock, \
              patch("script.resources.logger.warning") as warn_mock:
-            digits, data_out, _, low_conf = resources.execute_ocr(gray, conf_threshold=60)
+            digits, data_out, _, low_conf = resources.execute_ocr(
+                gray, conf_threshold=60, resource="wood_stockpile"
+            )
         self.assertEqual(digits, "123")
         self.assertTrue(low_conf)
         self.assertTrue(data_out.get("low_conf_multi"))
@@ -114,7 +118,9 @@ class TestExecuteOcr(TestCase):
              patch("script.resources.pytesseract.image_to_string", return_value="") as img2str_mock, \
              patch("script.resources.logger.warning") as warn_mock, \
              patch.dict(resources.CFG, {"ocr_conf_decay": 1.0}, clear=False):
-            digits, data_out, _, low_conf = resources.execute_ocr(gray, conf_threshold=60)
+            digits, data_out, _, low_conf = resources.execute_ocr(
+                gray, conf_threshold=60, resource="wood_stockpile"
+            )
         self.assertEqual(digits, "12")
         self.assertTrue(low_conf)
         self.assertTrue(data_out.get("low_conf_multi"))
@@ -127,7 +133,9 @@ class TestExecuteOcr(TestCase):
         with patch("script.resources._ocr_digits_better", return_value=("0", data, None)), \
              patch("script.resources.pytesseract.image_to_string", return_value="") as img2str_mock, \
              patch("script.resources.logger.warning") as warn_mock:
-            digits, data_out, _, low_conf = resources.execute_ocr(gray, conf_threshold=60)
+            digits, data_out, _, low_conf = resources.execute_ocr(
+                gray, conf_threshold=60, resource="wood_stockpile"
+            )
         self.assertEqual(digits, "0")
         self.assertTrue(low_conf)
         self.assertTrue(data_out.get("low_conf_single"))
@@ -142,7 +150,9 @@ class TestExecuteOcr(TestCase):
             "script.resources._ocr_digits_better",
             side_effect=[("123", data1, None), ("789", data2, None)],
         ), patch("script.resources.pytesseract.image_to_string") as img2str_mock:
-            digits, _, _, low_conf = resources.execute_ocr(gray, conf_threshold=60)
+            digits, _, _, low_conf = resources.execute_ocr(
+                gray, conf_threshold=60, resource="wood_stockpile"
+            )
         self.assertEqual(digits, "789")
         self.assertFalse(low_conf)
         img2str_mock.assert_not_called()
@@ -155,7 +165,9 @@ class TestExecuteOcr(TestCase):
         ), patch("script.resources.pytesseract.image_to_string") as img2str_mock, patch(
             "script.resources.logger.warning"
         ) as warn_mock:
-            digits, data_out, mask, low_conf = resources.execute_ocr(gray, conf_threshold=60)
+            digits, data_out, mask, low_conf = resources.execute_ocr(
+                gray, conf_threshold=60, resource="wood_stockpile"
+            )
         self.assertEqual(digits, "0")
         self.assertFalse(low_conf)
         self.assertFalse(data_out.get("low_conf_single"))
@@ -173,7 +185,9 @@ class TestExecuteOcr(TestCase):
         with patch("script.resources._ocr_digits_better", side_effect=side_effect) as ocr_mock, \
              patch("script.resources.pytesseract.image_to_string", return_value="") as img2str_mock, \
              patch.dict(resources.CFG, {"ocr_conf_min": 30, "ocr_conf_decay": 0.5}, clear=False):
-            digits, data_out, _, low_conf = resources.execute_ocr(gray, conf_threshold=60)
+            digits, data_out, _, low_conf = resources.execute_ocr(
+                gray, conf_threshold=60, resource="wood_stockpile"
+            )
         self.assertEqual(digits, "12")
         self.assertFalse(low_conf)
         self.assertNotIn("low_conf_multi", data_out)

@@ -988,7 +988,8 @@ def execute_ocr(
             elif mean_conf < conf_threshold or max_conf < conf_threshold:
                 if len(digits) == 1:
                     logger.warning(
-                        "Low-confidence single-digit OCR result: mean=%.1f max=%.1f digits=%s",
+                        "Low-confidence single-digit OCR for %s: mean=%.1f max=%.1f digits=%s",
+                        resource,
                         mean_conf,
                         max_conf,
                         digits,
@@ -996,7 +997,8 @@ def execute_ocr(
                     data["low_conf_single"] = True
                 else:
                     logger.warning(
-                        "Low-confidence multi-digit OCR result: mean=%.1f max=%.1f digits=%s",
+                        "Low-confidence multi-digit OCR for %s: mean=%.1f max=%.1f digits=%s",
+                        resource,
                         mean_conf,
                         max_conf,
                         digits,
