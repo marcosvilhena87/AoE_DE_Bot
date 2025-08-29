@@ -144,7 +144,7 @@ class TestResourceOcrFailure(TestCase):
         self.assertEqual(result.get("wood_stockpile"), 123)
         self.assertIsNone(result.get("food_stockpile"))
 
-    def test_low_confidence_returns_value(self):
+    def test_low_confidence_triggers_retry(self):
         def fake_grab_frame(bbox=None):
             if bbox:
                 return np.zeros((bbox["height"], bbox["width"], 3), dtype=np.uint8)
@@ -159,12 +159,14 @@ class TestResourceOcrFailure(TestCase):
 
         with patch("script.resources.detect_resource_regions", side_effect=fake_detect), \
             patch("script.screen_utils._grab_frame", side_effect=fake_grab_frame), \
-            patch("script.resources._ocr_digits_better", side_effect=fake_ocr), \
+            patch("script.resources._ocr_digits_better", side_effect=fake_ocr) as ocr_mock, \
             patch("script.resources.pytesseract.image_to_string", return_value="") as img2str_mock, \
-            patch("script.resources.cv2.imwrite"):
-            result, _ = resources.read_resources_from_hud(["wood_stockpile"])
-        self.assertEqual(result["wood_stockpile"], 123)
-        img2str_mock.assert_not_called()
+            patch("script.resources.cv2.imwrite"), \
+            self.assertRaises(common.ResourceReadError):
+            resources.read_resources_from_hud(["wood_stockpile"])
+
+        self.assertGreaterEqual(ocr_mock.call_count, 2)
+        img2str_mock.assert_called()
 
     def test_low_confidence_single_digit_triggers_retry(self):
         def fake_grab_frame(bbox=None):

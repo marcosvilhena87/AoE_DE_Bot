@@ -938,6 +938,8 @@ def execute_ocr(gray, conf_threshold=None, allow_fallback=True, roi=None):
                     digits,
                 )
                 data["low_conf_multi"] = True
+            digits = ""
+            low_conf = True
     if low_conf:
         alt_gray = cv2.bitwise_not(gray)
         digits2, data2, mask2 = _ocr_digits_better(alt_gray)
