@@ -6,6 +6,7 @@ from unittest.mock import patch
 
 import numpy as np
 import time
+import re
 
 # Stub modules that require a GUI/display before importing the bot modules
 
@@ -222,7 +223,9 @@ class TestResourceReadRetry(TestCase):
              patch("script.resources.preprocess_roi", side_effect=lambda r: r[..., 0] if r.ndim == 3 else r), \
              patch("script.resources.execute_ocr", side_effect=fake_execute), \
              patch("script.resources.pytesseract.image_to_string", return_value=""), \
-             patch("script.resources.cv2.imwrite"):
+             patch("script.resources.handle_ocr_failure"), \
+             patch("script.resources.cv2.imwrite"), \
+             self.assertLogs("script.resources", level="DEBUG") as cm:
             resources.read_resources_from_hud([], ["wood_stockpile"])
             resources.read_resources_from_hud([], ["wood_stockpile"])
 
@@ -230,3 +233,12 @@ class TestResourceReadRetry(TestCase):
         self.assertEqual(len(expanded), 2)
         self.assertLess(expanded[1][0], expanded[0][0])
         self.assertGreater(expanded[1][2], expanded[0][2])
+
+        widths = []
+        for line in cm.output:
+            if "Expanding ROI for wood_stockpile" in line:
+                m = re.search(r"w=(\d+)", line)
+                if m:
+                    widths.append(int(m.group(1)))
+        self.assertEqual(len(widths), 2)
+        self.assertLess(widths[0], widths[1])

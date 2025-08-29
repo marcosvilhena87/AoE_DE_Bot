@@ -15,6 +15,8 @@
     "//ocr_roi_expand_px": "Base pixel margin to expand OCR ROI after a miss.",
     "ocr_roi_expand_step": 2,
     "//ocr_roi_expand_step": "Additional pixels to grow the OCR ROI per consecutive failure.",
+    "ocr_roi_expand_growth": 2.0,
+    "//ocr_roi_expand_growth": "Exponent controlling ROI growth rate; >1 grows faster.",
     "ocr_kernel_size": 1,
     "ocr_top_crop": 1,
     "ocr_top_crop_overrides": {"wood_stockpile": 0},
