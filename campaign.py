@@ -61,9 +61,9 @@ def main():
         try:
             icon_cfg = common.CFG.get("hud_icons", {})
             non_zero = {k: v for k, v in info.starting_resources.items() if v}
-            zero_icons = [k for k, v in info.starting_resources.items() if v == 0]
-            required = [i for i in icon_cfg.get("required") if i not in zero_icons]
-            optional = icon_cfg.get("optional", []) + zero_icons
+            zero_icons = {k for k, v in info.starting_resources.items() if v == 0}
+            required = [i for i in icon_cfg.get("required", []) if i not in zero_icons]
+            optional = [i for i in icon_cfg.get("optional", []) if i not in zero_icons]
             res, (cur_pop, pop_cap) = resources.gather_hud_stats(
                 force_delay=0.1,
                 required_icons=required,

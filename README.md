@@ -182,6 +182,11 @@ res, pop = cb.gather_hud_stats(
 When neither list is supplied, `gather_hud_stats` detects which icons are
 present and automatically treats missing ones as optional.
 
+Scenario definitions that specify starting resources omit any resource with an
+expected value of `0` from the optional list passed to `gather_hud_stats` to
+avoid spurious OCR readings. Explicitly provide such icons in
+`optional_icons` if they still need to be read.
+
 ### Manual ROI overrides
 
 Automatic ROI detection may fail on unusual HUD layouts. Optional sections in

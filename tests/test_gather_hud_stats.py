@@ -218,7 +218,7 @@ class TestGatherHudStats(TestCase):
         self.assertEqual(res, {"wood_stockpile": 100})
         self.assertEqual(pop, (None, None))
 
-    def test_zero_start_resources_optional(self):
+    def test_zero_start_resources_excluded(self):
         info = types.SimpleNamespace(
             starting_resources={
                 "wood_stockpile": 100,
@@ -242,5 +242,6 @@ class TestGatherHudStats(TestCase):
         args, kwargs = gh.call_args
         required = kwargs.get("required_icons")
         optional = kwargs.get("optional_icons")
+        self.assertNotIn("gold_stockpile", required)
         self.assertNotIn("stone_stockpile", required)
-        self.assertIn("stone_stockpile", optional)
+        self.assertEqual(optional, [])
