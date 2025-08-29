@@ -1695,6 +1695,8 @@ def validate_starting_resources(
     *,
     tolerance: int = 10,
     raise_on_error: bool = False,
+    frame: np.ndarray | None = None,
+    rois: dict[str, tuple[int, int, int, int]] | None = None,
 ) -> None:
     """Validate OCR resource readings against expected starting values.
 
@@ -1710,6 +1712,13 @@ def validate_starting_resources(
     raise_on_error:
         If ``True`` a :class:`ValueError` is raised when a deviation is
         detected; otherwise a warning is logged.
+    frame:
+        Optional screenshot used to extract the diagnostic ROI when a
+        deviation is detected.
+    rois:
+        Mapping of resource names to ROI tuples ``(x, y, w, h)`` relative to
+        ``frame``. When both ``frame`` and ``rois`` are supplied, ROIs for
+        failing resources are saved to ``debug/``.
     """
 
     if not expected:
@@ -1726,10 +1735,22 @@ def validate_starting_resources(
             continue
 
         if abs(actual - exp) > tolerance:
+            roi_path = None
+            if frame is not None and rois and name in rois:
+                x, y, w, h = rois[name]
+                debug_dir = ROOT / "debug"
+                debug_dir.mkdir(exist_ok=True)
+                ts = int(time.time() * 1000)
+                roi_img = frame[y : y + h, x : x + w]
+                roi_path = debug_dir / f"resource_roi_{name}_{ts}.png"
+                cv2.imwrite(str(roi_path), roi_img)
+
             msg = (
                 f"{name} reading {actual} deviates from expected {exp} "
                 f"(±{tolerance})"
             )
+            if roi_path is not None:
+                msg += f"; ROI saved to {roi_path}"
             if raise_on_error:
                 logger.error(msg)
                 raise ValueError(msg)

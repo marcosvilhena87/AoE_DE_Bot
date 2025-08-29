@@ -199,6 +199,11 @@ reviewed to tune template and padding values. Enable the optional
 `ocr_debug` flag in `config.json` to dump the intermediate masks used during
 OCR. Remove the images once calibration succeeds to keep the folder tidy.
 
+When `validate_starting_resources` flags a mismatch, the offending resource's
+ROI is also saved to this folder with a filename like
+`resource_roi_<name>_<timestamp>.png`. The path to the snapshot is included in
+the error or warning message to aid troubleshooting.
+
 Repeated OCR failures can flood this directory with images. To limit spam,
 the bot only writes new debug files if the set of failing resources changes or
 at least `ocr_debug_cooldown` seconds have elapsed since the last dump (default
