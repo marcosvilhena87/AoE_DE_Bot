@@ -166,11 +166,25 @@ def _read_resources(
                     roi=(x, y, w, h),
                     resource=name,
                 )
+                logger.info(
+                    "OCR %s: digits=%s conf=%s low_conf=%s",
+                    name,
+                    digits,
+                    data.get("conf"),
+                    low_conf,
+                )
             except TypeError:
                 digits, data, mask, low_conf = execute_ocr(
                     gray,
                     conf_threshold=res_conf_threshold,
                     resource=name,
+                )
+                logger.info(
+                    "OCR %s: digits=%s conf=%s low_conf=%s",
+                    name,
+                    digits,
+                    data.get("conf"),
+                    low_conf,
                 )
         if not digits:
             base_expand = CFG.get("ocr_roi_expand_px", 0)
@@ -208,11 +222,25 @@ def _read_resources(
                         roi=(x0, y0, x1 - x0, y1 - y0),
                         resource=name,
                     )
+                    logger.info(
+                        "OCR %s: digits=%s conf=%s low_conf=%s",
+                        name,
+                        digits_exp,
+                        data_exp.get("conf"),
+                        low_conf,
+                    )
                 except TypeError:
                     digits_exp, data_exp, mask_exp, low_conf = execute_ocr(
                         gray_expanded,
                         conf_threshold=res_conf_threshold,
                         resource=name,
+                    )
+                    logger.info(
+                        "OCR %s: digits=%s conf=%s low_conf=%s",
+                        name,
+                        digits_exp,
+                        data_exp.get("conf"),
+                        low_conf,
                     )
                 if digits_exp:
                     digits, data, mask = digits_exp, data_exp, mask_exp
@@ -247,12 +275,26 @@ def _read_resources(
                             roi=(cand_x, y, cand_w, h),
                             resource=name,
                         )
+                        logger.info(
+                            "OCR %s: digits=%s conf=%s low_conf=%s",
+                            name,
+                            digits_retry,
+                            data_retry.get("conf"),
+                            low_conf,
+                        )
                     except TypeError:
                         digits_retry, data_retry, mask_retry, low_conf = execute_ocr(
                             gray_retry,
                             conf_threshold=res_conf_threshold,
                             allow_fallback=False,
                             resource=name,
+                        )
+                        logger.info(
+                            "OCR %s: digits=%s conf=%s low_conf=%s",
+                            name,
+                            digits_retry,
+                            data_retry.get("conf"),
+                            low_conf,
                         )
                     if digits_retry:
                         digits, data, mask = digits_retry, data_retry, mask_retry
@@ -345,6 +387,8 @@ def _read_resources(
         )
 
     cache._LAST_READ_FROM_CACHE = cache_hits
+
+    logger.info("Resumo de recursos detectados: %s", results)
 
     return results, (cur_pop, pop_cap)
 
