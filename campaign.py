@@ -2,6 +2,7 @@
 import argparse
 import logging
 import time
+from pathlib import Path
 
 import script.common as common
 import script.hud as hud
@@ -20,6 +21,7 @@ def main():
         help="Path to scenario text file",
     )
     args = parser.parse_args()
+    scenario_name = Path(args.scenario).stem
 
     logging.basicConfig(
         level=logging.DEBUG if common.CFG.get("verbose_logging") else logging.INFO,
@@ -30,7 +32,8 @@ def main():
     screen_utils.init_sct()
     try:
         logger.info(
-            "Enter the campaign mission (Hunting). The script starts when the HUD is detected…",
+            "Enter the campaign mission (%s). The script starts when the HUD is detected…",
+            scenario_name,
         )
         try:
             anchor, asset = hud.wait_hud(timeout=90)
