@@ -52,6 +52,8 @@ _LAST_READ_FROM_CACHE = set()
 
 # Resource names whose available span fell below the configured minimum width
 _NARROW_ROIS = set()
+# Track width deficit for resources with narrow spans
+_NARROW_ROI_DEFICITS = {}
 
 # Maximum age (in seconds) for cached resource values
 _RESOURCE_CACHE_TTL = CFG.get("resource_cache_ttl", 1.5)
@@ -154,8 +156,8 @@ def compute_resource_rois(
         ``(regions, spans, narrow)`` where ``regions`` is a mapping of resource
         names to ROI tuples ``(left, top, width, height)``, ``spans`` contains the
         available left/right span for each resource with a valid ROI, and
-        ``narrow`` flags resources whose available span was smaller than the
-        configured minimum width.
+        ``narrow`` maps resources to the number of pixels by which the available
+        span fell below the configured minimum width.
     """
 
     if min_requireds is None:
@@ -222,7 +224,7 @@ def compute_resource_rois(
         min_w = min_widths[idx] if idx < len(min_widths) else min_widths[-1]
         if available_width < min_w:
             width = available_width
-            narrow[current] = True
+            narrow[current] = min_w - available_width
             logger.warning(
                 "Narrow ROI for '%s': available=%d min=%d",
                 current,
@@ -384,8 +386,9 @@ def locate_resource_panel(frame, cache: ResourceCache = RESOURCE_CACHE):
         detected,
     )
 
-    global _NARROW_ROIS, _LAST_REGION_SPANS
+    global _NARROW_ROIS, _NARROW_ROI_DEFICITS, _LAST_REGION_SPANS
     _NARROW_ROIS = set(narrow.keys())
+    _NARROW_ROI_DEFICITS = narrow.copy()
     _LAST_REGION_SPANS = spans.copy()
 
     if "idle_villager" in detected:
@@ -583,8 +586,9 @@ def _auto_calibrate_from_icons(frame, cache: ResourceCache = RESOURCE_CACHE):
         detected_rel,
     )
 
-    global _NARROW_ROIS, _LAST_REGION_SPANS, _LAST_REGION_BOUNDS
+    global _NARROW_ROIS, _NARROW_ROI_DEFICITS, _LAST_REGION_SPANS, _LAST_REGION_BOUNDS
     _NARROW_ROIS = set(narrow.keys())
+    _NARROW_ROI_DEFICITS = narrow.copy()
     _LAST_REGION_SPANS = spans.copy()
 
     if "idle_villager" in detected_rel:
@@ -630,7 +634,7 @@ def _fallback_rois_from_slice(
         Resource icons that must be present; used to add the idle villager ROI.
     """
 
-    global _NARROW_ROIS, _LAST_REGION_SPANS
+    global _NARROW_ROIS, _NARROW_ROI_DEFICITS, _LAST_REGION_SPANS
 
     slice_w = width / len(RESOURCE_ICON_ORDER)
     detected = {
@@ -667,6 +671,7 @@ def _fallback_rois_from_slice(
     )
 
     _NARROW_ROIS = set(narrow.keys())
+    _NARROW_ROI_DEFICITS = narrow.copy()
 
     for name in RESOURCE_ICON_ORDER[:-1]:
         if name in regions:
@@ -1287,7 +1292,11 @@ def _read_resources(
     max_cache_age: float | None = None,
     conf_threshold: int | None = None,
 ):
-    """Core routine for reading resource values from a frame."""
+    """Core routine for reading resource values from a frame.
+
+    Regions whose spans fall below the configured minimum width are
+    automatically expanded horizontally before OCR is attempted.
+    """
 
     required_icons = list(required_icons)
     icons_to_read = list(icons_to_read)
@@ -1315,6 +1324,23 @@ def _read_resources(
                 results[name] = None
             continue
         x, y, w, h = regions[name]
+        deficit = _NARROW_ROI_DEFICITS.get(name)
+        if deficit:
+            expand_left = deficit // 2
+            expand_right = deficit - expand_left
+            orig_x = x
+            orig_w = w
+            x = max(0, orig_x - expand_left)
+            right = min(frame.shape[1], orig_x + orig_w + expand_right)
+            w = right - x
+            regions[name] = (x, y, w, h)
+            logger.debug(
+                "Expanding narrow ROI for %s by %dpx (left=%d right=%d)",
+                name,
+                deficit,
+                expand_left,
+                expand_right,
+            )
         if w <= 0 or h <= 0:
             logger.error(
                 "ROI for '%s' has invalid dimensions w=%d h=%d", name, w, h

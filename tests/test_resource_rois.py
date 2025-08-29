@@ -425,6 +425,7 @@ class TestResourceROIs(TestCase):
         self.assertEqual(roi[0] + roi[2], span_right)
         self.assertEqual(roi[2], span_right - span_left)
         self.assertIn("wood_stockpile", narrow)
+        self.assertEqual(narrow["wood_stockpile"], 14)
 
     def test_ignores_non_positive_span(self):
         """Resources with zero or negative spans should be skipped entirely."""
