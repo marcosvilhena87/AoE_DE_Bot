@@ -16,6 +16,8 @@
     "ocr_roi_expand_step": 2,
     "//ocr_roi_expand_step": "Additional pixels to grow the OCR ROI per consecutive failure.",
     "ocr_kernel_size": 1,
+    "ocr_top_crop": 1,
+    "ocr_top_crop_overrides": {"wood_stockpile": 0},
   "ocr_bilateral": [7, 60, 60],
   "ocr_equalize_hist": true,
   "ocr_contrast_stretch": false,
