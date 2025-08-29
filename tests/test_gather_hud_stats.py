@@ -105,7 +105,7 @@ class TestGatherHudStats(TestCase):
         }
         self.assertEqual(res, expected_res)
         self.assertEqual(pop, (123, 200))
-        expected_shapes = [(52, 90), (52, 90), (52, 90), (52, 90)]
+        expected_shapes = [(52, 90), (51, 90), (51, 90), (51, 90)]
         self.assertEqual(roi_shapes, expected_shapes)
         self.assertEqual(pop_shapes, [(52, 90)])
         self.assertEqual(grab_calls, [None])

@@ -84,23 +84,29 @@ class TestExecuteOcr(TestCase):
         self.assertEqual(data["text"], ["456"])
         np.testing.assert_array_equal(mask, gray)
 
-    def test_execute_ocr_rejects_low_confidence(self):
+    def test_execute_ocr_warns_low_confidence(self):
         gray = np.zeros((5, 5), dtype=np.uint8)
         data = {"text": ["123"], "conf": ["10", "20", "30"]}
         with patch("script.resources._ocr_digits_better", return_value=("123", data, None)), \
-             patch("script.resources.pytesseract.image_to_string", return_value="") as img2str_mock:
-            digits, _, _ = resources.execute_ocr(gray, conf_threshold=60)
-        self.assertEqual(digits, "")
-        img2str_mock.assert_called_once()
+             patch("script.resources.pytesseract.image_to_string", return_value="") as img2str_mock, \
+             patch("script.resources.logger.warning") as warn_mock:
+            digits, data_out, _ = resources.execute_ocr(gray, conf_threshold=60)
+        self.assertEqual(digits, "123")
+        self.assertTrue(data_out.get("low_conf_multi"))
+        img2str_mock.assert_not_called()
+        warn_mock.assert_called_once()
 
-    def test_execute_ocr_rejects_low_mean_confidence(self):
+    def test_execute_ocr_warns_low_mean_confidence(self):
         gray = np.zeros((5, 5), dtype=np.uint8)
         data = {"text": ["12"], "conf": ["80", "20"]}
         with patch("script.resources._ocr_digits_better", return_value=("12", data, None)), \
-             patch("script.resources.pytesseract.image_to_string", return_value="") as img2str_mock:
-            digits, _, _ = resources.execute_ocr(gray, conf_threshold=60)
-        self.assertEqual(digits, "")
-        img2str_mock.assert_called_once()
+             patch("script.resources.pytesseract.image_to_string", return_value="") as img2str_mock, \
+             patch("script.resources.logger.warning") as warn_mock:
+            digits, data_out, _ = resources.execute_ocr(gray, conf_threshold=60)
+        self.assertEqual(digits, "12")
+        self.assertTrue(data_out.get("low_conf_multi"))
+        img2str_mock.assert_not_called()
+        warn_mock.assert_called_once()
 
     def test_execute_ocr_accepts_low_conf_single_digit(self):
         gray = np.zeros((5, 5), dtype=np.uint8)
@@ -115,7 +121,7 @@ class TestExecuteOcr(TestCase):
 
     def test_execute_ocr_second_attempt_success(self):
         gray = np.zeros((5, 5), dtype=np.uint8)
-        data1 = {"text": ["123"], "conf": ["10", "20", "30"]}
+        data1 = {"text": ["123"], "conf": ["0", "0", "0"]}
         data2 = {"text": ["789"], "conf": ["80", "90", "100"]}
         with patch(
             "script.resources._ocr_digits_better",
@@ -144,3 +150,34 @@ class TestHandleOcrFailure(TestCase):
         with patch("script.resources.cv2.imwrite") as imwrite_mock:
             resources.handle_ocr_failure(frame, regions, results, ["wood_stockpile"])
         imwrite_mock.assert_not_called()
+
+    def test_handle_ocr_failure_low_confidence_fallback(self):
+        frame = np.zeros((20, 20, 3), dtype=np.uint8)
+        regions = {"wood_stockpile": (0, 0, 10, 10)}
+        results = {"wood_stockpile": 50}
+        cache = resources.ResourceCache()
+        cache.last_resource_values["wood_stockpile"] = 99
+        with patch("script.resources.cv2.imwrite"), \
+             patch("script.resources.logger.warning") as warn_mock:
+            resources.handle_ocr_failure(
+                frame,
+                regions,
+                results,
+                ["wood_stockpile"],
+                cache=cache,
+                retry_limit=2,
+                low_confidence={"wood_stockpile"},
+            )
+            self.assertEqual(results["wood_stockpile"], 50)
+            self.assertEqual(cache.resource_failure_counts["wood_stockpile"], 1)
+            resources.handle_ocr_failure(
+                frame,
+                regions,
+                results,
+                ["wood_stockpile"],
+                cache=cache,
+                retry_limit=2,
+                low_confidence={"wood_stockpile"},
+            )
+        self.assertEqual(results["wood_stockpile"], 99)
+        self.assertEqual(warn_mock.call_count, 1)
