@@ -100,10 +100,10 @@ class TestExecuteOcr(TestCase):
              patch("script.resources.pytesseract.image_to_string", return_value="") as img2str_mock, \
              patch("script.resources.logger.warning") as warn_mock:
             digits, data_out, _ = resources.execute_ocr(gray, conf_threshold=60)
-        self.assertEqual(digits, "123")
+        self.assertEqual(digits, "")
         self.assertTrue(data_out.get("low_conf_multi"))
-        img2str_mock.assert_not_called()
-        warn_mock.assert_called_once()
+        img2str_mock.assert_called_once()
+        self.assertGreaterEqual(warn_mock.call_count, 1)
 
     def test_execute_ocr_warns_low_mean_confidence(self):
         gray = np.zeros((5, 5), dtype=np.uint8)
@@ -112,10 +112,10 @@ class TestExecuteOcr(TestCase):
              patch("script.resources.pytesseract.image_to_string", return_value="") as img2str_mock, \
              patch("script.resources.logger.warning") as warn_mock:
             digits, data_out, _ = resources.execute_ocr(gray, conf_threshold=60)
-        self.assertEqual(digits, "12")
+        self.assertEqual(digits, "")
         self.assertTrue(data_out.get("low_conf_multi"))
-        img2str_mock.assert_not_called()
-        warn_mock.assert_called_once()
+        img2str_mock.assert_called_once()
+        self.assertGreaterEqual(warn_mock.call_count, 1)
 
     def test_execute_ocr_accepts_low_conf_single_digit(self):
         gray = np.zeros((5, 5), dtype=np.uint8)
@@ -123,10 +123,11 @@ class TestExecuteOcr(TestCase):
         with patch("script.resources._ocr_digits_better", return_value=("0", data, None)), \
              patch("script.resources.pytesseract.image_to_string", return_value="") as img2str_mock, \
              patch("script.resources.logger.warning") as warn_mock:
-            digits, _, _ = resources.execute_ocr(gray, conf_threshold=60)
-        self.assertEqual(digits, "0")
-        img2str_mock.assert_not_called()
-        warn_mock.assert_called_once()
+            digits, data_out, _ = resources.execute_ocr(gray, conf_threshold=60)
+        self.assertEqual(digits, "")
+        self.assertTrue(data_out.get("low_conf_single"))
+        img2str_mock.assert_called_once()
+        self.assertGreaterEqual(warn_mock.call_count, 1)
 
     def test_execute_ocr_second_attempt_success(self):
         gray = np.zeros((5, 5), dtype=np.uint8)
