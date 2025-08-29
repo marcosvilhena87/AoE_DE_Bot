@@ -883,7 +883,13 @@ def preprocess_roi(roi):
     return gray
 
 
-def execute_ocr(gray, conf_threshold=None, allow_fallback=True, roi=None):
+def execute_ocr(
+    gray,
+    conf_threshold=None,
+    allow_fallback=True,
+    roi=None,
+    resource=None,
+):
     """Run OCR on a preprocessed grayscale image.
 
     Parameters
@@ -896,10 +902,21 @@ def execute_ocr(gray, conf_threshold=None, allow_fallback=True, roi=None):
         When ``True`` (default) an additional Tesseract ``image_to_string``
         pass is attempted if no digits are detected. Sliding-window retries
         disable this to avoid excessive fallback calls.
+    roi : tuple[int, int, int, int] | None, optional
+        ROI bounds associated with ``gray`` used for debug logging.
+    resource : str | None, optional
+        Resource name for looking up per-resource confidence overrides when
+        ``conf_threshold`` is ``None``.
     """
 
     if conf_threshold is None:
-        conf_threshold = CFG.get("ocr_conf_threshold", 60)
+        if resource is not None:
+            conf_threshold = CFG.get(
+                f"{resource}_ocr_conf_threshold",
+                CFG.get("ocr_conf_threshold", 60),
+            )
+        else:
+            conf_threshold = CFG.get("ocr_conf_threshold", 60)
 
     digits, data, mask = _ocr_digits_better(gray)
 
@@ -1281,7 +1298,10 @@ def _read_resources(
     if max_cache_age is None:
         max_cache_age = _RESOURCE_CACHE_MAX_AGE
     if conf_threshold is None:
-        conf_threshold = CFG.get("ocr_conf_threshold", 60)
+        conf_threshold = CFG.get(
+            "population_limit_ocr_conf_threshold",
+            CFG.get("ocr_conf_threshold", 60),
+        )
 
     resource_icons = [n for n in icons_to_read if n != "population_limit"]
     results = {}
@@ -1289,6 +1309,7 @@ def _read_resources(
     debug_images = {}
     low_confidence = set()
     for name in resource_icons:
+        res_conf_threshold = CFG.get(f"{name}_ocr_conf_threshold", conf_threshold)
         if name not in regions:
             if name in required_set:
                 results[name] = None
@@ -1324,7 +1345,9 @@ def _read_resources(
                 for c in data.get("conf", [])
                 if c not in ("-1", "")
             ]
-            if texts and confidences and all(c >= conf_threshold for c in confidences):
+            if texts and confidences and all(
+                c >= res_conf_threshold for c in confidences
+            ):
                 digits = "".join(filter(str.isdigit, "".join(texts)))
             else:
                 digits = None
@@ -1332,11 +1355,16 @@ def _read_resources(
         else:
             try:
                 digits, data, mask = execute_ocr(
-                    gray, conf_threshold=conf_threshold, roi=(x, y, w, h)
+                    gray,
+                    conf_threshold=res_conf_threshold,
+                    roi=(x, y, w, h),
+                    resource=name,
                 )
             except TypeError:
                 digits, data, mask = execute_ocr(
-                    gray, conf_threshold=conf_threshold
+                    gray,
+                    conf_threshold=res_conf_threshold,
+                    resource=name,
                 )
         if not digits or data.get("low_conf_single"):
             digits = ""
@@ -1371,12 +1399,15 @@ def _read_resources(
                 try:
                     digits_exp, data_exp, mask_exp = execute_ocr(
                         gray_expanded,
-                        conf_threshold=conf_threshold,
+                        conf_threshold=res_conf_threshold,
                         roi=(x0, y0, x1 - x0, y1 - y0),
+                        resource=name,
                     )
                 except TypeError:
                     digits_exp, data_exp, mask_exp = execute_ocr(
-                        gray_expanded, conf_threshold=conf_threshold
+                        gray_expanded,
+                        conf_threshold=res_conf_threshold,
+                        resource=name,
                     )
                 if digits_exp and not data_exp.get("low_conf_single"):
                     digits, data, mask = digits_exp, data_exp, mask_exp
@@ -1406,15 +1437,17 @@ def _read_resources(
                     try:
                         digits_retry, data_retry, mask_retry = execute_ocr(
                             gray_retry,
-                            conf_threshold=conf_threshold,
+                            conf_threshold=res_conf_threshold,
                             allow_fallback=False,
                             roi=(cand_x, y, cand_w, h),
+                            resource=name,
                         )
                     except TypeError:
                         digits_retry, data_retry, mask_retry = execute_ocr(
                             gray_retry,
-                            conf_threshold=conf_threshold,
+                            conf_threshold=res_conf_threshold,
                             allow_fallback=False,
+                            resource=name,
                         )
                     if digits_retry and not data_retry.get("low_conf_single"):
                         digits, data, mask = digits_retry, data_retry, mask_retry
@@ -1495,8 +1528,15 @@ def _read_resources(
     cur_pop = pop_cap = None
     if "population_limit" in icons_to_read:
         pop_required = "population_limit" in required_set
+        pop_conf_threshold = CFG.get(
+            "population_limit_ocr_conf_threshold", conf_threshold
+        )
         cur_pop, pop_cap = _extract_population(
-            frame, regions, results, pop_required, conf_threshold=conf_threshold
+            frame,
+            regions,
+            results,
+            pop_required,
+            conf_threshold=pop_conf_threshold,
         )
 
     global _LAST_READ_FROM_CACHE
@@ -1601,7 +1641,10 @@ def _read_population_from_roi(roi, conf_threshold=None, save_debug=True):
     """
 
     if conf_threshold is None:
-        conf_threshold = CFG.get("ocr_conf_threshold", 60)
+        conf_threshold = CFG.get(
+            "population_limit_ocr_conf_threshold",
+            CFG.get("ocr_conf_threshold", 60),
+        )
 
     if roi.size == 0:
         raise common.PopulationReadError("Population ROI has zero size")

@@ -323,7 +323,9 @@ class TestGatherHudStatsSliding(TestCase):
 
         calls = []
 
-        def fake_execute(gray, conf_threshold=None, allow_fallback=True):
+        def fake_execute(
+            gray, conf_threshold=None, allow_fallback=True, roi=None, resource=None
+        ):
             h, w = gray.shape
             mean = gray.mean()
             x = int(round(mean - (w - 1) / 2))

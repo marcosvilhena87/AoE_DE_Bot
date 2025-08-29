@@ -137,7 +137,9 @@ class TestResourceReadRetry(TestCase):
 
         calls = []
 
-        def fake_execute(gray, conf_threshold=None, allow_fallback=True):
+        def fake_execute(
+            gray, conf_threshold=None, allow_fallback=True, roi=None, resource=None
+        ):
             h, w = gray.shape
             mean = gray.mean()
             x = int(round(mean - (w - 1) / 2))
@@ -213,7 +215,9 @@ class TestResourceReadRetry(TestCase):
         frame = np.zeros((100, 100, 3), dtype=np.uint8)
         rois = []
 
-        def fake_execute(gray, conf_threshold=None, allow_fallback=True, roi=None):
+        def fake_execute(
+            gray, conf_threshold=None, allow_fallback=True, roi=None, resource=None
+        ):
             if roi is not None:
                 rois.append((roi, allow_fallback))
             return "", {"text": [""]}, np.zeros((1, 1), dtype=np.uint8)
