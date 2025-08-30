@@ -73,7 +73,7 @@ class TestForagingScenario(TestCase):
             resources, "RESOURCE_CACHE", resources.ResourceCache()
         ):
             runpy.run_path(
-                os.path.join("campaigns", "Ascent_of_Egypt", "2_Foraging.py"),
+                os.path.join("campaigns", "Ascent_of_Egypt", "Egypt_2_Foraging.py"),
                 run_name="__main__",
             )
 
