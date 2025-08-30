@@ -64,7 +64,6 @@ from .panel import (
 # OCR helpers
 from .ocr import (
     preprocess_roi,
-    _ocr_digits_better,
     execute_ocr,
     handle_ocr_failure,
     _read_population_from_roi,

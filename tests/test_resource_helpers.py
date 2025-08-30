@@ -86,7 +86,7 @@ class TestPreprocessRoi(TestCase):
 class TestExecuteOcr(TestCase):
     def test_execute_ocr_fallback(self):
         gray = np.zeros((5, 5), dtype=np.uint8)
-        with patch("script.resources.ocr._ocr_digits_better", return_value=("", {}, None)), \
+        with patch("script.resources.ocr.masks._ocr_digits_better", return_value=("", {}, None)), \
              patch("script.resources.reader.pytesseract.image_to_string", return_value="456"):
             digits, data, mask, low_conf = resources.execute_ocr(
                 gray, resource="wood_stockpile"
@@ -99,7 +99,7 @@ class TestExecuteOcr(TestCase):
     def test_execute_ocr_warns_low_confidence(self):
         gray = np.zeros((5, 5), dtype=np.uint8)
         data = {"text": ["123"], "conf": ["10", "20", "30"]}
-        with patch("script.resources.ocr._ocr_digits_better", return_value=("123", data, None)), \
+        with patch("script.resources.ocr.masks._ocr_digits_better", return_value=("123", data, None)), \
              patch("script.resources.reader.pytesseract.image_to_string", return_value="") as img2str_mock:
             digits, data_out, _, low_conf = resources.execute_ocr(
                 gray, conf_threshold=60, resource="wood_stockpile"
@@ -111,7 +111,7 @@ class TestExecuteOcr(TestCase):
     def test_execute_ocr_warns_low_mean_confidence(self):
         gray = np.zeros((5, 5), dtype=np.uint8)
         data = {"text": ["12"], "conf": ["80", "20"]}
-        with patch("script.resources.ocr._ocr_digits_better", return_value=("12", data, None)), \
+        with patch("script.resources.ocr.masks._ocr_digits_better", return_value=("12", data, None)), \
              patch("script.resources.reader.pytesseract.image_to_string", return_value="") as img2str_mock, \
              patch.dict(resources.CFG, {"ocr_conf_decay": 1.0}, clear=False):
             digits, data_out, _, low_conf = resources.execute_ocr(
@@ -124,7 +124,7 @@ class TestExecuteOcr(TestCase):
     def test_execute_ocr_accepts_mixed_confidence_digits(self):
         gray = np.zeros((5, 5), dtype=np.uint8)
         data = {"text": ["789"], "conf": ["90", "10", "90"]}
-        with patch("script.resources.ocr._ocr_digits_better", return_value=("789", data, None)), \
+        with patch("script.resources.ocr.masks._ocr_digits_better", return_value=("789", data, None)), \
              patch("script.resources.reader.pytesseract.image_to_string", return_value="") as img2str_mock, \
              patch.dict(resources.CFG, {"ocr_conf_decay": 1.0}, clear=False):
             digits, data_out, _, low_conf = resources.execute_ocr(
@@ -137,7 +137,7 @@ class TestExecuteOcr(TestCase):
     def test_execute_ocr_accepts_low_conf_single_digit(self):
         gray = np.zeros((5, 5), dtype=np.uint8)
         data = {"text": ["0"], "conf": ["10"]}
-        with patch("script.resources.ocr._ocr_digits_better", return_value=("0", data, None)), \
+        with patch("script.resources.ocr.masks._ocr_digits_better", return_value=("0", data, None)), \
              patch("script.resources.reader.pytesseract.image_to_string", return_value="") as img2str_mock:
             digits, data_out, _, low_conf = resources.execute_ocr(
                 gray, conf_threshold=60, resource="wood_stockpile"
@@ -151,7 +151,7 @@ class TestExecuteOcr(TestCase):
         data1 = {"text": ["123"], "conf": ["0", "0", "0"]}
         data2 = {"text": ["789"], "conf": ["80", "90", "100"]}
         with patch(
-            "script.resources.ocr._ocr_digits_better",
+            "script.resources.ocr.masks._ocr_digits_better",
             side_effect=[("123", data1, None), ("789", data2, None)],
         ) as ocr_mock, patch("script.resources.reader.pytesseract.image_to_string") as img2str_mock:
             digits, _, _, low_conf = resources.execute_ocr(
@@ -165,7 +165,7 @@ class TestExecuteOcr(TestCase):
     def test_execute_ocr_zero_variance_shortcut(self):
         gray = np.zeros((5, 5), dtype=np.uint8)
         with patch(
-            "script.resources.ocr._ocr_digits_better",
+            "script.resources.ocr.masks._ocr_digits_better",
             return_value=("0", {"zero_variance": True}, None),
         ), patch("script.resources.reader.pytesseract.image_to_string") as img2str_mock, patch(
             "script.resources.reader.logger.warning"
@@ -187,7 +187,7 @@ class TestExecuteOcr(TestCase):
             ("12", {"text": ["12"], "conf": ["40", "40"]}, None)
             for _ in range(4)
         ]
-        with patch("script.resources.ocr._ocr_digits_better", side_effect=side_effect) as ocr_mock, \
+        with patch("script.resources.ocr.masks._ocr_digits_better", side_effect=side_effect) as ocr_mock, \
              patch("script.resources.reader.pytesseract.image_to_string", return_value="") as img2str_mock, \
              patch.dict(resources.CFG, {"ocr_conf_min": 30, "ocr_conf_decay": 0.5}, clear=False):
             digits, data_out, _, low_conf = resources.execute_ocr(
@@ -202,7 +202,7 @@ class TestExecuteOcr(TestCase):
     def test_execute_ocr_ignores_non_positive_confidences(self):
         gray = np.zeros((5, 5), dtype=np.uint8)
         data = {"text": ["12"], "conf": [-1, "0", "95"]}
-        with patch("script.resources.ocr._ocr_digits_better", return_value=("12", data, None)), \
+        with patch("script.resources.ocr.masks._ocr_digits_better", return_value=("12", data, None)), \
              patch("script.resources.reader.pytesseract.image_to_string", return_value="") as img2str_mock:
             digits, _, _, low_conf = resources.execute_ocr(
                 gray, conf_threshold=60, resource="wood_stockpile"
