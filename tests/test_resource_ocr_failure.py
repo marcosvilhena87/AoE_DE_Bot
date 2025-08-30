@@ -353,7 +353,11 @@ class TestGatherHudStatsSliding(TestCase):
         ), patch(
             "script.resources.preprocess_roi", side_effect=lambda roi: roi[..., 0]
         ), patch.dict(
-            "script.resources._LAST_REGION_SPANS",
+            resources.cache._LAST_REGION_SPANS,
+            {"wood_stockpile": (0, 120)},
+            clear=True,
+        ), patch.dict(
+            resources._LAST_REGION_SPANS,
             {"wood_stockpile": (0, 120)},
             clear=True,
         ), patch(
@@ -361,6 +365,11 @@ class TestGatherHudStatsSliding(TestCase):
         ), patch(
             "script.resources.pytesseract.image_to_string", return_value=""
         ):
+            resources.cache._NARROW_ROIS.clear()
+            resources.cache._NARROW_ROI_DEFICITS.clear()
+            resources.RESOURCE_CACHE.resource_failure_counts.clear()
+            resources.RESOURCE_CACHE.last_resource_values.clear()
+            resources.RESOURCE_CACHE.last_resource_ts.clear()
             res, _ = resources._read_resources(
                 frame,
                 ["wood_stockpile"],
@@ -424,7 +433,7 @@ class TestResourceOcrRois(TestCase):
             [2] * 6,
             [2] * 6,
             [0] * 6,
-            999,
+            [999] * 6,
             [0] * 6,
             detected=detected,
         )

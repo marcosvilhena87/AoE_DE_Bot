@@ -64,7 +64,7 @@
         "scales": [0.9, 0.95, 1.0, 1.05, 1.1],
         "roi_padding_left": [0, 0, 0, 0, 0, 0],
         "roi_padding_right": [0, 0, 0, 0, 0, 0],
-        "max_width": 160,
+        "max_width": [160, 160, 160, 160, 160, 160],
         "min_width": [5, 5, 5, 5, 5, 4],
         "min_required_width": 0,
         "idle_roi_extra_width": 24,

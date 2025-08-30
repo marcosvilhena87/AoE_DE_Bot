@@ -67,7 +67,7 @@ def compute_resource_rois(
     pad_left,
     pad_right,
     icon_trims,
-    max_width,
+    max_widths,
     min_widths,
     min_requireds=None,
     detected=None,
@@ -129,7 +129,8 @@ def compute_resource_rois(
         spans[current] = (left, right)
 
         available_width = right - left
-        width = min(max_width, available_width)
+        max_w = max_widths[idx] if idx < len(max_widths) else max_widths[-1]
+        width = min(max_w, available_width)
 
         min_req = min_requireds[idx] if idx < len(min_requireds) else min_requireds[-1]
         if available_width >= min_req:
@@ -165,7 +166,7 @@ class ResourcePanelCfg:
     pad_left: list
     pad_right: list
     icon_trims: list
-    max_width: int
+    max_widths: list
     min_widths: list
     min_requireds: list
     top_pct: float
@@ -199,7 +200,12 @@ def _get_resource_panel_cfg():
         icon_trims if isinstance(icon_trims, (list, tuple)) else [icon_trims] * num_icons
     )
 
-    max_width = res_cfg.get("max_width", 160)
+    max_width_cfg = res_cfg.get("max_width", 160)
+    max_widths = (
+        max_width_cfg
+        if isinstance(max_width_cfg, (list, tuple))
+        else [max_width_cfg] * num_icons
+    )
 
     min_width_cfg = res_cfg.get("min_width", 90)
     min_widths = (
@@ -226,7 +232,7 @@ def _get_resource_panel_cfg():
         pad_left,
         pad_right,
         icon_trims,
-        max_width,
+        max_widths,
         min_widths,
         min_requireds,
         top_pct,
@@ -294,7 +300,7 @@ def locate_resource_panel(frame, cache_obj: cache.ResourceCache = cache.RESOURCE
         cfg.pad_left,
         cfg.pad_right,
         cfg.icon_trims,
-        cfg.max_width,
+        cfg.max_widths,
         cfg.min_widths,
         cfg.min_requireds,
         detected,
@@ -357,6 +363,7 @@ def _fallback_rois_from_slice(
     icon_trims_zero = [0] * len(RESOURCE_ICON_ORDER)
     min_widths = [90] * len(RESOURCE_ICON_ORDER)
 
+    max_widths = [width] * len(RESOURCE_ICON_ORDER)
     regions, spans, narrow = compute_resource_rois(
         left,
         left + width,
@@ -365,7 +372,7 @@ def _fallback_rois_from_slice(
         pad_left_fallback,
         pad_right_fallback,
         icon_trims_zero,
-        width,
+        max_widths,
         min_widths,
         detected=detected,
     )
@@ -446,7 +453,7 @@ def _auto_calibrate_from_icons(frame, cache_obj: cache.ResourceCache = cache.RES
         cfg.pad_left,
         cfg.pad_right,
         cfg.icon_trims,
-        cfg.max_width,
+        cfg.max_widths,
         cfg.min_widths,
         cfg.min_requireds,
         detected_rel,
