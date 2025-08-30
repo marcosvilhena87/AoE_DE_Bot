@@ -58,7 +58,7 @@ class TestGetResourcePanelCfg(TestCase):
         self.assertEqual(cfg.pad_left, [3] * n)
         self.assertEqual(cfg.pad_right, [4] * n)
         self.assertEqual(cfg.icon_trims, [0.2] * n)
-        self.assertEqual(cfg.max_width, 150)
+        self.assertEqual(cfg.max_widths, [150] * n)
         self.assertEqual(cfg.min_widths, [80] * n)
         self.assertEqual(cfg.min_requireds, [20] * n)
         self.assertEqual(cfg.top_pct, 0.1)

@@ -346,7 +346,7 @@ class TestResourceROIs(TestCase):
         positions = [0, 120]
         pad_left = 2
         pad_right = 2
-        max_width = 50
+        max_widths = [50, 30, 999, 999, 999, 999]
         loc_iter = iter([(x, 0) for x in positions])
 
         def fake_minmax(res):
@@ -367,7 +367,7 @@ class TestResourceROIs(TestCase):
                 "icon_trim_pct": [0] * 6,
                 "scales": [1.0],
                 "match_threshold": 0.5,
-                "max_width": max_width,
+                "max_width": max_widths,
                 "min_width": 0,
                 "top_pct": 0.0,
                 "height_pct": 1.0,
@@ -378,26 +378,35 @@ class TestResourceROIs(TestCase):
                 regions = resources.locate_resource_panel(frame)
                 icon_width = screen_utils.ICON_TEMPLATES[icons[0]].shape[1]
 
-        roi = regions[icons[0]]
-        width = roi[2]
-        left = roi[0]
-        right = left + width
+        roi1 = regions[icons[0]]
+        left1, _, width1, _ = roi1
+        right1 = left1 + width1
+        icon_right1 = positions[0] + icon_width
+        next_icon_left1 = positions[1]
+        avail_left1 = icon_right1 + pad_left
+        avail_right1 = next_icon_left1 - pad_right
+        avail_width1 = avail_right1 - avail_left1
+        expected_width1 = min(avail_width1, max_widths[0])
+        expected_left1 = avail_left1
+        expected_right1 = expected_left1 + expected_width1
+        if expected_right1 > avail_right1:
+            expected_left1 = avail_right1 - expected_width1
+            expected_right1 = avail_right1
 
-        icon_right = positions[0] + icon_width
-        next_icon_left = positions[1]
-        available_left = icon_right + pad_left
-        available_right = next_icon_left - pad_right
-        available_width = available_right - available_left
-        expected_width = min(available_width, max_width)
-        expected_left = available_left
-        expected_right = expected_left + expected_width
-        if expected_right > available_right:
-            expected_left = available_right - expected_width
-            expected_right = available_right
+        self.assertEqual(width1, expected_width1, "width not limited by max_width[0]")
+        self.assertEqual(left1, expected_left1, "ROI not anchored within bounds")
+        self.assertEqual(right1, expected_right1, "ROI exceeds available space")
 
-        self.assertEqual(width, expected_width, "width not limited by max_width")
-        self.assertEqual(left, expected_left, "ROI not anchored within bounds")
-        self.assertEqual(right, expected_right, "ROI exceeds available space")
+        roi2 = regions[icons[1]]
+        left2, _, width2, _ = roi2
+        icon_right2 = positions[1] + icon_width
+        avail_left2 = icon_right2 + pad_left
+        avail_right2 = panel_box[2] - pad_right
+        avail_width2 = avail_right2 - avail_left2
+        expected_width2 = min(avail_width2, max_widths[1])
+
+        self.assertEqual(width2, expected_width2, "width not limited by max_width[1]")
+        self.assertEqual(left2, avail_left2)
 
     def test_build_rois_reduce_width_when_gap_below_min(self):
         """Icons closer than ``min_width`` should yield a shrunken ROI within the gap."""
@@ -414,7 +423,7 @@ class TestResourceROIs(TestCase):
             [2] * 6,
             [2] * 6,
             [0] * 6,
-            999,
+            [999] * 6,
             [20] * 6,
             detected=detected,
         )
@@ -442,7 +451,7 @@ class TestResourceROIs(TestCase):
             [2] * 6,
             [2] * 6,
             [0] * 6,
-            999,
+            [999] * 6,
             [0] * 6,
             detected=detected,
         )
@@ -488,9 +497,18 @@ class TestResourceROIs(TestCase):
                 common.CFG["profiles"]["aoe1de"]["resource_panel"],
                 {"icon_trim_pct": [0] * 6},
             ):
-            with patch.object(resources, "_NARROW_ROIS", set()):
+                resources.cache._NARROW_ROIS.clear()
+                resources.cache._NARROW_ROI_DEFICITS.clear()
+                resources.RESOURCE_CACHE.resource_failure_counts.clear()
+                resources.RESOURCE_CACHE.last_resource_values.clear()
+                resources.RESOURCE_CACHE.last_resource_ts.clear()
                 resources.locate_resource_panel(frame)
-                result = resources._NARROW_ROIS.copy()
+                result = resources.cache._NARROW_ROIS.copy()
+                resources.cache._NARROW_ROIS.clear()
+                resources.cache._NARROW_ROI_DEFICITS.clear()
+                resources.RESOURCE_CACHE.resource_failure_counts.clear()
+                resources.RESOURCE_CACHE.last_resource_values.clear()
+                resources.RESOURCE_CACHE.last_resource_ts.clear()
 
         self.assertEqual(result, {"wood_stockpile"})
 
