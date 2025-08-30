@@ -188,6 +188,43 @@ def _read_resources(
                     data.get("conf"),
                     low_conf,
                 )
+            if (
+                name == "wood_stockpile"
+                and low_conf
+                and digits
+                and name not in cache_obj.last_resource_values
+            ):
+                min_conf = CFG.get("ocr_conf_min", 0)
+                if res_conf_threshold > min_conf:
+                    try:
+                        digits_retry, data_retry, mask_retry, low_conf = execute_ocr(
+                            gray,
+                            conf_threshold=min_conf,
+                            roi=(x, y, w, h),
+                            resource=name,
+                        )
+                        logger.info(
+                            "Retry OCR %s: digits=%s conf=%s low_conf=%s",
+                            name,
+                            digits_retry,
+                            data_retry.get("conf"),
+                            low_conf,
+                        )
+                    except TypeError:
+                        digits_retry, data_retry, mask_retry, low_conf = execute_ocr(
+                            gray,
+                            conf_threshold=min_conf,
+                            resource=name,
+                        )
+                        logger.info(
+                            "Retry OCR %s: digits=%s conf=%s low_conf=%s",
+                            name,
+                            digits_retry,
+                            data_retry.get("conf"),
+                            low_conf,
+                        )
+                    if digits_retry:
+                        digits, data, mask = digits_retry, data_retry, mask_retry
         if not digits:
             base_expand = CFG.get("ocr_roi_expand_px", 0)
             step = CFG.get("ocr_roi_expand_step", 0)
@@ -357,7 +394,11 @@ def _read_resources(
             cache_obj.resource_failure_counts[name] = failure_count + 1
         else:
             value = int(digits)
-            if low_conf and CFG.get("treat_low_conf_as_failure", True):
+            if (
+                low_conf
+                and CFG.get("treat_low_conf_as_failure", True)
+                and (name != "wood_stockpile" or name in cache_obj.last_resource_values)
+            ):
                 fallback_key = f"{name}_low_conf_fallback"
                 if CFG.get(fallback_key, False) and name in cache_obj.last_resource_values:
                     results[name] = cache_obj.last_resource_values[name]
