@@ -34,7 +34,7 @@ os.environ.setdefault("TESSERACT_CMD", "/usr/bin/true")
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import script.common as common
 import script.hud as hud
-import script.resources as resources
+import script.resources.reader as resources
 import tools.campaign_bot as cb
 
 ASSET = "assets/resources.png"
@@ -73,17 +73,17 @@ class TestHudAnchor(TestCase):
             d = next(digits_iter)
             return d, {"text": [d]}, np.zeros((1, 1), dtype=np.uint8)
 
-        with patch("script.resources.locate_resource_panel", return_value={}), \
+        with patch("script.resources.reader.locate_resource_panel", return_value={}), \
              patch("script.screen_utils._grab_frame", side_effect=fake_grab_frame), \
-             patch("script.resources._ocr_digits_better", side_effect=fake_ocr), \
-             patch("script.resources.preprocess_roi", side_effect=lambda roi: np.zeros((52, 90), dtype=np.uint8)), \
+             patch("script.resources.reader._ocr_digits_better", side_effect=fake_ocr), \
+             patch("script.resources.reader.preprocess_roi", side_effect=lambda roi: np.zeros((52, 90), dtype=np.uint8)), \
              patch(
-                 "script.resources.pytesseract.image_to_data",
+                 "script.resources.reader.pytesseract.image_to_data",
                  return_value={"text": ["600"], "conf": ["90"]},
              ), \
-             patch("script.resources._read_population_from_roi", return_value=(500, 500)), \
+             patch("script.resources.reader._read_population_from_roi", return_value=(500, 500)), \
              patch("script.input_utils._screen_size", return_value=(1920, 1080)), \
-             patch("script.resources.cv2.imwrite"):
+             patch("script.resources.reader.cv2.imwrite"):
             result, _ = resources.read_resources_from_hud()
 
         expected = {
@@ -145,15 +145,15 @@ class TestHudAnchorTools(TestCase):
         with patch("tools.campaign_bot.locate_resource_panel", return_value={}), \
              patch("tools.campaign_bot._grab_frame", side_effect=fake_grab_frame), \
              patch("tools.campaign_bot._ocr_digits_better", side_effect=fake_ocr), \
-             patch("script.resources._ocr_digits_better", side_effect=fake_ocr), \
-             patch("script.resources.preprocess_roi", side_effect=lambda roi: np.zeros((52, 90), dtype=np.uint8)), \
+             patch("script.resources.reader._ocr_digits_better", side_effect=fake_ocr), \
+             patch("script.resources.reader.preprocess_roi", side_effect=lambda roi: np.zeros((52, 90), dtype=np.uint8)), \
              patch(
-                 "script.resources.pytesseract.image_to_data",
+                 "script.resources.reader.pytesseract.image_to_data",
                  return_value={"text": ["600"], "conf": ["90"]},
              ), \
-             patch("script.resources._read_population_from_roi", return_value=(500, 500)), \
+             patch("script.resources.reader._read_population_from_roi", return_value=(500, 500)), \
              patch("script.input_utils._screen_size", return_value=(1920, 1080)), \
-             patch("script.resources.cv2.imwrite"):
+             patch("script.resources.reader.cv2.imwrite"):
             result, _ = cb.read_resources_from_hud([
                 "wood_stockpile",
                 "food_stockpile",

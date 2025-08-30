@@ -63,29 +63,30 @@ os.environ.setdefault("TESSERACT_CMD", "/usr/bin/true")
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import script.common as common
 import script.resources as resources
+import script.resources.reader as reader
 
 
 class TestResourceRoiValidation(TestCase):
     def setUp(self):
-        resources.RESOURCE_CACHE.last_resource_values.clear()
-        resources.RESOURCE_CACHE.last_resource_ts.clear()
-        resources.RESOURCE_CACHE.resource_failure_counts.clear()
-        resources._LAST_REGION_SPANS.clear()
+        reader.RESOURCE_CACHE.last_resource_values.clear()
+        reader.RESOURCE_CACHE.last_resource_ts.clear()
+        reader.RESOURCE_CACHE.resource_failure_counts.clear()
+        reader._LAST_REGION_SPANS.clear()
 
     def tearDown(self):
-        resources.RESOURCE_CACHE.last_resource_values.clear()
-        resources.RESOURCE_CACHE.last_resource_ts.clear()
-        resources.RESOURCE_CACHE.resource_failure_counts.clear()
-        resources._LAST_REGION_SPANS.clear()
+        reader.RESOURCE_CACHE.last_resource_values.clear()
+        reader.RESOURCE_CACHE.last_resource_ts.clear()
+        reader.RESOURCE_CACHE.resource_failure_counts.clear()
+        reader._LAST_REGION_SPANS.clear()
 
     def test_zero_width_roi_raises(self):
         frame = np.zeros((100, 100, 3), dtype=np.uint8)
         with patch(
-            "script.resources.detect_resource_regions",
+            "script.resources.reader.detect_resource_regions",
             return_value={"wood_stockpile": (0, 0, 0, 10)},
         ):
             with self.assertRaises(common.ResourceReadError):
-                resources._read_resources(
+                reader._read_resources(
                     frame,
                     ["wood_stockpile"],
                     ["wood_stockpile"],
@@ -99,7 +100,7 @@ class TestResourceRoiValidation(TestCase):
         calibrated = {"wood_stockpile": (50, 5, 20, 10)}
 
         def fake_auto_calibrate(_frame, _cache):
-            resources._LAST_REGION_SPANS["wood_stockpile"] = (
+            reader._LAST_REGION_SPANS["wood_stockpile"] = (
                 calibrated["wood_stockpile"][0],
                 calibrated["wood_stockpile"][0] + calibrated["wood_stockpile"][2],
             )
@@ -115,6 +116,6 @@ class TestResourceRoiValidation(TestCase):
 
         self.assertTrue(mock_calib.called)
         self.assertEqual(regions["wood_stockpile"], calibrated["wood_stockpile"])
-        span = resources._LAST_REGION_SPANS.get("wood_stockpile")
+        span = reader._LAST_REGION_SPANS.get("wood_stockpile")
         self.assertEqual(span, (50, 70))
         self.assertGreater(span[1], span[0])

@@ -16,6 +16,7 @@ from .template_utils import find_template
 from .config_utils import load_config
 from . import screen_utils
 from . import common, resources, input_utils
+from .resources import reader as resource_reader
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -129,7 +130,7 @@ def read_population_from_hud(retries=1, conf_threshold=None, save_failed_roi=Fal
         )
         fallback_exc = None
         try:
-            _, (cur, limit) = resources.read_resources_from_hud(
+            _, (cur, limit) = resource_reader.read_resources_from_hud(
                 ["population_limit"], force_delay=0.1, conf_threshold=conf_threshold
             )
             if cur is not None and limit is not None:

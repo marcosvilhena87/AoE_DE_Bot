@@ -6,7 +6,9 @@ patch helper functions without duplicating the full implementation.
 import script.common as common
 import script.hud as hud
 import script.screen_utils as screen_utils
-import script.resources as resources
+import script.resources.reader as resources
+from script.resources import panel
+from script.resources.ocr import _read_population_from_roi as _read_population_from_roi_func
 import numpy as np
 
 # Public API expected by the tests
@@ -17,8 +19,8 @@ HUD_TEMPLATE = np.zeros((1, 1), dtype=np.uint8)
 # Default helpers (can be monkeypatched in tests)
 _grab_frame = screen_utils._grab_frame
 find_template = hud.find_template
-locate_resource_panel = resources.locate_resource_panel
-_read_population_from_roi = resources._read_population_from_roi
+locate_resource_panel = panel.locate_resource_panel
+_read_population_from_roi = _read_population_from_roi_func
 
 def wait_hud(timeout=60):
     """Delegate to :func:`script.hud.wait_hud` using patched helpers."""
@@ -45,7 +47,7 @@ def _ocr_digits_better(gray):
 def read_resources_from_hud(required_icons=None, conf_threshold=None):
     """Delegate to :func:`script.resources.read_resources_from_hud` using patched helpers."""
     common.HUD_ANCHOR = HUD_ANCHOR
-    original_locate = resources.locate_resource_panel
+    original_locate = panel.locate_resource_panel
     original_grab = screen_utils._grab_frame
     original_ocr = resources._ocr_digits_better
 
@@ -56,7 +58,7 @@ def read_resources_from_hud(required_icons=None, conf_threshold=None):
             return digits, data, None
         return res
 
-    resources.locate_resource_panel = locate_resource_panel
+    panel.locate_resource_panel = locate_resource_panel
     screen_utils._grab_frame = _grab_frame
     resources._ocr_digits_better = wrapper
     try:
@@ -65,7 +67,7 @@ def read_resources_from_hud(required_icons=None, conf_threshold=None):
             kwargs["conf_threshold"] = conf_threshold
         return resources.read_resources_from_hud(required_icons, **kwargs)
     finally:
-        resources.locate_resource_panel = original_locate
+        panel.locate_resource_panel = original_locate
         screen_utils._grab_frame = original_grab
         resources._ocr_digits_better = original_ocr
 
@@ -79,7 +81,7 @@ def gather_hud_stats(
 ):
     """Delegate to :func:`script.resources.gather_hud_stats` using patched helpers."""
     common.HUD_ANCHOR = HUD_ANCHOR
-    original_locate = resources.locate_resource_panel
+    original_locate = panel.locate_resource_panel
     original_grab = screen_utils._grab_frame
     original_ocr = resources._ocr_digits_better
     original_pop = resources._read_population_from_roi
@@ -91,7 +93,7 @@ def gather_hud_stats(
             return digits, data, None
         return res
 
-    resources.locate_resource_panel = locate_resource_panel
+    panel.locate_resource_panel = locate_resource_panel
     screen_utils._grab_frame = _grab_frame
     resources._ocr_digits_better = wrapper
     resources._read_population_from_roi = _read_population_from_roi
@@ -106,7 +108,7 @@ def gather_hud_stats(
             kwargs["conf_threshold"] = conf_threshold
         return resources.gather_hud_stats(**kwargs)
     finally:
-        resources.locate_resource_panel = original_locate
+        panel.locate_resource_panel = original_locate
         screen_utils._grab_frame = original_grab
         resources._ocr_digits_better = original_ocr
         resources._read_population_from_roi = original_pop

@@ -34,17 +34,17 @@ os.environ.setdefault("TESSERACT_CMD", "/usr/bin/true")
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import script.common as common
-import script.resources as resources
+import script.resources.reader as resources
 
 
 class TestDetectResourceRegions(TestCase):
     def test_missing_icons_raises_error(self):
         frame = np.zeros((100, 100, 3), dtype=np.uint8)
         required = ["wood_stockpile", "food_stockpile"]
-        with patch("script.resources.locate_resource_panel", return_value={"wood_stockpile": (0, 0, 10, 10)}), \
+        with patch("script.resources.panel.locate_resource_panel", return_value={"wood_stockpile": (0, 0, 10, 10)}), \
              patch.object(common, "HUD_ANCHOR", None), \
-             patch("script.resources._auto_calibrate_from_icons", return_value=None), \
-             patch.dict(resources.CFG, {"food_stockpile_roi": None}, clear=False):
+             patch("script.resources.panel._auto_calibrate_from_icons", return_value=None), \
+            patch.dict(resources.CFG, {"food_stockpile_roi": None}, clear=False):
             with self.assertRaises(common.ResourceReadError):
                 resources.detect_resource_regions(frame, required)
 
@@ -58,7 +58,7 @@ class TestPreprocessRoi(TestCase):
 
     def test_blur_kernel_from_config(self):
         roi = np.zeros((40, 5, 3), dtype=np.uint8)
-        with patch("script.resources.cv2.medianBlur", return_value=np.zeros((40, 5), dtype=np.uint8)) as blur_mock, \
+        with patch("script.resources.reader.cv2.medianBlur", return_value=np.zeros((40, 5), dtype=np.uint8)) as blur_mock, \
              patch.dict(resources.CFG, {"ocr_blur_kernel": 5}, clear=False):
             resources.preprocess_roi(roi)
         args, _ = blur_mock.call_args
@@ -66,7 +66,7 @@ class TestPreprocessRoi(TestCase):
 
     def test_blur_kernel_zero_disables(self):
         roi = np.zeros((40, 5, 3), dtype=np.uint8)
-        with patch("script.resources.cv2.medianBlur") as blur_mock, \
+        with patch("script.resources.reader.cv2.medianBlur") as blur_mock, \
              patch.dict(resources.CFG, {"ocr_blur_kernel": 0}, clear=False):
             gray = resources.preprocess_roi(roi)
         blur_mock.assert_not_called()
@@ -75,7 +75,7 @@ class TestPreprocessRoi(TestCase):
 
     def test_small_roi_disables_blur(self):
         roi = np.zeros((20, 5, 3), dtype=np.uint8)
-        with patch("script.resources.cv2.medianBlur") as blur_mock, \
+        with patch("script.resources.reader.cv2.medianBlur") as blur_mock, \
              patch.dict(resources.CFG, {"ocr_blur_kernel": 5}, clear=False):
             gray = resources.preprocess_roi(roi)
         blur_mock.assert_not_called()
@@ -87,7 +87,7 @@ class TestExecuteOcr(TestCase):
     def test_execute_ocr_fallback(self):
         gray = np.zeros((5, 5), dtype=np.uint8)
         with patch("script.resources.ocr._ocr_digits_better", return_value=("", {}, None)), \
-             patch("script.resources.pytesseract.image_to_string", return_value="456"):
+             patch("script.resources.reader.pytesseract.image_to_string", return_value="456"):
             digits, data, mask, low_conf = resources.execute_ocr(
                 gray, resource="wood_stockpile"
             )
@@ -100,7 +100,7 @@ class TestExecuteOcr(TestCase):
         gray = np.zeros((5, 5), dtype=np.uint8)
         data = {"text": ["123"], "conf": ["10", "20", "30"]}
         with patch("script.resources.ocr._ocr_digits_better", return_value=("123", data, None)), \
-             patch("script.resources.pytesseract.image_to_string", return_value="") as img2str_mock:
+             patch("script.resources.reader.pytesseract.image_to_string", return_value="") as img2str_mock:
             digits, data_out, _, low_conf = resources.execute_ocr(
                 gray, conf_threshold=60, resource="wood_stockpile"
             )
@@ -112,7 +112,7 @@ class TestExecuteOcr(TestCase):
         gray = np.zeros((5, 5), dtype=np.uint8)
         data = {"text": ["12"], "conf": ["80", "20"]}
         with patch("script.resources.ocr._ocr_digits_better", return_value=("12", data, None)), \
-             patch("script.resources.pytesseract.image_to_string", return_value="") as img2str_mock, \
+             patch("script.resources.reader.pytesseract.image_to_string", return_value="") as img2str_mock, \
              patch.dict(resources.CFG, {"ocr_conf_decay": 1.0}, clear=False):
             digits, data_out, _, low_conf = resources.execute_ocr(
                 gray, conf_threshold=60, resource="wood_stockpile"
@@ -125,7 +125,7 @@ class TestExecuteOcr(TestCase):
         gray = np.zeros((5, 5), dtype=np.uint8)
         data = {"text": ["789"], "conf": ["90", "10", "90"]}
         with patch("script.resources.ocr._ocr_digits_better", return_value=("789", data, None)), \
-             patch("script.resources.pytesseract.image_to_string", return_value="") as img2str_mock, \
+             patch("script.resources.reader.pytesseract.image_to_string", return_value="") as img2str_mock, \
              patch.dict(resources.CFG, {"ocr_conf_decay": 1.0}, clear=False):
             digits, data_out, _, low_conf = resources.execute_ocr(
                 gray, conf_threshold=60, resource="wood_stockpile"
@@ -138,7 +138,7 @@ class TestExecuteOcr(TestCase):
         gray = np.zeros((5, 5), dtype=np.uint8)
         data = {"text": ["0"], "conf": ["10"]}
         with patch("script.resources.ocr._ocr_digits_better", return_value=("0", data, None)), \
-             patch("script.resources.pytesseract.image_to_string", return_value="") as img2str_mock:
+             patch("script.resources.reader.pytesseract.image_to_string", return_value="") as img2str_mock:
             digits, data_out, _, low_conf = resources.execute_ocr(
                 gray, conf_threshold=60, resource="wood_stockpile"
             )
@@ -153,7 +153,7 @@ class TestExecuteOcr(TestCase):
         with patch(
             "script.resources.ocr._ocr_digits_better",
             side_effect=[("123", data1, None), ("789", data2, None)],
-        ) as ocr_mock, patch("script.resources.pytesseract.image_to_string") as img2str_mock:
+        ) as ocr_mock, patch("script.resources.reader.pytesseract.image_to_string") as img2str_mock:
             digits, _, _, low_conf = resources.execute_ocr(
                 gray, conf_threshold=60, resource="wood_stockpile"
             )
@@ -167,8 +167,8 @@ class TestExecuteOcr(TestCase):
         with patch(
             "script.resources.ocr._ocr_digits_better",
             return_value=("0", {"zero_variance": True}, None),
-        ), patch("script.resources.pytesseract.image_to_string") as img2str_mock, patch(
-            "script.resources.logger.warning"
+        ), patch("script.resources.reader.pytesseract.image_to_string") as img2str_mock, patch(
+            "script.resources.reader.logger.warning"
         ) as warn_mock:
             digits, data_out, mask, low_conf = resources.execute_ocr(
                 gray, conf_threshold=60, resource="wood_stockpile"
@@ -188,7 +188,7 @@ class TestExecuteOcr(TestCase):
             for _ in range(4)
         ]
         with patch("script.resources.ocr._ocr_digits_better", side_effect=side_effect) as ocr_mock, \
-             patch("script.resources.pytesseract.image_to_string", return_value="") as img2str_mock, \
+             patch("script.resources.reader.pytesseract.image_to_string", return_value="") as img2str_mock, \
              patch.dict(resources.CFG, {"ocr_conf_min": 30, "ocr_conf_decay": 0.5}, clear=False):
             digits, data_out, _, low_conf = resources.execute_ocr(
                 gray, conf_threshold=60, resource="wood_stockpile"
@@ -203,7 +203,7 @@ class TestExecuteOcr(TestCase):
         gray = np.zeros((5, 5), dtype=np.uint8)
         data = {"text": ["12"], "conf": [-1, "0", "95"]}
         with patch("script.resources.ocr._ocr_digits_better", return_value=("12", data, None)), \
-             patch("script.resources.pytesseract.image_to_string", return_value="") as img2str_mock:
+             patch("script.resources.reader.pytesseract.image_to_string", return_value="") as img2str_mock:
             digits, _, _, low_conf = resources.execute_ocr(
                 gray, conf_threshold=60, resource="wood_stockpile"
             )
@@ -217,9 +217,9 @@ class TestHandleOcrFailure(TestCase):
         frame = np.zeros((20, 20, 3), dtype=np.uint8)
         regions = {"wood_stockpile": (0, 0, 10, 10)}
         results = {"wood_stockpile": None}
-        with patch("script.resources.cv2.imwrite"), \
+        with patch("script.resources.reader.cv2.imwrite"), \
              patch("script.resources.ocr.logger.error") as err_mock, \
-             patch("script.resources.pytesseract.pytesseract.tesseract_cmd", "/usr/bin/true"):
+             patch("script.resources.reader.pytesseract.pytesseract.tesseract_cmd", "/usr/bin/true"):
             resources.handle_ocr_failure(frame, regions, results, ["wood_stockpile"])
         err_mock.assert_called()
 
@@ -227,7 +227,7 @@ class TestHandleOcrFailure(TestCase):
         frame = np.zeros((20, 20, 3), dtype=np.uint8)
         regions = {"wood_stockpile": (0, 0, 10, 10)}
         results = {"wood_stockpile": 1}
-        with patch("script.resources.cv2.imwrite") as imwrite_mock:
+        with patch("script.resources.reader.cv2.imwrite") as imwrite_mock:
             resources.handle_ocr_failure(frame, regions, results, ["wood_stockpile"])
         imwrite_mock.assert_not_called()
 
@@ -237,7 +237,7 @@ class TestHandleOcrFailure(TestCase):
         results = {"wood_stockpile": None}
         cache = resources.ResourceCache()
         cache.last_resource_values["wood_stockpile"] = 99
-        with patch("script.resources.cv2.imwrite"), \
+        with patch("script.resources.reader.cv2.imwrite"), \
              patch("script.resources.ocr.logger.warning") as warn_mock:
             resources.handle_ocr_failure(
                 frame,
@@ -269,13 +269,13 @@ class TestReadResourcesLowConfFallback(TestCase):
         cache = resources.ResourceCache()
         cache.last_resource_values["wood_stockpile"] = 77
         with patch(
-            "script.resources.detect_resource_regions",
+            "script.resources.reader.detect_resource_regions",
             return_value={"wood_stockpile": (0, 0, 10, 10)},
         ), patch(
-            "script.resources.preprocess_roi",
+            "script.resources.reader.preprocess_roi",
             return_value=np.zeros((10, 10), dtype=np.uint8),
         ), patch(
-            "script.resources.execute_ocr",
+            "script.resources.reader.execute_ocr",
             return_value=("123", {"text": ["123"]}, None, True),
         ), patch.dict(
             resources.CFG,
@@ -284,7 +284,7 @@ class TestReadResourcesLowConfFallback(TestCase):
                 "wood_stockpile_low_conf_fallback": True,
             },
             clear=False,
-        ), patch("script.resources.handle_ocr_failure"):
+        ), patch("script.resources.reader.handle_ocr_failure"):
             result, _ = resources._read_resources(
                 frame,
                 ["wood_stockpile"],
@@ -305,7 +305,7 @@ class TestValidateStartingResources(TestCase):
             )
 
     def test_logs_warning_without_raise(self):
-        with patch("script.resources.logger.warning") as warn_mock:
+        with patch("script.resources.reader.logger.warning") as warn_mock:
             resources.validate_starting_resources(
                 {"wood_stockpile": 50},
                 {"wood_stockpile": 80},
@@ -315,7 +315,7 @@ class TestValidateStartingResources(TestCase):
             warn_mock.assert_called_once()
 
     def test_logs_low_confidence_warning(self):
-        with patch("script.resources.logger.warning") as warn_mock:
+        with patch("script.resources.reader.logger.warning") as warn_mock:
             resources._LAST_LOW_CONFIDENCE = {"wood_stockpile"}
             resources._LAST_NO_DIGITS = set()
             resources.validate_starting_resources(
@@ -331,7 +331,7 @@ class TestValidateStartingResources(TestCase):
         resources._LAST_NO_DIGITS = set()
 
     def test_logs_missing_reading_warning(self):
-        with patch("script.resources.logger.warning") as warn_mock:
+        with patch("script.resources.reader.logger.warning") as warn_mock:
             resources._LAST_LOW_CONFIDENCE = set()
             resources._LAST_NO_DIGITS = {"wood_stockpile"}
             resources.validate_starting_resources(
@@ -352,9 +352,9 @@ class TestValidateStartingResources(TestCase):
         ts = 1.234
         expected_ts = int(ts * 1000)
         expected_path = resources.ROOT / "debug" / f"resource_roi_wood_stockpile_{expected_ts}.png"
-        with patch("script.resources.cv2.imwrite") as imwrite_mock, \
-             patch("script.resources.time.time", return_value=ts), \
-             patch("script.resources.logger.error"):
+        with patch("script.resources.reader.cv2.imwrite") as imwrite_mock, \
+             patch("script.resources.reader.time.time", return_value=ts), \
+             patch("script.resources.reader.logger.error"):
             with self.assertRaises(ValueError) as ctx:
                 resources.validate_starting_resources(
                     {"wood_stockpile": 50},
@@ -373,9 +373,9 @@ class TestValidateStartingResources(TestCase):
             "wood_stockpile": (0, 0, 5, 5),
             "food_stockpile": (5, 5, 5, 5),
         }
-        with patch("script.resources.cv2.imwrite") as imwrite_mock, \
-             patch("script.resources.logger.error") as error_mock, \
-             patch("script.resources.time.time", side_effect=[1.0, 2.0]):
+        with patch("script.resources.reader.cv2.imwrite") as imwrite_mock, \
+             patch("script.resources.reader.logger.error") as error_mock, \
+             patch("script.resources.reader.time.time", side_effect=[1.0, 2.0]):
             with self.assertRaises(ValueError) as ctx:
                 resources.validate_starting_resources(
                     {"wood_stockpile": 50, "food_stockpile": 30},

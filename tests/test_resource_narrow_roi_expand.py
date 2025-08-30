@@ -61,7 +61,7 @@ except ModuleNotFoundError:  # pragma: no cover - fallback stub
     )
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-import script.resources as resources
+import script.resources.reader as resources
 
 
 class TestNarrowROIExpansion(TestCase):

@@ -43,7 +43,7 @@ class TestSelectIdleVillager(TestCase):
         ])
 
         with patch("script.input_utils._press_key_safe"), \
-             patch("script.resources.read_resources_from_hud", side_effect=lambda *a, **k: next(reads)):
+             patch("script.resources.reader.read_resources_from_hud", side_effect=lambda *a, **k: next(reads)):
             self.assertTrue(villager.select_idle_villager())
 
     def test_returns_false_when_no_idle_villagers(self):
@@ -53,5 +53,5 @@ class TestSelectIdleVillager(TestCase):
         ])
 
         with patch("script.input_utils._press_key_safe"), \
-             patch("script.resources.read_resources_from_hud", side_effect=lambda *a, **k: next(reads)):
+             patch("script.resources.reader.read_resources_from_hud", side_effect=lambda *a, **k: next(reads)):
             self.assertFalse(villager.select_idle_villager())

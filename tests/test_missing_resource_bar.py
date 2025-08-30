@@ -40,7 +40,7 @@ class TestMissingResourceBar(TestCase):
         common.CURRENT_POP = 3
         common.POP_CAP = 5
         with patch(
-            "script.resources.read_resources_from_hud",
+            "script.resources.reader.read_resources_from_hud",
             side_effect=common.ResourceReadError("missing"),
         ), \
              patch("script.buildings.town_center.select_idle_villager", return_value=True), \
@@ -51,7 +51,7 @@ class TestMissingResourceBar(TestCase):
     def test_build_house_handles_missing_bar(self):
         common.POP_CAP = 4
         with patch(
-            "script.resources.read_resources_from_hud",
+            "script.resources.reader.read_resources_from_hud",
             side_effect=common.ResourceReadError("missing"),
         ):
             self.assertFalse(villager.build_house())

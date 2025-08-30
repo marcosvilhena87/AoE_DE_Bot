@@ -47,7 +47,7 @@ class TestClickAndBuildHouse(TestCase):
         common.POP_CAP = 4
         expected_coords = tuple(common.CFG["areas"]["house_spot"])
         with patch(
-            "script.resources.read_resources_from_hud",
+            "script.resources.reader.read_resources_from_hud",
             return_value=({"wood_stockpile": 100}, (None, None)),
         ), \
             patch("script.input_utils._press_key_safe"), \
@@ -72,7 +72,7 @@ class TestBuildHouseResourceRetry(TestCase):
             common.ResourceReadError("fail2"),
         ]
         with patch(
-            "script.resources.read_resources_from_hud",
+            "script.resources.reader.read_resources_from_hud",
             side_effect=side_effect,
         ) as read_mock, patch("script.input_utils._press_key_safe") as press_mock, patch(
             "script.input_utils._click_norm"
@@ -92,7 +92,7 @@ class TestBuildHouseResourceRetry(TestCase):
             ({"wood_stockpile": 100}, (None, None)),
         ]
         with patch(
-            "script.resources.read_resources_from_hud",
+            "script.resources.reader.read_resources_from_hud",
             side_effect=side_effect,
         ) as read_mock, patch("script.input_utils._press_key_safe"), patch(
             "script.input_utils._click_norm"

@@ -35,7 +35,7 @@ os.environ.setdefault("TESSERACT_CMD", "/usr/bin/true")
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import script.common as common
-import script.resources as resources
+import script.resources.reader as resources
 
 
 class TestResourceDebugImages(TestCase):
@@ -58,7 +58,7 @@ class TestResourceDebugImages(TestCase):
 
         with patch("script.screen_utils._grab_frame", side_effect=fake_grab_frame), \
              patch(
-                 "script.resources.locate_resource_panel",
+                 "script.resources.reader.locate_resource_panel",
                  return_value={
                      "wood_stockpile": (0, 0, 50, 50),
                      "food_stockpile": (50, 0, 50, 50),
@@ -68,14 +68,14 @@ class TestResourceDebugImages(TestCase):
                      "idle_villager": (250, 0, 50, 50),
                  },
              ), \
-            patch("script.resources._ocr_digits_better", side_effect=fake_ocr), \
+            patch("script.resources.reader._ocr_digits_better", side_effect=fake_ocr), \
             patch(
-                "script.resources.pytesseract.image_to_data",
+                "script.resources.reader.pytesseract.image_to_data",
                 return_value={"text": [""], "conf": ["0"]},
             ), \
-            patch("script.resources.pytesseract.image_to_string", return_value=""), \
-            patch("script.resources._read_population_from_roi", return_value=(0, 0)), \
-            patch("script.resources.cv2.imwrite") as imwrite_mock:
+            patch("script.resources.reader.pytesseract.image_to_string", return_value=""), \
+            patch("script.resources.reader._read_population_from_roi", return_value=(0, 0)), \
+            patch("script.resources.reader.cv2.imwrite") as imwrite_mock:
             with self.assertRaises(common.ResourceReadError):
                 resources.read_resources_from_hud()
         paths = [call.args[0] for call in imwrite_mock.call_args_list]
@@ -114,7 +114,7 @@ class TestResourceDebugImages(TestCase):
         resources.RESOURCE_CACHE.resource_failure_counts.clear()
         with patch("script.screen_utils._grab_frame", side_effect=fake_grab_frame), \
              patch(
-                 "script.resources.locate_resource_panel",
+                 "script.resources.reader.locate_resource_panel",
                  return_value={
                      "wood_stockpile": (0, 0, 50, 50),
                      "food_stockpile": (50, 0, 50, 50),
@@ -124,15 +124,15 @@ class TestResourceDebugImages(TestCase):
                      "idle_villager": (250, 0, 50, 50),
                  },
              ), \
-             patch("script.resources._ocr_digits_better", side_effect=fake_ocr), \
+             patch("script.resources.reader._ocr_digits_better", side_effect=fake_ocr), \
             patch(
-                "script.resources.pytesseract.image_to_data",
+                "script.resources.reader.pytesseract.image_to_data",
                 side_effect=[{"text": [""], "conf": ["0"]}] * 20
                 + [{"text": ["0"], "conf": ["90"]}],
             ), \
-            patch("script.resources.pytesseract.image_to_string", return_value=""), \
-            patch("script.resources._read_population_from_roi", return_value=(0, 0)), \
-            patch("script.resources.cv2.imwrite") as imwrite_mock:
+            patch("script.resources.reader.pytesseract.image_to_string", return_value=""), \
+            patch("script.resources.reader._read_population_from_roi", return_value=(0, 0)), \
+            patch("script.resources.reader.cv2.imwrite") as imwrite_mock:
             with self.assertRaises(common.ResourceReadError) as ctx:
                 resources.read_resources_from_hud()
 
@@ -152,9 +152,9 @@ class TestResourceDebugImages(TestCase):
         cache = resources.ResourceCache()
 
         with tempfile.TemporaryDirectory() as tmpdir, \
-             patch("script.resources.ROOT", Path(tmpdir)), \
+             patch("script.resources.reader.ROOT", Path(tmpdir)), \
              patch("script.resources.ocr.ROOT", Path(tmpdir)), \
-             patch("script.resources._RESOURCE_DEBUG_COOLDOWN", 60):
+             patch("script.resources.reader._RESOURCE_DEBUG_COOLDOWN", 60):
 
             resources.handle_ocr_failure(frame, regions, results, [], cache_obj=cache)
             debug_dir = Path(tmpdir) / "debug"
