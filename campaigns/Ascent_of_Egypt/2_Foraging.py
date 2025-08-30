@@ -29,7 +29,7 @@ def main() -> None:
 
     1.  Wait for the game HUD to be detected on screen (with a fallback
         attempt if the first detection fails).
-    2.  Parse the scenario information from ``2.Foraging.txt`` which
+    2.  Parse the scenario information from ``2_Foraging.txt`` which
         lives alongside this file.
     3.  Initialise the internal resource and population counters so that
         the rest of the automation knows the correct starting state.
