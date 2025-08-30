@@ -162,6 +162,7 @@ def main():
         sig = inspect.signature(func)
         accepts_info = "info" in sig.parameters
         logger.info("Starting mission '%s'.", module_name)
+        logger.info("Tentando cumprir os objetivos do cenário %s...", module_name)
         if accepts_info:
             func(info)
         else:
