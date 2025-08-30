@@ -12,7 +12,7 @@ from .. import CFG, ROOT
 from .colors import color_mask_sets
 
 
-def _run_masks(masks, psms, debug, debug_dir, ts, start_idx=0):
+def _run_masks(masks, psms, debug, debug_dir, ts, start_idx=0, whitelist="0123456789"):
     results = []
     for idx, mask in enumerate(masks, start=start_idx):
         if debug and debug_dir is not None:
@@ -21,7 +21,7 @@ def _run_masks(masks, psms, debug, debug_dir, ts, start_idx=0):
         for psm in psms:
             data = pytesseract.image_to_data(
                 mask,
-                config=f"--psm {psm} --oem 3 -c tessedit_char_whitelist=0123456789",
+                config=f"--psm {psm} --oem 3 -c tessedit_char_whitelist={whitelist}",
                 output_type=pytesseract.Output.DICT,
             )
             text = "".join(data.get("text", [])).strip()
@@ -40,7 +40,7 @@ def _is_nearly_empty(mask, tol=0.01):
     return ratio < tol or ratio > 1 - tol
 
 
-def _ocr_digits_better(gray, color=None, resource=None):
+def _ocr_digits_better(gray, color=None, resource=None, whitelist="0123456789"):
     variance = float(np.var(gray))
     if variance < CFG.get("ocr_zero_variance", 15.0):
         return "0", {"zero_variance": True}, None
@@ -95,7 +95,9 @@ def _ocr_digits_better(gray, color=None, resource=None):
         _otsu_ret, thresh = cv2.threshold(
             gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU
         )
-    digits, data, mask = _run_masks([thresh, cv2.bitwise_not(thresh)], psms, debug, debug_dir, ts, 0)
+    digits, data, mask = _run_masks(
+        [thresh, cv2.bitwise_not(thresh)], psms, debug, debug_dir, ts, 0, whitelist=whitelist
+    )
     if digits:
         return digits, data, mask
 
@@ -109,7 +111,9 @@ def _ocr_digits_better(gray, color=None, resource=None):
         _otsu_ret, adaptive = cv2.threshold(
             gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU
         )
-    digits, data, mask = _run_masks([adaptive, cv2.bitwise_not(adaptive)], psms, debug, debug_dir, ts, 2)
+    digits, data, mask = _run_masks(
+        [adaptive, cv2.bitwise_not(adaptive)], psms, debug, debug_dir, ts, 2, whitelist=whitelist
+    )
 
     if not digits:
         if color is not None:
@@ -117,9 +121,13 @@ def _ocr_digits_better(gray, color=None, resource=None):
         else:
             hsv = cv2.cvtColor(cv2.cvtColor(orig, cv2.COLOR_GRAY2BGR), cv2.COLOR_BGR2HSV)
         base_masks, closed_masks = color_mask_sets(hsv, resource, kernel)
-        digits, data, mask = _run_masks(base_masks, psms, debug, debug_dir, ts, 4)
+        digits, data, mask = _run_masks(
+            base_masks, psms, debug, debug_dir, ts, 4, whitelist=whitelist
+        )
         if not digits:
-            digits, data, mask = _run_masks(closed_masks, psms, debug, debug_dir, ts, 6)
+            digits, data, mask = _run_masks(
+                closed_masks, psms, debug, debug_dir, ts, 6, whitelist=whitelist
+            )
 
     if not digits:
         variance = float(np.var(orig))
