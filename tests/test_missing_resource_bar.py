@@ -31,7 +31,7 @@ sys.modules.setdefault("mss", types.SimpleNamespace(mss=lambda: DummyMSS()))
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import script.common as common
-import script.buldings.town_center as tc
+import script.buildings.town_center as tc
 import script.units.villager as villager
 
 
@@ -43,8 +43,8 @@ class TestMissingResourceBar(TestCase):
             "script.resources.read_resources_from_hud",
             side_effect=common.ResourceReadError("missing"),
         ), \
-             patch("script.buldings.town_center.select_idle_villager", return_value=True), \
-             patch("script.buldings.town_center.build_house"):
+             patch("script.buildings.town_center.select_idle_villager", return_value=True), \
+             patch("script.buildings.town_center.build_house"):
             tc.train_villagers(5)
         self.assertEqual(common.CURRENT_POP, 3)
 

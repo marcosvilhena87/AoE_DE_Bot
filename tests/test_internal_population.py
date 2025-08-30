@@ -33,7 +33,7 @@ os.environ.setdefault("TESSERACT_CMD", "/bin/true")
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import script.common as common
-import script.buldings.town_center as tc
+import script.buildings.town_center as tc
 import script.units.villager as villager
 import script.config_utils as config_utils
 import script.hud as hud
@@ -66,8 +66,8 @@ class TestInternalPopulation(TestCase):
             "script.resources.read_resources_from_hud",
             return_value=({"food_stockpile": 500}, (None, None)),
         ), \
-             patch("script.buldings.town_center.build_house", side_effect=fake_build_house) as build_house_mock, \
-             patch("script.buldings.town_center.select_idle_villager", return_value=True), \
+             patch("script.buildings.town_center.build_house", side_effect=fake_build_house) as build_house_mock, \
+             patch("script.buildings.town_center.select_idle_villager", return_value=True), \
              patch("script.hud.read_population_from_hud") as read_pop_mock:
             tc.train_villagers(7)
             self.assertEqual(common.CURRENT_POP, 7)
