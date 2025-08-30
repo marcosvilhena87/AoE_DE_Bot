@@ -20,7 +20,7 @@ import script.hud as hud
 import script.resources as resources
 import script.input_utils as input_utils
 from script.units import villager
-from script.buldings.town_center import train_villagers
+from script.buildings.town_center import train_villagers
 from script.config_utils import parse_scenario_info
 
 logger = logging.getLogger(__name__)
