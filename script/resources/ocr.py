@@ -204,8 +204,8 @@ def execute_ocr(
         if fallback:
             digits = fallback
             data = {"text": [text.strip()], "conf": []}
-            mask = gray
-            return digits, data, mask, True
+            mask = None
+            low_conf = True
     if not digits and best_digits:
         return best_digits, best_data, best_mask, True
     if not digits:

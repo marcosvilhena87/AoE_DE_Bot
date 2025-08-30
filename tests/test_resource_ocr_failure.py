@@ -1,6 +1,8 @@
 import os
 import sys
 import types
+from pathlib import Path
+import tempfile
 from unittest import TestCase
 from unittest.mock import patch
 
@@ -313,6 +315,22 @@ class TestResourceOcrFailure(TestCase):
             regions["wood_stockpile"][0] + regions["wood_stockpile"][2],
             regions["food_stockpile"][0],
         )
+
+    def test_fallback_failure_saves_debug_images(self):
+        gray = np.zeros((5, 5), dtype=np.uint8)
+        mask = np.ones((5, 5), dtype=np.uint8)
+        with tempfile.TemporaryDirectory() as tmpdir, \
+             patch("script.resources.ocr._ocr_digits_better", return_value=("", {"text": [""]}, mask)), \
+             patch("script.resources.pytesseract.image_to_string", return_value=""), \
+             patch("script.resources.cv2.imwrite") as imwrite_mock, \
+             patch("script.resources.ocr.ROOT", Path(tmpdir)):
+            digits, data, mask_out, low_conf = resources.execute_ocr(gray)
+        self.assertEqual(digits, "")
+        self.assertTrue(low_conf)
+        self.assertIs(mask_out, mask)
+        imgs = [call.args[1] for call in imwrite_mock.call_args_list]
+        self.assertTrue(any(np.array_equal(img, mask) for img in imgs))
+        self.assertTrue(any(np.array_equal(img, gray) for img in imgs))
 
 
 class TestGatherHudStatsSliding(TestCase):

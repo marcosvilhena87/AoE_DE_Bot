@@ -94,7 +94,7 @@ class TestExecuteOcr(TestCase):
         self.assertEqual(digits, "456")
         self.assertTrue(low_conf)
         self.assertEqual(data["text"], ["456"])
-        np.testing.assert_array_equal(mask, gray)
+        self.assertIsNone(mask)
 
     def test_execute_ocr_warns_low_confidence(self):
         gray = np.zeros((5, 5), dtype=np.uint8)
