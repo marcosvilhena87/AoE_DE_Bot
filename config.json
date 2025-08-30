@@ -96,14 +96,14 @@
   "wood_stockpile_roi": {
     "top_pct": 0.111,
     "height_pct": 0.025,
-    "left_pct": 0.191,
-    "width_pct": 0.042
+    "left_pct": 0.187,
+    "width_pct": 0.048
   },
   "food_stockpile_roi": {
     "top_pct": 0.111,
     "height_pct": 0.025,
-    "left_pct": 0.233,
-    "width_pct": 0.039
+    "left_pct": 0.240,
+    "width_pct": 0.048
   },
   "gold_stockpile_roi": {
     "top_pct": 0.111,
