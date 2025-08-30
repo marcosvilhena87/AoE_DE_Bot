@@ -191,7 +191,7 @@ class TestPopulationROI(TestCase):
             )
             return frame[t : t + h, l : l + w]
 
-        def fake_pop(roi, conf_threshold=None, save_debug=True):
+        def fake_pop(roi, conf_threshold=None, roi_bbox=None):
             widths.append(roi.shape[1])
             if roi.shape[1] <= 4:
                 raise common.PopulationReadError("tight")

@@ -63,6 +63,6 @@ class TestPopulationOcrConfidence(TestCase):
             ),
         ):
             cur, cap = resources._read_population_from_roi(
-                roi, conf_threshold=60, save_debug=False
+                roi, conf_threshold=60
             )
         self.assertEqual((cur, cap), (3, 4))

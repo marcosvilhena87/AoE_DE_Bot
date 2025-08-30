@@ -145,7 +145,7 @@ def expand_population_roi_after_failure(
         cur_pop, pop_cap = _read_population_from_roi(
             roi_expanded,
             conf_threshold=res_conf_threshold,
-            save_debug=False,
+            roi_bbox=(x0, y0, x1 - x0, y1 - y0),
         )
         return cur_pop, pop_cap, roi_expanded, x0, y0, x1 - x0, y1 - y0
     except common.PopulationReadError:
