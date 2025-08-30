@@ -145,11 +145,7 @@ def _read_resources(
                 output_type=pytesseract.Output.DICT,
             )
             texts = [t for t in data.get("text", []) if t.strip()]
-            confidences = [
-                float(c)
-                for c in data.get("conf", [])
-                if c not in ("-1", "")
-            ]
+            confidences = ocr.parse_confidences(data)
             if texts and confidences and all(
                 c >= res_conf_threshold for c in confidences
             ):
