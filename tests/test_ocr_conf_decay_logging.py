@@ -88,3 +88,62 @@ class TestOcrConfDecayLogging(TestCase):
         self.assertNotEqual(old, new)
         self.assertEqual(old, 60)
         self.assertEqual(new, 30)
+
+    def test_loop_runs_until_min_conf(self):
+        gray = np.zeros((10, 10), dtype=np.uint8)
+
+        call_count = {
+            "count": 0,
+        }
+
+        def fake_ocr(_gray):
+            call_count["count"] += 1
+            return "1", {"text": ["1"], "conf": ["5"]}, None
+
+        with patch.object(ocr, "_ocr_digits_better", side_effect=fake_ocr):
+            with patch.dict(
+                ocr.CFG,
+                {
+                    "ocr_conf_threshold": 60,
+                    "ocr_conf_decay": 0.5,
+                    "ocr_conf_min": 10,
+                    "ocr_conf_max_attempts": 1,
+                },
+                clear=False,
+            ):
+                with self.assertLogs(ocr.logger, level="DEBUG") as cm:
+                    digits, _data, _mask, low_conf = ocr.execute_ocr(gray)
+
+        self.assertEqual(digits, "1")
+        self.assertTrue(low_conf)
+        self.assertEqual(call_count["count"], 2)
+        threshold_logs = [
+            r.args for r in cm.records if "OCR confidence threshold" in r.getMessage()
+        ]
+        self.assertEqual(threshold_logs[-1][1], 10)
+
+    def test_stops_after_confidence_sufficient(self):
+        gray = np.zeros((10, 10), dtype=np.uint8)
+
+        call_count = {"count": 0}
+
+        def fake_ocr(_gray):
+            call_count["count"] += 1
+            return "1", {"text": ["1"], "conf": ["50"]}, None
+
+        with patch.object(ocr, "_ocr_digits_better", side_effect=fake_ocr):
+            with patch.dict(
+                ocr.CFG,
+                {
+                    "ocr_conf_threshold": 60,
+                    "ocr_conf_decay": 0.5,
+                    "ocr_conf_min": 10,
+                    "ocr_conf_max_attempts": 5,
+                },
+                clear=False,
+            ):
+                digits, _data, _mask, low_conf = ocr.execute_ocr(gray)
+
+        self.assertEqual(digits, "1")
+        self.assertFalse(low_conf)
+        self.assertEqual(call_count["count"], 2)

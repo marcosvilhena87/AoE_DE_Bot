@@ -47,6 +47,9 @@ Configuration options in `config.json` allow adjusting how resource numbers are 
   threshold is multiplied by `ocr_conf_decay` (default `0.8`) until it reaches
   `ocr_conf_min` (default `25–30`). This adaptive decay allows accepting digits
   that repeatedly fail the initial threshold.
+* `ocr_conf_max_attempts` – number of full OCR retries performed while lowering
+  the confidence threshold. After this cap is reached the threshold continues
+  to decay toward `ocr_conf_min` without additional OCR passes.
 * `ocr_kernel_size` – size of the square kernel used for morphological dilation
   before running OCR (default `2`).
 * `ocr_contrast_stretch` – rescale grayscale intensities before thresholding;
