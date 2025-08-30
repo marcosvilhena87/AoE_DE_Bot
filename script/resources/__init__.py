@@ -358,7 +358,15 @@ def _read_resources(
         else:
             value = int(digits)
             if low_conf and CFG.get("treat_low_conf_as_failure", True):
-                results[name] = None
+                fallback_key = f"{name}_low_conf_fallback"
+                if CFG.get(fallback_key, False) and name in cache_obj.last_resource_values:
+                    results[name] = cache_obj.last_resource_values[name]
+                    cache_hits.add(name)
+                    logger.warning(
+                        "Using cached value for %s due to low-confidence OCR", name
+                    )
+                else:
+                    results[name] = None
                 low_confidence.add(name)
             else:
                 results[name] = value
