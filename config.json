@@ -34,7 +34,11 @@
     "//ocr_roi_expand_growth": "Exponent controlling ROI growth rate; >1 grows faster.",
     "ocr_kernel_size": 1,
     "ocr_top_crop": 1,
-    "ocr_top_crop_overrides": {"wood_stockpile": 0},
+    "ocr_top_crop_overrides": {
+      "wood_stockpile": 0,
+      "food_stockpile": 0
+    },
+    "//ocr_top_crop_overrides": "Disable top cropping for wood and food stockpiles to avoid clipping digits.",
     "ocr_blur_kernel": 1,
     "//ocr_blur_kernel": "Median blur kernel before OCR; set >1 to enable; 0 disables.",
     "ocr_bilateral": [7, 60, 60],
