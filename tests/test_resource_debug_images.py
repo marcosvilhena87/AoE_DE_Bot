@@ -153,7 +153,7 @@ class TestResourceDebugImages(TestCase):
 
         with tempfile.TemporaryDirectory() as tmpdir, \
              patch("script.resources.reader.ROOT", Path(tmpdir)), \
-             patch("script.resources.ocr.ROOT", Path(tmpdir)), \
+             patch("script.resources.ocr.executor.ROOT", Path(tmpdir)), \
              patch("script.resources.reader._RESOURCE_DEBUG_COOLDOWN", 60):
 
             resources.handle_ocr_failure(frame, regions, results, [], cache_obj=cache)

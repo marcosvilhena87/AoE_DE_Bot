@@ -9,17 +9,18 @@ import pytesseract
 
 from .. import CFG, ROOT, cache, common, logger, screen_utils, RESOURCE_ICON_ORDER
 from ..panel import detect_resource_regions, locate_resource_panel
-from .. import ocr
 from ..ocr import masks
+from ..ocr.preprocess import preprocess_roi
+from ..ocr.executor import (
+    execute_ocr,
+    handle_ocr_failure,
+    _read_population_from_roi,
+    read_population_from_roi,
+    _extract_population,
+)
 
 # Re-export OCR helpers
-preprocess_roi = ocr.preprocess_roi
 _ocr_digits_better = masks._ocr_digits_better
-execute_ocr = ocr.execute_ocr
-handle_ocr_failure = ocr.handle_ocr_failure
-_read_population_from_roi = ocr._read_population_from_roi
-read_population_from_roi = ocr.read_population_from_roi
-_extract_population = ocr._extract_population
 
 from .cache_utils import (
     ResourceCache,

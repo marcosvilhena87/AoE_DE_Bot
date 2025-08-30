@@ -62,7 +62,8 @@ sys.modules.setdefault(
 # Make sure the script package is importable
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
-import script.resources.ocr as ocr
+from script.resources import CFG
+from script.resources.ocr.executor import execute_ocr, logger
 
 
 class TestOcrConfDecayLogging(TestCase):
@@ -72,14 +73,14 @@ class TestOcrConfDecayLogging(TestCase):
         def fake_ocr(_gray):
             return "1", {"text": ["1"], "conf": ["50"]}, None
 
-        with patch.object(ocr, "_ocr_digits_better", side_effect=fake_ocr):
+        with patch("script.resources.ocr.masks._ocr_digits_better", side_effect=fake_ocr):
             with patch.dict(
-                ocr.CFG,
+                CFG,
                 {"ocr_conf_threshold": 60, "ocr_conf_decay": 0.5},
                 clear=False,
             ):
-                with self.assertLogs(ocr.logger, level="DEBUG") as cm:
-                    ocr.execute_ocr(gray)
+                with self.assertLogs(logger, level="DEBUG") as cm:
+                    execute_ocr(gray)
 
         record = next(
             r for r in cm.records if "OCR confidence threshold" in r.getMessage()
@@ -100,9 +101,9 @@ class TestOcrConfDecayLogging(TestCase):
             call_count["count"] += 1
             return "1", {"text": ["1"], "conf": ["5"]}, None
 
-        with patch.object(ocr, "_ocr_digits_better", side_effect=fake_ocr):
+        with patch("script.resources.ocr.masks._ocr_digits_better", side_effect=fake_ocr):
             with patch.dict(
-                ocr.CFG,
+                CFG,
                 {
                     "ocr_conf_threshold": 60,
                     "ocr_conf_decay": 0.5,
@@ -111,8 +112,8 @@ class TestOcrConfDecayLogging(TestCase):
                 },
                 clear=False,
             ):
-                with self.assertLogs(ocr.logger, level="DEBUG") as cm:
-                    digits, _data, _mask, low_conf = ocr.execute_ocr(gray)
+                with self.assertLogs(logger, level="DEBUG") as cm:
+                    digits, _data, _mask, low_conf = execute_ocr(gray)
 
         self.assertEqual(digits, "1")
         self.assertTrue(low_conf)
@@ -131,9 +132,9 @@ class TestOcrConfDecayLogging(TestCase):
             call_count["count"] += 1
             return "1", {"text": ["1"], "conf": ["50"]}, None
 
-        with patch.object(ocr, "_ocr_digits_better", side_effect=fake_ocr):
+        with patch("script.resources.ocr.masks._ocr_digits_better", side_effect=fake_ocr):
             with patch.dict(
-                ocr.CFG,
+                CFG,
                 {
                     "ocr_conf_threshold": 60,
                     "ocr_conf_decay": 0.5,
@@ -142,7 +143,7 @@ class TestOcrConfDecayLogging(TestCase):
                 },
                 clear=False,
             ):
-                digits, _data, _mask, low_conf = ocr.execute_ocr(gray)
+                digits, _data, _mask, low_conf = execute_ocr(gray)
 
         self.assertEqual(digits, "1")
         self.assertFalse(low_conf)

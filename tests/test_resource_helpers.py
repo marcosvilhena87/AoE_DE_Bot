@@ -218,7 +218,7 @@ class TestHandleOcrFailure(TestCase):
         regions = {"wood_stockpile": (0, 0, 10, 10)}
         results = {"wood_stockpile": None}
         with patch("script.resources.reader.cv2.imwrite"), \
-             patch("script.resources.ocr.logger.error") as err_mock, \
+             patch("script.resources.ocr.executor.logger.error") as err_mock, \
              patch("script.resources.reader.pytesseract.pytesseract.tesseract_cmd", "/usr/bin/true"):
             resources.handle_ocr_failure(frame, regions, results, ["wood_stockpile"])
         err_mock.assert_called()
@@ -238,7 +238,7 @@ class TestHandleOcrFailure(TestCase):
         cache = resources.ResourceCache()
         cache.last_resource_values["wood_stockpile"] = 99
         with patch("script.resources.reader.cv2.imwrite"), \
-             patch("script.resources.ocr.logger.warning") as warn_mock:
+             patch("script.resources.ocr.executor.logger.warning") as warn_mock:
             resources.handle_ocr_failure(
                 frame,
                 regions,

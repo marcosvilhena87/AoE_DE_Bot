@@ -5,24 +5,20 @@ from typing import Iterable
 
 import cv2
 import numpy as np
+import pytesseract
 
-from . import (
-    CFG,
-    ROOT,
-    cache,
-    common,
-    logger,
-    screen_utils,
-    RESOURCE_ICON_ORDER,
-    detect_resource_regions,
-    preprocess_roi,
+from .. import CFG, ROOT, cache, common, logger, screen_utils, RESOURCE_ICON_ORDER
+from ..panel import detect_resource_regions
+from ..ocr.preprocess import preprocess_roi
+from ..ocr.confidence import parse_confidences
+from ..ocr.executor import (
     execute_ocr,
     handle_ocr_failure,
     _read_population_from_roi,
     read_population_from_roi,
     _extract_population,
-    pytesseract,
-    ocr,
+)
+from .cache_utils import (
     ResourceCache,
     RESOURCE_CACHE,
     _LAST_READ_FROM_CACHE,
@@ -86,7 +82,7 @@ def _read_resources(
                 output_type=pytesseract.Output.DICT,
             )
             texts = [t for t in data.get("text", []) if t.strip()]
-            confidences = ocr.parse_confidences(data)
+            confidences = parse_confidences(data)
             if texts and confidences and all(
                 c >= res_conf_threshold for c in confidences
             ):

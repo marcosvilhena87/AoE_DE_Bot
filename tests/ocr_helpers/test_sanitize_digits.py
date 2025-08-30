@@ -1,4 +1,4 @@
-from script.resources.ocr import _sanitize_digits
+from script.resources.ocr.confidence import _sanitize_digits
 
 
 def test_trim_long_value():

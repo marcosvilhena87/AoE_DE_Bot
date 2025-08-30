@@ -110,7 +110,7 @@ class TestResourceOcrFailure(TestCase):
             return_value={"text": [""], "conf": ["0"]},
         ), patch(
             "script.resources.reader.pytesseract.image_to_string", return_value="123"
-        ), patch("script.resources.ocr._read_population_from_roi", return_value=(0, 0)):
+        ), patch("script.resources.ocr.executor._read_population_from_roi", return_value=(0, 0)):
             icons = resources.RESOURCE_ICON_ORDER[:-1]
             result, _ = resources._read_resources(
                 frame,
@@ -310,7 +310,7 @@ class TestResourceOcrFailure(TestCase):
         regions = {"wood_stockpile": (0, 0, 10, 10)}
         results = {"wood_stockpile": None}
         with patch("script.resources.reader.cv2.imwrite"), \
-            patch("script.resources.ocr.logger.error") as err_mock, \
+            patch("script.resources.ocr.executor.logger.error") as err_mock, \
             patch("script.resources.reader.pytesseract.pytesseract.tesseract_cmd", "/usr/bin/true"), \
             patch.object(resources.cache, "_NARROW_ROIS", {"wood_stockpile"}):
             resources.handle_ocr_failure(
@@ -341,7 +341,7 @@ class TestResourceOcrFailure(TestCase):
              patch("script.resources.ocr.masks._ocr_digits_better", return_value=("", {"text": [""]}, mask)), \
              patch("script.resources.reader.pytesseract.image_to_string", return_value=""), \
              patch("script.resources.reader.cv2.imwrite") as imwrite_mock, \
-             patch("script.resources.ocr.ROOT", Path(tmpdir)):
+             patch("script.resources.ocr.executor.ROOT", Path(tmpdir)):
             digits, data, mask_out, low_conf = resources.execute_ocr(gray)
         self.assertEqual(digits, "")
         self.assertTrue(low_conf)
@@ -515,7 +515,7 @@ class TestResourceOcrRois(TestCase):
         ), patch(
             "script.resources.ocr.masks._ocr_digits_better", side_effect=fake_ocr
         ), patch(
-            "script.resources.ocr._read_population_from_roi",
+            "script.resources.ocr.executor._read_population_from_roi",
             side_effect=fake_pop_reader,
         ), patch(
             "script.resources.reader.pytesseract.pytesseract.tesseract_cmd", "/usr/bin/true"

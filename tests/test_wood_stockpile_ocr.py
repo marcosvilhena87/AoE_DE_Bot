@@ -31,11 +31,13 @@ sys.modules.setdefault("pyautogui", dummy_pg)
 sys.modules.setdefault("mss", types.SimpleNamespace(mss=lambda: DummyMSS()))
 
 _OLD_TESS = os.environ.get("TESSERACT_CMD")
-_TESS_PATH = shutil.which("tesseract") or "/usr/bin/tesseract"
-os.environ["TESSERACT_CMD"] = _TESS_PATH
+os.environ["TESSERACT_CMD"] = "/usr/bin/true"
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-import script.resources.ocr as ocr
+from script.resources import CFG
+from script.resources.ocr.preprocess import preprocess_roi
+from script.resources.ocr.executor import execute_ocr
+from script.resources.ocr.confidence import parse_confidences
 
 
 class TestWoodStockpileOCR(TestCase):
@@ -50,12 +52,12 @@ class TestWoodStockpileOCR(TestCase):
     def test_wood_stockpile_high_confidence(self):
         roi = np.full((60, 120, 3), (19, 69, 139), dtype=np.uint8)
         cv2.putText(roi, "123", (5, 50), cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 255, 255), 3)
-        gray = ocr.preprocess_roi(roi)
-        digits, data, _mask, low_conf = ocr.execute_ocr(
+        gray = preprocess_roi(roi)
+        digits, data, _mask, low_conf = execute_ocr(
             gray, color=roi, resource="wood_stockpile"
         )
-        confs = ocr.parse_confidences(data)
-        threshold = ocr.CFG.get("ocr_conf_threshold", 60)
+        confs = parse_confidences(data)
+        threshold = CFG.get("ocr_conf_threshold", 60)
         self.assertTrue(digits.isdigit())
         self.assertGreaterEqual(np.median(confs), threshold)
         self.assertFalse(low_conf)
@@ -63,8 +65,8 @@ class TestWoodStockpileOCR(TestCase):
     def test_wood_stockpile_detects_80(self):
         roi = np.full((60, 120, 3), (19, 69, 139), dtype=np.uint8)
         cv2.putText(roi, "80", (5, 50), cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 255, 255), 3)
-        gray = ocr.preprocess_roi(roi)
-        digits, data, _mask, low_conf = ocr.execute_ocr(
+        gray = preprocess_roi(roi)
+        digits, data, _mask, low_conf = execute_ocr(
             gray, color=roi, resource="wood_stockpile"
         )
         self.assertEqual(digits, "80")
