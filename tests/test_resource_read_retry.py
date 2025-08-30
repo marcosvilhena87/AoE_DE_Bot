@@ -54,7 +54,7 @@ os.environ.setdefault("TESSERACT_CMD", "/usr/bin/true")
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import script.common as common
-import script.resources as resources
+import script.resources.reader as resources
 
 
 class TestResourceReadRetry(TestCase):
@@ -92,11 +92,11 @@ class TestResourceReadRetry(TestCase):
 
         frame = np.zeros((600, 600, 3), dtype=np.uint8)
 
-        with patch("script.resources.detect_resource_regions", side_effect=fake_detect), \
+        with patch("script.resources.reader.detect_resource_regions", side_effect=fake_detect), \
              patch("script.screen_utils._grab_frame", return_value=frame), \
-             patch("script.resources._ocr_digits_better", side_effect=fake_ocr), \
-             patch("script.resources.pytesseract.image_to_string", return_value=""), \
-             patch("script.resources.cv2.imwrite"):
+             patch("script.resources.reader._ocr_digits_better", side_effect=fake_ocr), \
+             patch("script.resources.reader.pytesseract.image_to_string", return_value=""), \
+             patch("script.resources.reader.cv2.imwrite"):
             first, _ = resources.read_resources_from_hud(["wood_stockpile"])
             second, _ = resources.read_resources_from_hud(["wood_stockpile"])
 
@@ -118,11 +118,11 @@ class TestResourceReadRetry(TestCase):
 
         frame = np.zeros((600, 600, 3), dtype=np.uint8)
 
-        with patch("script.resources.detect_resource_regions", side_effect=fake_detect), \
+        with patch("script.resources.reader.detect_resource_regions", side_effect=fake_detect), \
              patch("script.screen_utils._grab_frame", return_value=frame), \
-             patch("script.resources._ocr_digits_better", side_effect=fake_ocr) as ocr_mock, \
-             patch("script.resources.pytesseract.image_to_string", return_value=""), \
-             patch("script.resources.cv2.imwrite"):
+             patch("script.resources.reader._ocr_digits_better", side_effect=fake_ocr) as ocr_mock, \
+             patch("script.resources.reader.pytesseract.image_to_string", return_value=""), \
+             patch("script.resources.reader.cv2.imwrite"):
             result, _ = resources.read_resources_from_hud(["wood_stockpile"])
 
         self.assertEqual(result["wood_stockpile"], 456)
@@ -148,12 +148,12 @@ class TestResourceReadRetry(TestCase):
                 return "789", {"text": ["789"]}, None, False
             return "", {"text": [""]}, None, False
 
-        with patch("script.resources.detect_resource_regions", side_effect=fake_detect), \
+        with patch("script.resources.reader.detect_resource_regions", side_effect=fake_detect), \
              patch("script.screen_utils._grab_frame", return_value=frame), \
-             patch("script.resources.preprocess_roi", side_effect=lambda roi: roi[..., 0]), \
-             patch("script.resources.execute_ocr", side_effect=fake_execute), \
-             patch.dict("script.resources._LAST_REGION_SPANS", {"wood_stockpile": (0, 120)}, clear=True), \
-             patch("script.resources.pytesseract.image_to_string", return_value=""):
+             patch("script.resources.reader.preprocess_roi", side_effect=lambda roi: roi[..., 0]), \
+             patch("script.resources.reader.execute_ocr", side_effect=fake_execute), \
+             patch.dict(resources._LAST_REGION_SPANS, {"wood_stockpile": (0, 120)}, clear=True), \
+             patch("script.resources.reader.pytesseract.image_to_string", return_value=""):
             result, _ = resources.read_resources_from_hud(["wood_stockpile"])
 
         self.assertEqual(result["wood_stockpile"], 789)
@@ -175,11 +175,11 @@ class TestResourceReadRetry(TestCase):
             time.time() - (resources._RESOURCE_CACHE_TTL + 10)
         )
 
-        with patch("script.resources.detect_resource_regions", side_effect=fake_detect), \
+        with patch("script.resources.reader.detect_resource_regions", side_effect=fake_detect), \
              patch("script.screen_utils._grab_frame", return_value=frame), \
-             patch("script.resources._ocr_digits_better", side_effect=fake_ocr), \
-             patch("script.resources.pytesseract.image_to_string", return_value=""), \
-             patch("script.resources.cv2.imwrite"):
+             patch("script.resources.reader._ocr_digits_better", side_effect=fake_ocr), \
+             patch("script.resources.reader.pytesseract.image_to_string", return_value=""), \
+             patch("script.resources.reader.cv2.imwrite"):
             with self.assertRaises(common.ResourceReadError):
                 resources.read_resources_from_hud(["wood_stockpile"])
             result, _ = resources.read_resources_from_hud(["wood_stockpile"])
@@ -197,11 +197,11 @@ class TestResourceReadRetry(TestCase):
         frame = np.zeros((600, 600, 3), dtype=np.uint8)
 
         with patch.dict(resources.CFG, {"ocr_retry_limit": 2}, clear=False), \
-             patch("script.resources.detect_resource_regions", side_effect=fake_detect), \
+             patch("script.resources.reader.detect_resource_regions", side_effect=fake_detect), \
              patch("script.screen_utils._grab_frame", return_value=frame), \
-             patch("script.resources._ocr_digits_better", side_effect=fake_ocr), \
-             patch("script.resources.pytesseract.image_to_string", return_value=""), \
-             patch("script.resources.cv2.imwrite"):
+             patch("script.resources.reader._ocr_digits_better", side_effect=fake_ocr), \
+             patch("script.resources.reader.pytesseract.image_to_string", return_value=""), \
+             patch("script.resources.reader.cv2.imwrite"):
             with self.assertRaises(common.ResourceReadError):
                 resources.read_resources_from_hud(["wood_stockpile"])
             result, _ = resources.read_resources_from_hud(["wood_stockpile"])
@@ -222,13 +222,13 @@ class TestResourceReadRetry(TestCase):
                 rois.append((roi, allow_fallback))
             return "", {"text": [""]}, np.zeros((1, 1), dtype=np.uint8), False
 
-        with patch("script.resources.detect_resource_regions", side_effect=fake_detect), \
+        with patch("script.resources.reader.detect_resource_regions", side_effect=fake_detect), \
              patch("script.screen_utils._grab_frame", return_value=frame), \
-             patch("script.resources.preprocess_roi", side_effect=lambda r: r[..., 0] if r.ndim == 3 else r), \
-             patch("script.resources.execute_ocr", side_effect=fake_execute), \
-             patch("script.resources.pytesseract.image_to_string", return_value=""), \
-             patch("script.resources.handle_ocr_failure"), \
-             patch("script.resources.cv2.imwrite"), \
+             patch("script.resources.reader.preprocess_roi", side_effect=lambda r: r[..., 0] if r.ndim == 3 else r), \
+             patch("script.resources.reader.execute_ocr", side_effect=fake_execute), \
+             patch("script.resources.reader.pytesseract.image_to_string", return_value=""), \
+             patch("script.resources.reader.handle_ocr_failure"), \
+             patch("script.resources.reader.cv2.imwrite"), \
              self.assertLogs("script.resources", level="DEBUG") as cm:
             resources.read_resources_from_hud([], ["wood_stockpile"])
             resources.read_resources_from_hud([], ["wood_stockpile"])

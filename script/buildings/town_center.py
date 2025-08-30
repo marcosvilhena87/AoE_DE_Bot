@@ -2,7 +2,7 @@ import logging
 import time
 
 import script.common as common
-import script.resources as resources
+import script.resources.reader as resources
 import script.input_utils as input_utils
 from script.units.villager import build_house, select_idle_villager
 

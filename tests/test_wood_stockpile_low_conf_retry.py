@@ -28,7 +28,7 @@ sys.modules.setdefault("mss", types.SimpleNamespace(mss=lambda: DummyMSS()))
 os.environ.setdefault("TESSERACT_CMD", "/usr/bin/true")
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-import script.resources as resources
+import script.resources.reader as resources
 
 class TestWoodStockpileLowConfRetry(TestCase):
     def setUp(self):
@@ -54,11 +54,11 @@ class TestWoodStockpileLowConfRetry(TestCase):
             calls.append(conf_threshold)
             return "999", {"conf": [conf_threshold or 0]}, None, True
 
-        with patch("script.resources.detect_resource_regions", side_effect=fake_detect), \
+        with patch("script.resources.reader.detect_resource_regions", side_effect=fake_detect), \
              patch("script.screen_utils._grab_frame", return_value=frame), \
-             patch("script.resources.preprocess_roi", side_effect=lambda roi: roi[..., 0]), \
-             patch("script.resources.execute_ocr", side_effect=fake_execute), \
-             patch("script.resources.cv2.imwrite"), \
+             patch("script.resources.reader.preprocess_roi", side_effect=lambda roi: roi[..., 0]), \
+             patch("script.resources.reader.execute_ocr", side_effect=fake_execute), \
+             patch("script.resources.reader.cv2.imwrite"), \
              patch.dict(resources.CFG, {"treat_low_conf_as_failure": True}, clear=False):
             result, _ = resources.read_resources_from_hud(["wood_stockpile"])
 

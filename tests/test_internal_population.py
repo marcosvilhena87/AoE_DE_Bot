@@ -63,7 +63,7 @@ class TestInternalPopulation(TestCase):
             return True
 
         with patch(
-            "script.resources.read_resources_from_hud",
+            "script.resources.reader.read_resources_from_hud",
             return_value=({"food_stockpile": 500}, (None, None)),
         ), \
              patch("script.buildings.town_center.build_house", side_effect=fake_build_house) as build_house_mock, \
@@ -80,7 +80,7 @@ class TestInternalPopulation(TestCase):
             "script.resources.read_population_from_roi",
             side_effect=common.PopulationReadError("primary fail"),
         ), patch(
-            "script.resources.read_resources_from_hud",
+            "script.resources.reader.read_resources_from_hud",
             side_effect=common.ResourceReadError("fallback fail"),
         ), patch("script.resources.locate_resource_panel", return_value={}):
             with self.assertRaises(common.PopulationReadError) as ctx:

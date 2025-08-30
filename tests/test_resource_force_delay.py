@@ -30,7 +30,7 @@ sys.modules.setdefault("mss", types.SimpleNamespace(mss=lambda: DummyMSS()))
 os.environ.setdefault("TESSERACT_CMD", "/usr/bin/true")
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-import script.resources as resources
+import script.resources.reader as resources
 
 
 class TestResourceForceDelay(TestCase):
@@ -49,10 +49,10 @@ class TestResourceForceDelay(TestCase):
             calls.append(("grab", None))
             return np.zeros((1, 1, 3), dtype=np.uint8)
 
-        with patch("script.resources.time.sleep", side_effect=fake_sleep), \
-            patch("script.resources.screen_utils._grab_frame", side_effect=fake_grab), \
-            patch("script.resources.detect_resource_regions", return_value={}), \
-            patch("script.resources.handle_ocr_failure"):
+        with patch("script.resources.reader.time.sleep", side_effect=fake_sleep), \
+            patch("script.resources.reader.screen_utils._grab_frame", side_effect=fake_grab), \
+            patch("script.resources.reader.detect_resource_regions", return_value={}), \
+            patch("script.resources.reader.handle_ocr_failure"):
             resources.read_resources_from_hud([], force_delay=0.1)
 
         assert calls[0] == ("sleep", 0.1)

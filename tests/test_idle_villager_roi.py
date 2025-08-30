@@ -147,7 +147,7 @@ class TestIdleVillagerROI(TestCase):
             return next(counts)
 
         with patch("script.units.villager.select_idle_villager") as mock_sel, \
-            patch("script.resources.read_resources_from_hud", side_effect=fake_read):
+            patch("script.resources.reader.read_resources_from_hud", side_effect=fake_read):
             initial, selections = villager.count_idle_villagers_via_hotkey(
                 delay=0, return_selections=True
             )
@@ -170,7 +170,7 @@ class TestIdleVillagerROI(TestCase):
             return next(counts)
 
         with patch("script.units.villager.select_idle_villager"), patch(
-            "script.resources.read_resources_from_hud", side_effect=fake_read
+            "script.resources.reader.read_resources_from_hud", side_effect=fake_read
         ):
             initial, selections = villager.count_idle_villagers_via_hotkey(
                 delay=0.1, return_selections=True
@@ -193,7 +193,7 @@ class TestIdleVillagerROI(TestCase):
             return next(counts)
 
         with patch("script.units.villager.select_idle_villager") as mock_sel, patch(
-            "script.resources.read_resources_from_hud", side_effect=fake_read
+            "script.resources.reader.read_resources_from_hud", side_effect=fake_read
         ):
             initial, selections = villager.count_idle_villagers_via_hotkey(
                 delay=0, stop_threshold=2, return_selections=True

@@ -16,7 +16,7 @@ from pathlib import Path
 
 import script.common as common
 import script.hud as hud
-import script.resources as resources
+import script.resources.reader as resources
 from script.config_utils import parse_scenario_info
 
 logger = logging.getLogger(__name__)
