@@ -101,8 +101,14 @@ def run_mission(info) -> None:
 
     loops = 0
     max_loops = common.CFG.get("max_mission_loops", 20)
+    logger.info("Mission loop starting. Target population: %s", common.TARGET_POP)
     while common.CURRENT_POP < common.TARGET_POP and loops < max_loops:
         loops += 1
+        logger.info(
+            "Population progress: %s/%s",
+            common.CURRENT_POP,
+            common.TARGET_POP,
+        )
         try:
             res_vals, _ = resources.read_resources_from_hud(["food_stockpile"])
         except common.ResourceReadError as exc:  # pragma: no cover - OCR failure
@@ -126,12 +132,23 @@ def run_mission(info) -> None:
             )
         time.sleep(0.1)
 
+    logger.info(
+        "Mission loop ended after %s iterations. Objective met: %s",
+        loops,
+        common.CURRENT_POP >= common.TARGET_POP,
+    )
+
     if common.CURRENT_POP >= common.TARGET_POP:
-        logger.info("Population objective reached: %s", common.CURRENT_POP)
+        logger.info(
+            "Population objective reached: %s/%s",
+            common.CURRENT_POP,
+            common.TARGET_POP,
+        )
     else:
         logger.info(
-            "Mission ended before reaching population objective. Current pop: %s",
+            "Mission ended before reaching population objective. Population: %s/%s",
             common.CURRENT_POP,
+            common.TARGET_POP,
         )
 
 
