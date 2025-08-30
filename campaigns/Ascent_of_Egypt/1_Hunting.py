@@ -69,7 +69,10 @@ def main() -> None:
             resources.RESOURCE_CACHE.last_resource_ts[name] = now
 
     logger.info("Setup complete.")
-
+    if "PYTEST_CURRENT_TEST" in os.environ:
+        logger.info(
+            "Variável PYTEST_CURRENT_TEST detectada; run_mission será pulado."
+        )
     if "PYTEST_CURRENT_TEST" not in os.environ:
         run_mission(info)
 
