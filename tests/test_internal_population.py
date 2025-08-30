@@ -41,7 +41,7 @@ import script.hud as hud
 
 class TestInternalPopulation(TestCase):
     def test_parse_scenario_info(self):
-        info = config_utils.parse_scenario_info("campaigns/Ascent_of_Egypt/1_Hunting.txt")
+        info = config_utils.parse_scenario_info("campaigns/Ascent_of_Egypt/Egypt_1_Hunting.txt")
         self.assertEqual(info.starting_villagers, 3)
         self.assertEqual(info.population_limit, 50)
         self.assertEqual(info.objective_villagers, 7)

@@ -67,7 +67,7 @@ class TestHuntingScenario(TestCase):
              patch("script.config_utils.parse_scenario_info", return_value=info) as parse_mock, \
              patch.object(resources, "RESOURCE_CACHE", resources.ResourceCache()):
             runpy.run_path(
-                os.path.join("campaigns", "Ascent_of_Egypt", "1_Hunting.py"),
+                os.path.join("campaigns", "Ascent_of_Egypt", "Egypt_1_Hunting.py"),
                 run_name="__main__",
             )
 
