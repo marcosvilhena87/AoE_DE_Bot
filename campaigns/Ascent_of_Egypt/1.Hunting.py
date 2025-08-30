@@ -83,8 +83,11 @@ def run_mission(info) -> None:
     automated tests where resource values never change.
     """
 
+    logger.info("Starting mission objectives")
+
     food_spot = common.CFG.get("areas", {}).get("food_spot")
 
+    logger.info("Assigning starting villagers to hunt")
     # Allocate the starting villagers to gather food.
     for idx in range(info.starting_villagers):
         if villager.select_idle_villager():
@@ -92,7 +95,9 @@ def run_mission(info) -> None:
                 input_utils._click_norm(*food_spot, button="right")
             logger.info("Villager %d assigned to hunt", idx + 1)
         else:
-            logger.info("No idle villager available for hunting")
+            logger.info("No idle villager available for hunting when assigning villager %d", idx + 1)
+
+    logger.info("Initial villager assignment complete")
 
     start_food = resources.RESOURCE_CACHE.last_resource_values.get(
         "food_stockpile", 0
@@ -125,10 +130,11 @@ def run_mission(info) -> None:
         logger.info("Current food stockpile: %s", food)
 
         if food >= start_food + spent_food + 50:
+            logger.info("Training villager to reach population %s", common.CURRENT_POP + 1)
             train_villagers(common.CURRENT_POP + 1)
             spent_food += 50
             logger.info(
-                "Trained villager. Population: %s", common.CURRENT_POP
+                "Villager trained. Population: %s", common.CURRENT_POP
             )
         time.sleep(0.1)
 
@@ -144,12 +150,14 @@ def run_mission(info) -> None:
             common.CURRENT_POP,
             common.TARGET_POP,
         )
+        logger.info("Mission accomplished: objectives achieved")
     else:
         logger.info(
             "Mission ended before reaching population objective. Population: %s/%s",
             common.CURRENT_POP,
             common.TARGET_POP,
         )
+        logger.info("Mission failed: objectives not achieved")
 
 
 if __name__ == "__main__":  # pragma: no cover - manual execution entry point
