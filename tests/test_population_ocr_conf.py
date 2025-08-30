@@ -28,11 +28,11 @@ import script.resources as resources
 
 
 class TestPopulationOcrConfidence(TestCase):
-    def test_negative_confidences_are_ignored(self):
+    def test_non_positive_confidences_are_ignored(self):
         roi = np.zeros((10, 10, 3), dtype=np.uint8)
         with patch(
             "script.resources.pytesseract.image_to_data",
-            return_value={"text": ["3/4"], "conf": ["-1", "-1", "95"]},
+            return_value={"text": ["3/4"], "conf": ["-1", "0", "95"]},
         ):
             cur, cap = resources._read_population_from_roi(
                 roi, conf_threshold=60, save_debug=False

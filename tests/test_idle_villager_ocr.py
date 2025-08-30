@@ -63,7 +63,7 @@ class TestIdleVillagerOCR(TestCase):
         )
         exec_mock.assert_not_called()
 
-    def test_idle_villager_ignores_negative_confidences(self):
+    def test_idle_villager_ignores_non_positive_confidences(self):
         def fake_detect(frame, required_icons, cache=None):
             return {"idle_villager": (0, 0, 50, 50)}
 
@@ -72,7 +72,7 @@ class TestIdleVillagerOCR(TestCase):
              patch("script.screen_utils._grab_frame", return_value=frame), \
              patch(
                  "script.resources.pytesseract.image_to_data",
-                 return_value={"text": ["1", "2"], "conf": [-1, "95"]},
+                 return_value={"text": ["1", "2"], "conf": [-1, "0", "95"]},
              ) as img2data, \
              patch("script.resources.execute_ocr") as exec_mock:
             result, _ = resources.read_resources_from_hud(["idle_villager"])

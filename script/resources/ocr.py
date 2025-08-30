@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 def parse_confidences(data):
-    """Convert OCR confidence values to floats, ignoring negatives."""
+    """Convert OCR confidence values to floats, ignoring non-positive entries."""
 
     confs = []
     for c in data.get("conf", []):
@@ -22,7 +22,7 @@ def parse_confidences(data):
             val = float(c)
         except (ValueError, TypeError):
             continue
-        if val >= 0:
+        if val > 0:
             confs.append(val)
     return confs
 
@@ -503,7 +503,7 @@ def _read_population_from_roi(roi, conf_threshold=None, save_debug=True):
         output_type=pytesseract.Output.DICT,
     )
     text = "".join(data.get("text", [])).replace(" ", "")
-    confidences = [c for c in map(int, data.get("conf", [])) if c >= 0]
+    confidences = [c for c in map(int, data.get("conf", [])) if c > 0]
     parts = [p for p in text.split("/") if p]
     if len(parts) >= 2 and (not confidences or min(confidences) >= conf_threshold):
         cur = int("".join(filter(str.isdigit, parts[0])) or 0)
