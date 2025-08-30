@@ -1,12 +1,9 @@
 import os
 import sys
 import types
-from unittest import TestCase
-from unittest.mock import patch
-
 import numpy as np
 
-# Stub modules that require a GUI/display before importing the bot modules
+# Stub modules requiring a GUI/display
 
 dummy_pg = types.SimpleNamespace(
     PAUSE=0,
@@ -28,6 +25,7 @@ class DummyMSS:
 
 sys.modules.setdefault("pyautogui", dummy_pg)
 sys.modules.setdefault("mss", types.SimpleNamespace(mss=lambda: DummyMSS()))
+
 try:  # pragma: no cover - used for environments without OpenCV
     import cv2  # noqa: F401
 except ModuleNotFoundError:  # pragma: no cover - fallback stub
@@ -57,49 +55,13 @@ except ModuleNotFoundError:  # pragma: no cover - fallback stub
             IMREAD_GRAYSCALE=0,
             COLOR_BGR2GRAY=0,
             COLOR_GRAY2BGR=0,
+            THRESH_BINARY=0,
+            THRESH_OTSU=0,
+            TM_CCOEFF_NORMED=0,
         ),
     )
 
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-import script.resources.reader as resources
+os.environ.setdefault("TESSERACT_CMD", "/usr/bin/true")
 
-
-class TestNarrowROIExpansion(TestCase):
-    def setUp(self):
-        resources.RESOURCE_CACHE.last_resource_values.clear()
-        resources.RESOURCE_CACHE.last_resource_ts.clear()
-        resources.RESOURCE_CACHE.resource_failure_counts.clear()
-        resources._LAST_REGION_SPANS.clear()
-        resources._NARROW_ROI_DEFICITS.clear()
-        resources._NARROW_ROIS.clear()
-
-    def tearDown(self):
-        resources.RESOURCE_CACHE.last_resource_values.clear()
-        resources.RESOURCE_CACHE.last_resource_ts.clear()
-        resources.RESOURCE_CACHE.resource_failure_counts.clear()
-        resources._LAST_REGION_SPANS.clear()
-        resources._NARROW_ROI_DEFICITS.clear()
-        resources._NARROW_ROIS.clear()
-
-    def test_stone_stockpile_expands_narrow_roi(self):
-        frame = np.zeros((40, 200, 3), dtype=np.uint8)
-        regions = {"stone_stockpile": (50, 10, 40, 20)}
-
-        def fake_detect(frame, required_icons, cache=None):
-            resources.cache._NARROW_ROIS = {"stone_stockpile"}
-            resources.cache._NARROW_ROI_DEFICITS = {"stone_stockpile": 20}
-            resources.cache._LAST_REGION_SPANS = {"stone_stockpile": (50, 90)}
-            return regions
-
-        with patch.object(resources, "detect_resource_regions", side_effect=fake_detect), \
-            patch.object(
-                resources,
-                "execute_ocr",
-                return_value=("123", {"text": ["123"]}, np.zeros((1, 1), dtype=np.uint8), False),
-            ) as ocr_mock:
-            results, _ = resources._read_resources(
-                frame, ["stone_stockpile"], ["stone_stockpile"]
-            )
-
-        self.assertEqual(ocr_mock.call_args[1]["roi"], (40, 10, 60, 20))
-        self.assertEqual(results["stone_stockpile"], 123)
+# Ensure project root is importable
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
