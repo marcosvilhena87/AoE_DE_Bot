@@ -48,6 +48,7 @@ os.environ.setdefault("TESSERACT_CMD", "/usr/bin/true")
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import script.common as common
 import script.hud as hud
+import script.resources as resources
 
 
 class TestPopulationROI(TestCase):
@@ -173,3 +174,50 @@ class TestPopulationROI(TestCase):
             grab_mock.assert_called_once()
             ocr_mock.assert_not_called()
             sleep_mock.assert_not_called()
+
+    def test_population_roi_expands_and_succeeds(self):
+        frame = np.zeros((40, 40, 3), dtype=np.uint8)
+        bbox = {"left": 10, "top": 10, "width": 4, "height": 4}
+        widths = []
+
+        def fake_grab(bbox=None):
+            if bbox is None:
+                return frame
+            l, t, w, h = (
+                bbox["left"],
+                bbox["top"],
+                bbox["width"],
+                bbox["height"],
+            )
+            return frame[t : t + h, l : l + w]
+
+        def fake_pop(roi, conf_threshold=None, save_debug=True):
+            widths.append(roi.shape[1])
+            if roi.shape[1] <= 4:
+                raise common.PopulationReadError("tight")
+            return 12, 34
+
+        resources.RESOURCE_CACHE.resource_failure_counts.pop("population_limit", None)
+        with patch.dict(
+            common.CFG,
+            {
+                "population_ocr_roi_expand_px": 3,
+                "population_ocr_roi_expand_step": 0,
+                "population_ocr_roi_expand_growth": 1.0,
+            },
+            clear=False,
+        ), patch("script.screen_utils._grab_frame", side_effect=fake_grab), patch(
+            "script.resources.ocr.executor._read_population_from_roi",
+            side_effect=fake_pop,
+        ), patch(
+            "script.resources.reader.roi._read_population_from_roi",
+            side_effect=fake_pop,
+        ):
+            cur, cap = resources.read_population_from_roi(bbox, retries=1)
+
+        self.assertEqual((cur, cap), (12, 34))
+        self.assertGreater(widths[1], widths[0])
+        self.assertEqual(
+            resources.RESOURCE_CACHE.resource_failure_counts.get("population_limit"),
+            0,
+        )

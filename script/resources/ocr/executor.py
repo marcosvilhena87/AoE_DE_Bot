@@ -363,12 +363,19 @@ def read_population_from_roi(
     retries: int = 1,
     conf_threshold: int | None = None,
     save_failed_roi: bool = False,
+    cache_obj: cache.ResourceCache = cache.RESOURCE_CACHE,
 ):
+    from ..reader.roi import expand_population_roi_after_failure
+
+    x = roi_bbox["left"]
+    y = roi_bbox["top"]
+    w = roi_bbox["width"]
+    h = roi_bbox["height"]
     last_exc = None
     for attempt in range(retries):
-        roi = screen_utils._grab_frame(roi_bbox)
+        roi = screen_utils._grab_frame({"left": x, "top": y, "width": w, "height": h})
         try:
-            return _read_population_from_roi(
+            cur_pop, pop_cap = _read_population_from_roi(
                 roi,
                 conf_threshold=conf_threshold,
                 save_debug=(
@@ -376,8 +383,31 @@ def read_population_from_roi(
                     and (CFG.get("debug") or save_failed_roi)
                 ),
             )
+            cache_obj.resource_failure_counts["population_limit"] = 0
+            return cur_pop, pop_cap
         except common.PopulationReadError as exc:
             last_exc = exc
+            failure_count = cache_obj.resource_failure_counts.get(
+                "population_limit", 0
+            )
+            frame_full = screen_utils._grab_frame()
+            expansion = expand_population_roi_after_failure(
+                frame_full,
+                x,
+                y,
+                w,
+                h,
+                roi,
+                failure_count,
+                conf_threshold,
+            )
+            if expansion:
+                cur_pop, pop_cap, _, x, y, w, h = expansion
+                cache_obj.resource_failure_counts["population_limit"] = 0
+                return cur_pop, pop_cap
+            cache_obj.resource_failure_counts["population_limit"] = (
+                failure_count + 1
+            )
             if attempt < retries - 1:
                 logger.debug("OCR attempt %s failed: %s", attempt + 1, exc)
                 time.sleep(0.1)
@@ -385,22 +415,52 @@ def read_population_from_roi(
     raise last_exc
 
 
-def _extract_population(frame, regions, results, pop_required, conf_threshold=None):
+def _extract_population(
+    frame,
+    regions,
+    results,
+    pop_required,
+    conf_threshold=None,
+    cache_obj: cache.ResourceCache = cache.RESOURCE_CACHE,
+):
+    from ..reader.roi import expand_population_roi_after_failure
+
     cur_pop = pop_cap = None
     if "population_limit" in regions:
         x, y, w, h = regions["population_limit"]
         roi = frame[y : y + h, x : x + w]
+        failure_count = cache_obj.resource_failure_counts.get("population_limit", 0)
         try:
             cur_pop, pop_cap = _read_population_from_roi(
                 roi, conf_threshold=conf_threshold
             )
             if results is not None:
                 results["population_limit"] = cur_pop
+            cache_obj.resource_failure_counts["population_limit"] = 0
         except common.PopulationReadError:
-            if results is not None:
-                results["population_limit"] = None
-            if pop_required:
-                raise
+            expansion = expand_population_roi_after_failure(
+                frame,
+                x,
+                y,
+                w,
+                h,
+                roi,
+                failure_count,
+                conf_threshold,
+            )
+            if expansion:
+                cur_pop, pop_cap, _, x, y, w, h = expansion
+                if results is not None:
+                    results["population_limit"] = cur_pop
+                cache_obj.resource_failure_counts["population_limit"] = 0
+            else:
+                if results is not None:
+                    results["population_limit"] = None
+                cache_obj.resource_failure_counts["population_limit"] = (
+                    failure_count + 1
+                )
+                if pop_required:
+                    raise
     else:
         if results is not None:
             results["population_limit"] = None

@@ -348,6 +348,7 @@ def _read_resources(
             results,
             pop_required,
             conf_threshold=pop_conf_threshold,
+            cache_obj=cache_obj,
         )
 
     cache._LAST_READ_FROM_CACHE = cache_hits
