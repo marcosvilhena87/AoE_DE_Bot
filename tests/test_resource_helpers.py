@@ -283,6 +283,38 @@ class TestValidateStartingResources(TestCase):
             )
             warn_mock.assert_called_once()
 
+    def test_logs_low_confidence_warning(self):
+        with patch("script.resources.logger.warning") as warn_mock:
+            resources._LAST_LOW_CONFIDENCE = {"wood_stockpile"}
+            resources._LAST_NO_DIGITS = set()
+            resources.validate_starting_resources(
+                {"wood_stockpile": None},
+                {"wood_stockpile": 80},
+                tolerance=10,
+                raise_on_error=False,
+            )
+            warn_mock.assert_called_once_with(
+                "Low-confidence OCR for 'wood_stockpile'"
+            )
+        resources._LAST_LOW_CONFIDENCE = set()
+        resources._LAST_NO_DIGITS = set()
+
+    def test_logs_missing_reading_warning(self):
+        with patch("script.resources.logger.warning") as warn_mock:
+            resources._LAST_LOW_CONFIDENCE = set()
+            resources._LAST_NO_DIGITS = {"wood_stockpile"}
+            resources.validate_starting_resources(
+                {"wood_stockpile": None},
+                {"wood_stockpile": 80},
+                tolerance=10,
+                raise_on_error=False,
+            )
+            warn_mock.assert_called_once_with(
+                "Missing OCR reading for 'wood_stockpile'"
+            )
+        resources._LAST_LOW_CONFIDENCE = set()
+        resources._LAST_NO_DIGITS = set()
+
     def test_deviation_saves_roi_image(self):
         frame = np.zeros((10, 10, 3), dtype=np.uint8)
         rois = {"wood_stockpile": (0, 0, 5, 5)}
