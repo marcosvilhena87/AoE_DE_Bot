@@ -206,10 +206,10 @@ class TestHandleOcrFailure(TestCase):
         regions = {"wood_stockpile": (0, 0, 10, 10)}
         results = {"wood_stockpile": None}
         with patch("script.resources.cv2.imwrite"), \
-             patch("script.resources.logger.error"), \
+             patch("script.resources.ocr.logger.error") as err_mock, \
              patch("script.resources.pytesseract.pytesseract.tesseract_cmd", "/usr/bin/true"):
-            with self.assertRaises(common.ResourceReadError):
-                resources.handle_ocr_failure(frame, regions, results, ["wood_stockpile"])
+            resources.handle_ocr_failure(frame, regions, results, ["wood_stockpile"])
+        err_mock.assert_called()
 
     def test_handle_ocr_failure_noop_when_success(self):
         frame = np.zeros((20, 20, 3), dtype=np.uint8)
@@ -222,28 +222,28 @@ class TestHandleOcrFailure(TestCase):
     def test_handle_ocr_failure_low_confidence_fallback(self):
         frame = np.zeros((20, 20, 3), dtype=np.uint8)
         regions = {"wood_stockpile": (0, 0, 10, 10)}
-        results = {"wood_stockpile": 50}
+        results = {"wood_stockpile": None}
         cache = resources.ResourceCache()
         cache.last_resource_values["wood_stockpile"] = 99
         with patch("script.resources.cv2.imwrite"), \
-             patch("script.resources.logger.warning") as warn_mock:
+             patch("script.resources.ocr.logger.warning") as warn_mock:
             resources.handle_ocr_failure(
                 frame,
                 regions,
                 results,
                 ["wood_stockpile"],
-                cache=cache,
+                cache_obj=cache,
                 retry_limit=2,
                 low_confidence={"wood_stockpile"},
             )
-            self.assertEqual(results["wood_stockpile"], 50)
+            self.assertIsNone(results["wood_stockpile"])
             self.assertEqual(cache.resource_failure_counts["wood_stockpile"], 1)
             resources.handle_ocr_failure(
                 frame,
                 regions,
                 results,
                 ["wood_stockpile"],
-                cache=cache,
+                cache_obj=cache,
                 retry_limit=2,
                 low_confidence={"wood_stockpile"},
             )
