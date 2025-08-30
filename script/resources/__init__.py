@@ -41,6 +41,10 @@ _RESOURCE_DEBUG_COOLDOWN = cache._RESOURCE_DEBUG_COOLDOWN
 _LAST_REGION_BOUNDS = cache._LAST_REGION_BOUNDS
 _LAST_REGION_SPANS = cache._LAST_REGION_SPANS
 
+# Track last OCR failure reasons
+_LAST_LOW_CONFIDENCE: set[str] = set()
+_LAST_NO_DIGITS: set[str] = set()
+
 def _screen_size():
     monitor = screen_utils.get_monitor()
     return monitor["width"], monitor["height"]
@@ -96,11 +100,13 @@ def _read_resources(
     cache_hits = set()
     debug_images = {}
     low_confidence = set()
+    no_digits = set()
     for name in resource_icons:
         res_conf_threshold = CFG.get(f"{name}_ocr_conf_threshold", conf_threshold)
         if name not in regions:
             if name in required_set:
                 results[name] = None
+                no_digits.add(name)
             continue
         x, y, w, h = regions[name]
         deficit = cache._NARROW_ROI_DEFICITS.get(name)
@@ -344,6 +350,10 @@ def _read_resources(
                 cache_hits.add(name)
             else:
                 results[name] = None
+                if low_conf:
+                    low_confidence.add(name)
+                else:
+                    no_digits.add(name)
             cache_obj.resource_failure_counts[name] = failure_count + 1
         else:
             value = int(digits)
@@ -387,6 +397,11 @@ def _read_resources(
         )
 
     cache._LAST_READ_FROM_CACHE = cache_hits
+
+    # Record failure reasons for later inspection
+    global _LAST_LOW_CONFIDENCE, _LAST_NO_DIGITS
+    _LAST_LOW_CONFIDENCE = set(low_confidence)
+    _LAST_NO_DIGITS = set(no_digits)
 
     logger.info("Resumo de recursos detectados: %s", results)
 
@@ -491,7 +506,10 @@ def validate_starting_resources(
     for name, exp in expected.items():
         actual = current.get(name)
         if actual is None:
-            msg = f"Missing OCR reading for '{name}'"
+            if name in _LAST_LOW_CONFIDENCE:
+                msg = f"Low-confidence OCR for '{name}'"
+            else:
+                msg = f"Missing OCR reading for '{name}'"
             if raise_on_error:
                 logger.error(msg)
                 errors.append(msg)
