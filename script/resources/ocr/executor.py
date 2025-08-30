@@ -48,7 +48,8 @@ def execute_ocr(
             break
         low_conf = True
         if metric == 0:
-            digits, data, mask = best_digits, best_data, best_mask
+            # Median confidence of zero indicates entirely unreliable results.
+            # Keep the current digits but mark them as low confidence.
             break
         if conf_threshold <= min_conf:
             digits, data, mask = best_digits, best_data, best_mask

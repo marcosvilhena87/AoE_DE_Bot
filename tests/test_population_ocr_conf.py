@@ -51,7 +51,7 @@ import script.resources as resources
 
 
 class TestPopulationOcrConfidence(TestCase):
-    def test_non_positive_confidences_are_ignored(self):
+    def test_negative_confidences_raise_error(self):
         roi = np.zeros((10, 10, 3), dtype=np.uint8)
         with patch(
             "script.resources.ocr.executor.execute_ocr",
@@ -59,10 +59,10 @@ class TestPopulationOcrConfidence(TestCase):
                 "34",
                 {"text": ["3", "4"], "conf": ["-1", "0", "95"]},
                 None,
-                False,
+                True,
             ),
         ):
-            cur, cap = resources._read_population_from_roi(
-                roi, conf_threshold=60
-            )
-        self.assertEqual((cur, cap), (3, 4))
+            with self.assertRaises(resources.common.PopulationReadError):
+                resources._read_population_from_roi(
+                    roi, conf_threshold=60
+                )
