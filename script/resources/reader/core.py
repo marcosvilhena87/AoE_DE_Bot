@@ -1,40 +1,44 @@
-"""Functions for reading resource values from the HUD."""
+from __future__ import annotations
 
 import time
 from typing import Iterable
 
 import cv2
 import numpy as np
-import pytesseract
 
-from . import CFG, ROOT, cache, common, logger, screen_utils, RESOURCE_ICON_ORDER
-from .panel import detect_resource_regions
-from . import ocr
-from .ocr import masks
+from . import (
+    CFG,
+    ROOT,
+    cache,
+    common,
+    logger,
+    screen_utils,
+    RESOURCE_ICON_ORDER,
+    detect_resource_regions,
+    preprocess_roi,
+    execute_ocr,
+    handle_ocr_failure,
+    _read_population_from_roi,
+    read_population_from_roi,
+    _extract_population,
+    pytesseract,
+    ocr,
+    ResourceCache,
+    RESOURCE_CACHE,
+    _LAST_READ_FROM_CACHE,
+    _NARROW_ROIS,
+    _NARROW_ROI_DEFICITS,
+    _RESOURCE_CACHE_TTL,
+    _RESOURCE_CACHE_MAX_AGE,
+    _RESOURCE_DEBUG_COOLDOWN,
+    _LAST_REGION_BOUNDS,
+    _LAST_REGION_SPANS,
+)
+from .roi import prepare_roi, expand_roi_after_failure
 
-# Re-export cache utilities
-ResourceCache = cache.ResourceCache
-RESOURCE_CACHE = cache.RESOURCE_CACHE
-_LAST_READ_FROM_CACHE = cache._LAST_READ_FROM_CACHE
-_NARROW_ROIS = cache._NARROW_ROIS
-_NARROW_ROI_DEFICITS = cache._NARROW_ROI_DEFICITS
-_RESOURCE_CACHE_TTL = cache._RESOURCE_CACHE_TTL
-_RESOURCE_DEBUG_COOLDOWN = cache._RESOURCE_DEBUG_COOLDOWN
-_LAST_REGION_BOUNDS = cache._LAST_REGION_BOUNDS
-_LAST_REGION_SPANS = cache._LAST_REGION_SPANS
-
-# Track last OCR failure reasons
 _LAST_LOW_CONFIDENCE: set[str] = set()
 _LAST_NO_DIGITS: set[str] = set()
 
-# OCR helpers
-preprocess_roi = ocr.preprocess_roi
-_ocr_digits_better = masks._ocr_digits_better
-execute_ocr = ocr.execute_ocr
-handle_ocr_failure = ocr.handle_ocr_failure
-_read_population_from_roi = ocr._read_population_from_roi
-read_population_from_roi = ocr.read_population_from_roi
-_extract_population = ocr._extract_population
 
 def _read_resources(
     frame,
@@ -71,42 +75,10 @@ def _read_resources(
                 results[name] = None
                 no_digits.add(name)
             continue
-        x, y, w, h = regions[name]
-        deficit = cache._NARROW_ROI_DEFICITS.get(name)
-        if deficit:
-            expand_left = deficit // 2
-            expand_right = deficit - expand_left
-            orig_x = x
-            orig_w = w
-            x = max(0, orig_x - expand_left)
-            right = min(frame.shape[1], orig_x + orig_w + expand_right)
-            w = right - x
-            regions[name] = (x, y, w, h)
-            logger.debug(
-                "Expanding narrow ROI for %s by %dpx (left=%d right=%d)",
-                name,
-                deficit,
-                expand_left,
-                expand_right,
-            )
-        if w <= 0 or h <= 0:
-            logger.error(
-                "ROI for '%s' has invalid dimensions w=%d h=%d", name, w, h
-            )
-            if name in required_set:
-                raise common.ResourceReadError(
-                    f"{name} region has non-positive size"
-                )
+        roi_info = prepare_roi(frame, regions, name, required_set, cache_obj)
+        if roi_info is None:
             continue
-        failure_count = cache_obj.resource_failure_counts.get(name, 0)
-        roi = frame[y : y + h, x : x + w]
-        gray = preprocess_roi(roi)
-        top_crop = CFG.get("ocr_top_crop", 2)
-        overrides = CFG.get("ocr_top_crop_overrides", {})
-        if name in overrides:
-            top_crop = overrides[name]
-        if top_crop > 0 and gray.shape[0] > top_crop:
-            gray = gray[top_crop:, :]
+        x, y, w, h, roi, gray, top_crop, failure_count = roi_info
         if name == "idle_villager":
             data = pytesseract.image_to_data(
                 gray,
@@ -191,68 +163,32 @@ def _read_resources(
                     if digits_retry:
                         digits, data, mask = digits_retry, data_retry, mask_retry
         if not digits:
-            base_expand = CFG.get("ocr_roi_expand_px", 0)
-            step = CFG.get("ocr_roi_expand_step", 0)
-            growth = CFG.get("ocr_roi_expand_growth", 1.0)
-            expand_px = int(
-                round(
-                    base_expand
-                    + step * ((failure_count + 1) ** growth - 1)
-                )
+            expansion = expand_roi_after_failure(
+                frame,
+                name,
+                x,
+                y,
+                w,
+                h,
+                roi,
+                gray,
+                top_crop,
+                failure_count,
+                res_conf_threshold,
             )
-            if expand_px > 0:
-                x0 = max(0, x - expand_px)
-                y0 = max(0, y - expand_px)
-                x1 = min(frame.shape[1], x + w + expand_px)
-                y1 = min(frame.shape[0], y + h + expand_px)
-                logger.debug(
-                    "Expanding ROI for %s after %d failures by %dpx to x=%d y=%d w=%d h=%d",
-                    name,
-                    failure_count,
-                    expand_px,
-                    x0,
-                    y0,
-                    x1 - x0,
-                    y1 - y0,
-                )
-                roi_expanded = frame[y0:y1, x0:x1]
-                gray_expanded = preprocess_roi(roi_expanded)
-                if top_crop > 0 and gray_expanded.shape[0] > top_crop:
-                    gray_expanded = gray_expanded[top_crop:, :]
-                try:
-                    digits_exp, data_exp, mask_exp, low_conf = execute_ocr(
-                        gray_expanded,
-                        color=roi_expanded,
-                        conf_threshold=res_conf_threshold,
-                        roi=(x0, y0, x1 - x0, y1 - y0),
-                        resource=name,
-                    )
-                    logger.info(
-                        "OCR %s: digits=%s conf=%s low_conf=%s",
-                        name,
-                        digits_exp,
-                        data_exp.get("conf"),
-                        low_conf,
-                    )
-                except TypeError:
-                    digits_exp, data_exp, mask_exp, low_conf = execute_ocr(
-                        gray_expanded,
-                        conf_threshold=res_conf_threshold,
-                        resource=name,
-                    )
-                    logger.info(
-                        "OCR %s: digits=%s conf=%s low_conf=%s",
-                        name,
-                        digits_exp,
-                        data_exp.get("conf"),
-                        low_conf,
-                    )
-                if digits_exp:
-                    digits, data, mask = digits_exp, data_exp, mask_exp
-                    roi, gray = roi_expanded, gray_expanded
-                    x, y = x0, y0
-                    w, h = x1 - x0, y1 - y0
-
+            if expansion:
+                (
+                    digits,
+                    data,
+                    mask,
+                    roi,
+                    gray,
+                    x,
+                    y,
+                    w,
+                    h,
+                    low_conf,
+                ) = expansion
         if not digits:
             span_left, span_right = cache._LAST_REGION_SPANS.get(name, (x, x + w))
             span_width = span_right - span_left
@@ -420,7 +356,6 @@ def _read_resources(
 
     cache._LAST_READ_FROM_CACHE = cache_hits
 
-    # Record failure reasons for later inspection
     global _LAST_LOW_CONFIDENCE, _LAST_NO_DIGITS
     _LAST_LOW_CONFIDENCE = set(low_confidence)
     _LAST_NO_DIGITS = set(no_digits)
@@ -566,23 +501,7 @@ def validate_starting_resources(
         raise ValueError("; ".join(errors))
 
 
-
 __all__ = [
-    "ResourceCache",
-    "RESOURCE_CACHE",
-    "_LAST_READ_FROM_CACHE",
-    "_NARROW_ROIS",
-    "_NARROW_ROI_DEFICITS",
-    "_RESOURCE_CACHE_TTL",
-    "_RESOURCE_DEBUG_COOLDOWN",
-    "_LAST_REGION_BOUNDS",
-    "_LAST_REGION_SPANS",
-    "preprocess_roi",
-    "_ocr_digits_better",
-    "execute_ocr",
-    "handle_ocr_failure",
-    "_read_population_from_roi",
-    "read_population_from_roi",
     "_read_resources",
     "read_resources_from_hud",
     "gather_hud_stats",
