@@ -5,6 +5,7 @@ import logging
 import re
 import time
 from pathlib import Path
+import inspect
 
 import script.common as common
 import script.hud as hud
@@ -158,7 +159,14 @@ def main():
             raise SystemExit(
                 f"Mission module '{module_name}' lacks run_mission or main"
             )
-        func()
+        sig = inspect.signature(func)
+        accepts_info = "info" in sig.parameters
+        logger.info("Starting mission '%s'.", module_name)
+        if accepts_info:
+            func(info)
+        else:
+            func()
+        logger.info("Mission '%s' completed.", module_name)
     finally:
         screen_utils.teardown_sct()
 
