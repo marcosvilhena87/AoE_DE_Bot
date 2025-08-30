@@ -24,16 +24,28 @@ def execute_ocr(
     allow_fallback=True,
     roi=None,
     resource=None,
+    whitelist=None,
 ):
     min_conf = CFG.get("ocr_conf_min", 0)
     decay = CFG.get("ocr_conf_decay", 1.0)
     if conf_threshold is None:
         conf_threshold = CFG.get("ocr_conf_threshold", 60)
 
+    if whitelist is None:
+        whitelist = "0123456789"
+
     try:
-        digits, data, mask = masks._ocr_digits_better(gray, color, resource=resource)
+        if whitelist == "0123456789":
+            digits, data, mask = masks._ocr_digits_better(gray, color, resource=resource)
+        else:
+            digits, data, mask = masks._ocr_digits_better(
+                gray, color, resource=resource, whitelist=whitelist
+            )
     except TypeError:
-        digits, data, mask = masks._ocr_digits_better(gray)
+        if whitelist == "0123456789":
+            digits, data, mask = masks._ocr_digits_better(gray)
+        else:
+            digits, data, mask = masks._ocr_digits_better(gray, whitelist=whitelist)
     low_conf = False
     best_digits = digits
     best_data = data
@@ -66,9 +78,21 @@ def execute_ocr(
             digits, data, mask = best_digits, best_data, best_mask
             break
         try:
-            digits, data, mask = masks._ocr_digits_better(gray, color, resource=resource)
+            if whitelist == "0123456789":
+                digits, data, mask = masks._ocr_digits_better(
+                    gray, color, resource=resource
+                )
+            else:
+                digits, data, mask = masks._ocr_digits_better(
+                    gray, color, resource=resource, whitelist=whitelist
+                )
         except TypeError:
-            digits, data, mask = masks._ocr_digits_better(gray)
+            if whitelist == "0123456789":
+                digits, data, mask = masks._ocr_digits_better(gray)
+            else:
+                digits, data, mask = masks._ocr_digits_better(
+                    gray, whitelist=whitelist
+                )
         if digits:
             best_digits, best_data, best_mask = digits, data, mask
         if attempts == max_attempts:
@@ -85,7 +109,7 @@ def execute_ocr(
     if not digits and allow_fallback:
         text = pytesseract.image_to_string(
             gray,
-            config="--psm 6 --oem 3 -c tessedit_char_whitelist=0123456789",
+            config=f"--psm 6 --oem 3 -c tessedit_char_whitelist={whitelist}",
         )
         fallback = "".join(filter(str.isdigit, text))
         if fallback:
@@ -339,8 +363,10 @@ def _read_population_from_roi(roi, conf_threshold=None, roi_bbox=None):
         color=roi,
         conf_threshold=conf_threshold,
         allow_fallback=False,
+        whitelist="0123456789/",
     )
-    parts = [p for p in data.get("text", []) if p]
+    raw_text = "".join(filter(None, data.get("text", [])))
+    parts = [p for p in raw_text.split("/") if p]
     confidences = parse_confidences(data)
     if len(parts) >= 2 and not low_conf:
         cur = int("".join(filter(str.isdigit, parts[0])) or 0)

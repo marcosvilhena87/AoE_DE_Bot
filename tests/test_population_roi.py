@@ -221,3 +221,20 @@ class TestPopulationROI(TestCase):
             resources.RESOURCE_CACHE.resource_failure_counts.get("population_limit"),
             0,
         )
+
+    def test_population_string_with_slash(self):
+        roi = np.zeros((10, 10, 3), dtype=np.uint8)
+        gray = np.zeros((10, 10), dtype=np.uint8)
+        with patch(
+            "script.resources.ocr.executor.preprocess_roi", return_value=gray
+        ), patch(
+            "script.resources.ocr.executor.execute_ocr",
+            return_value=("2025", {"text": ["20/25"], "conf": ["80"]}, None, False),
+        ) as ocr_mock:
+            cur, cap = resources._read_population_from_roi(roi)
+
+        self.assertEqual((cur, cap), (20, 25))
+        ocr_mock.assert_called_once()
+        _, kwargs = ocr_mock.call_args
+        self.assertEqual(kwargs.get("whitelist"), "0123456789/")
+
