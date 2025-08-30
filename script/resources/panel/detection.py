@@ -99,6 +99,8 @@ def locate_resource_panel(frame, cache_obj: cache.ResourceCache = cache.RESOURCE
             pw, ph = prev[2], prev[3]
         else:
             pw, ph = wi, hi
+        max_pw = int(wi * 1.5)
+        pw = min(pw, max_pw)
         px = max(0, xi - pw)
         detected["population_limit"] = (px, yi, pw, ph)
         cache_obj.last_icon_bounds["population_limit"] = (px, yi, pw, ph)
