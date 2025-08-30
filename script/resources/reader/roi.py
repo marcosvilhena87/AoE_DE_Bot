@@ -4,7 +4,7 @@ from typing import Optional, Tuple
 
 from .. import CFG, logger, common
 from ..ocr.preprocess import preprocess_roi
-from ..ocr.executor import execute_ocr
+from ..ocr.executor import execute_ocr, _read_population_from_roi
 from .cache_utils import get_narrow_roi_deficit, get_failure_count
 
 
@@ -110,4 +110,49 @@ def expand_roi_after_failure(
         )
     return None
 
-__all__ = ["prepare_roi", "expand_roi_after_failure"]
+
+def expand_population_roi_after_failure(
+    frame,
+    x: int,
+    y: int,
+    w: int,
+    h: int,
+    roi,
+    failure_count: int,
+    res_conf_threshold: int | None,
+):
+    base_expand = CFG.get("population_ocr_roi_expand_px", 0)
+    step = CFG.get("population_ocr_roi_expand_step", 0)
+    growth = CFG.get("population_ocr_roi_expand_growth", 1.0)
+    expand_px = int(round(base_expand + step * ((failure_count + 1) ** growth - 1)))
+    if expand_px <= 0:
+        return None
+    x0 = max(0, x - expand_px)
+    y0 = max(0, y - expand_px)
+    x1 = min(frame.shape[1], x + w + expand_px)
+    y1 = min(frame.shape[0], y + h + expand_px)
+    logger.debug(
+        "Expanding population ROI after %d failures by %dpx to x=%d y=%d w=%d h=%d",
+        failure_count,
+        expand_px,
+        x0,
+        y0,
+        x1 - x0,
+        y1 - y0,
+    )
+    roi_expanded = frame[y0:y1, x0:x1]
+    try:
+        cur_pop, pop_cap = _read_population_from_roi(
+            roi_expanded,
+            conf_threshold=res_conf_threshold,
+            save_debug=False,
+        )
+        return cur_pop, pop_cap, roi_expanded, x0, y0, x1 - x0, y1 - y0
+    except common.PopulationReadError:
+        return None
+
+__all__ = [
+    "prepare_roi",
+    "expand_roi_after_failure",
+    "expand_population_roi_after_failure",
+]
