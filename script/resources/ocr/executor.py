@@ -327,22 +327,21 @@ def _read_population_from_roi(roi, conf_threshold=None, save_debug=True):
     if roi.size == 0:
         raise common.PopulationReadError("Population ROI has zero size")
 
-    gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
-    gray = cv2.resize(gray, None, fx=2, fy=2, interpolation=cv2.INTER_LINEAR)
-    _, thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-    data = pytesseract.image_to_data(
-        thresh,
-        config="--psm 7 -c tessedit_char_whitelist=0123456789/",
-        output_type=pytesseract.Output.DICT,
+    gray = preprocess_roi(roi)
+    digits, data, mask, low_conf = execute_ocr(
+        gray,
+        color=roi,
+        conf_threshold=conf_threshold,
+        allow_fallback=False,
     )
-    text = "".join(data.get("text", [])).replace(" ", "")
-    confidences = [c for c in map(int, data.get("conf", [])) if c > 0]
-    parts = [p for p in text.split("/") if p]
-    if len(parts) >= 2 and (not confidences or min(confidences) >= conf_threshold):
+    parts = [p for p in data.get("text", []) if p]
+    confidences = parse_confidences(data)
+    if len(parts) >= 2 and not low_conf:
         cur = int("".join(filter(str.isdigit, parts[0])) or 0)
         cap = int("".join(filter(str.isdigit, parts[1])) or 0)
         return cur, cap
 
+    text = "/".join(parts)
     logger.warning(
         "OCR failed for population; text='%s', conf=%s", text, confidences
     )
@@ -352,7 +351,8 @@ def _read_population_from_roi(roi, conf_threshold=None, save_debug=True):
         debug_dir.mkdir(exist_ok=True)
         ts = int(time.time() * 1000)
         cv2.imwrite(str(debug_dir / f"population_roi_{ts}.png"), roi)
-        cv2.imwrite(str(debug_dir / f"population_thresh_{ts}.png"), thresh)
+        if mask is not None:
+            cv2.imwrite(str(debug_dir / f"population_mask_{ts}.png"), mask)
     raise common.PopulationReadError(
         f"Failed to read population from HUD: text='{text}', confs={confidences}"
     )
