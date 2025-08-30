@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from typing import Optional, Tuple
 
-from . import CFG, logger, common, preprocess_roi, execute_ocr
+from .. import CFG, logger, common
+from ..ocr.preprocess import preprocess_roi
+from ..ocr.executor import execute_ocr
 from .cache_utils import get_narrow_roi_deficit, get_failure_count
 
 

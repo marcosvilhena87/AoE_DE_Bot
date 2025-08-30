@@ -1,6 +1,6 @@
 import pytest
 
-from script.resources.ocr import parse_confidences
+from script.resources.ocr.confidence import parse_confidences
 
 
 def test_filters_invalid_and_non_positive_values():

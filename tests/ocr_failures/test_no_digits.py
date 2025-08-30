@@ -107,7 +107,7 @@ class TestNoDigits(TestCase):
             return_value={"text": [""], "conf": ["0"]},
         ), patch(
             "script.resources.reader.pytesseract.image_to_string", return_value="123"
-        ), patch("script.resources.ocr._read_population_from_roi", return_value=(0, 0)):
+        ), patch("script.resources.ocr.executor._read_population_from_roi", return_value=(0, 0)):
             icons = resources.RESOURCE_ICON_ORDER[:-1]
             result, _ = resources._read_resources(
                 frame,

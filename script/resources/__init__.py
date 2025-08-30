@@ -62,8 +62,8 @@ from .panel import (
 )
 
 # OCR helpers
-from .ocr import (
-    preprocess_roi,
+from .ocr.preprocess import preprocess_roi
+from .ocr.executor import (
     execute_ocr,
     handle_ocr_failure,
     _read_population_from_roi,

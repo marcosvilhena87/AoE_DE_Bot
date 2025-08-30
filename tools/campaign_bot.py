@@ -8,7 +8,7 @@ import script.hud as hud
 import script.screen_utils as screen_utils
 import script.resources.reader as resources
 from script.resources import panel
-from script.resources.ocr import _read_population_from_roi as _read_population_from_roi_func
+from script.resources.ocr.executor import _read_population_from_roi as _read_population_from_roi_func
 import numpy as np
 
 # Public API expected by the tests
