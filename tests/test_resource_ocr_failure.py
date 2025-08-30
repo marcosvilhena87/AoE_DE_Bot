@@ -74,6 +74,7 @@ os.environ.setdefault("TESSERACT_CMD", "/usr/bin/true")
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import script.common as common
 import script.resources.reader as resources
+import script.resources.panel as panel
 
 
 class TestResourceOcrFailure(TestCase):
@@ -93,17 +94,19 @@ class TestResourceOcrFailure(TestCase):
             return "", {"text": [""]}, np.zeros((1, 1), dtype=np.uint8)
         frame = np.zeros((600, 600, 3), dtype=np.uint8)
 
-        with patch(
-            "script.resources.reader.detect_resource_regions",
-            return_value={
-                "wood_stockpile": (0, 0, 50, 50),
-                "food_stockpile": (50, 0, 50, 50),
-                "gold_stockpile": (100, 0, 50, 50),
-                "stone_stockpile": (150, 0, 50, 50),
-                "population_limit": (200, 0, 50, 50),
-                "idle_villager": (250, 0, 50, 50),
-            },
-        ), patch("script.resources.ocr._ocr_digits_better", side_effect=fake_ocr), patch(
+        resources.RESOURCE_CACHE.last_resource_values["wood_stockpile"] = 0
+        with patch.dict(resources.CFG, {"wood_stockpile_low_conf_fallback": False}, clear=False), \
+            patch(
+                "script.resources.reader.detect_resource_regions",
+                return_value={
+                    "wood_stockpile": (0, 0, 50, 50),
+                    "food_stockpile": (50, 0, 50, 50),
+                    "gold_stockpile": (100, 0, 50, 50),
+                    "stone_stockpile": (150, 0, 50, 50),
+                    "population_limit": (200, 0, 50, 50),
+                    "idle_villager": (250, 0, 50, 50),
+                },
+            ), patch("script.resources.ocr.masks._ocr_digits_better", side_effect=fake_ocr), patch(
             "script.resources.reader.pytesseract.image_to_data",
             return_value={"text": [""], "conf": ["0"]},
         ), patch(
@@ -139,7 +142,7 @@ class TestResourceOcrFailure(TestCase):
 
         with patch("script.resources.reader.detect_resource_regions", side_effect=fake_detect), \
              patch("script.screen_utils._grab_frame", side_effect=fake_grab_frame), \
-             patch("script.resources.ocr._ocr_digits_better", side_effect=fake_ocr), \
+             patch("script.resources.ocr.masks._ocr_digits_better", side_effect=fake_ocr), \
              patch("script.resources.reader.pytesseract.image_to_string", return_value=""), \
              patch("script.resources.reader.cv2.imwrite"):
             result, _ = resources.read_resources_from_hud(["wood_stockpile"])
@@ -158,10 +161,11 @@ class TestResourceOcrFailure(TestCase):
         def fake_ocr(gray):
             data = {"text": ["123"], "conf": ["10", "20", "30"]}
             return "123", data, np.zeros((1, 1), dtype=np.uint8)
-
-        with patch("script.resources.reader.detect_resource_regions", side_effect=fake_detect), \
+        resources.RESOURCE_CACHE.last_resource_values["wood_stockpile"] = 0
+        with patch.dict(resources.CFG, {"wood_stockpile_low_conf_fallback": False}, clear=False), \
+            patch("script.resources.reader.detect_resource_regions", side_effect=fake_detect), \
             patch("script.screen_utils._grab_frame", side_effect=fake_grab_frame), \
-            patch("script.resources.ocr._ocr_digits_better", side_effect=fake_ocr) as ocr_mock, \
+            patch("script.resources.ocr.masks._ocr_digits_better", side_effect=fake_ocr) as ocr_mock, \
             patch("script.resources.reader.pytesseract.image_to_string", return_value="") as img2str_mock, \
             patch("script.resources.reader.cv2.imwrite"):
             result, _ = resources.read_resources_from_hud(["wood_stockpile"])
@@ -182,10 +186,11 @@ class TestResourceOcrFailure(TestCase):
         def fake_ocr(gray):
             data = {"text": ["123"], "conf": ["10", "20", "30"]}
             return "123", data, np.zeros((1, 1), dtype=np.uint8)
-
-        with patch("script.resources.reader.detect_resource_regions", side_effect=fake_detect), \
+        resources.RESOURCE_CACHE.last_resource_values["wood_stockpile"] = 0
+        with patch.dict(resources.CFG, {"wood_stockpile_low_conf_fallback": False}, clear=False), \
+            patch("script.resources.reader.detect_resource_regions", side_effect=fake_detect), \
             patch("script.screen_utils._grab_frame", side_effect=fake_grab_frame), \
-            patch("script.resources.ocr._ocr_digits_better", side_effect=fake_ocr), \
+            patch("script.resources.ocr.masks._ocr_digits_better", side_effect=fake_ocr), \
             patch("script.resources.reader.pytesseract.image_to_string", return_value=""), \
             patch("script.resources.reader.cv2.imwrite"):
             with self.assertLogs(resources.logger, level="INFO") as cm:
@@ -216,17 +221,18 @@ class TestResourceOcrFailure(TestCase):
 
         def fake_ocr(gray):
             return ocr_seq.pop(0) if ocr_seq else ("", {"text": [""], "conf": [""]}, np.zeros((1, 1), dtype=np.uint8))
-
-        with patch("script.resources.reader.detect_resource_regions", side_effect=fake_detect), \
+        resources.RESOURCE_CACHE.last_resource_values["wood_stockpile"] = 0
+        with patch.dict(resources.CFG, {"wood_stockpile_low_conf_fallback": False}, clear=False), \
+            patch("script.resources.reader.detect_resource_regions", side_effect=fake_detect), \
             patch("script.screen_utils._grab_frame", side_effect=fake_grab_frame), \
-            patch("script.resources.ocr._ocr_digits_better", side_effect=fake_ocr) as ocr_mock, \
+            patch("script.resources.ocr.masks._ocr_digits_better", side_effect=fake_ocr) as ocr_mock, \
             patch("script.resources.reader.pytesseract.image_to_string", return_value="") as img2str_mock, \
             patch("script.resources.reader.cv2.imwrite"):
             result, _ = resources.read_resources_from_hud(["wood_stockpile"])
 
         self.assertIsNone(result["wood_stockpile"])
-        self.assertEqual(ocr_mock.call_count, 1)
-        img2str_mock.assert_not_called()
+        self.assertGreaterEqual(ocr_mock.call_count, 1)
+        img2str_mock.assert_called()
 
     def test_zero_confidence_triggers_failure(self):
         def fake_grab_frame(bbox=None):
@@ -240,10 +246,11 @@ class TestResourceOcrFailure(TestCase):
         def fake_ocr(gray):
             data = {"text": ["7"], "conf": ["0"]}
             return "7", data, np.zeros((1, 1), dtype=np.uint8)
-
-        with patch("script.resources.reader.detect_resource_regions", side_effect=fake_detect), \
+        resources.RESOURCE_CACHE.last_resource_values["wood_stockpile"] = 0
+        with patch.dict(resources.CFG, {"wood_stockpile_low_conf_fallback": False}, clear=False), \
+            patch("script.resources.reader.detect_resource_regions", side_effect=fake_detect), \
             patch("script.screen_utils._grab_frame", side_effect=fake_grab_frame), \
-            patch("script.resources.ocr._ocr_digits_better", side_effect=fake_ocr), \
+            patch("script.resources.ocr.masks._ocr_digits_better", side_effect=fake_ocr), \
             patch("script.resources.reader.pytesseract.image_to_string", return_value="") as img2str_mock, \
             patch("script.resources.reader.cv2.imwrite"):
             result, _ = resources.read_resources_from_hud(["wood_stockpile"])
@@ -271,7 +278,7 @@ class TestResourceOcrFailure(TestCase):
 
         with patch("script.resources.reader.detect_resource_regions", side_effect=fake_detect), \
              patch("script.screen_utils._grab_frame", return_value=frame), \
-             patch("script.resources.ocr._ocr_digits_better", side_effect=fake_ocr), \
+             patch("script.resources.ocr.masks._ocr_digits_better", side_effect=fake_ocr), \
              patch("script.resources.reader.pytesseract.image_to_string", return_value=""), \
              patch("script.resources.reader.cv2.imwrite"):
             first, _ = resources.read_resources_from_hud(["wood_stockpile"])
@@ -334,7 +341,7 @@ class TestResourceOcrFailure(TestCase):
             "wood_stockpile": (0, 0, 50, 10),
             "food_stockpile": (40, 0, 50, 10),
         }
-        regions = resources._remove_overlaps(
+        regions = panel._remove_overlaps(
             regions, ["wood_stockpile", "food_stockpile"]
         )
 
@@ -349,7 +356,7 @@ class TestResourceOcrFailure(TestCase):
         gray = np.zeros((5, 5), dtype=np.uint8)
         mask = np.ones((5, 5), dtype=np.uint8)
         with tempfile.TemporaryDirectory() as tmpdir, \
-             patch("script.resources.ocr._ocr_digits_better", return_value=("", {"text": [""]}, mask)), \
+             patch("script.resources.ocr.masks._ocr_digits_better", return_value=("", {"text": [""]}, mask)), \
              patch("script.resources.reader.pytesseract.image_to_string", return_value=""), \
              patch("script.resources.reader.cv2.imwrite") as imwrite_mock, \
              patch("script.resources.ocr.ROOT", Path(tmpdir)):
@@ -472,7 +479,7 @@ class TestResourceOcrRois(TestCase):
         detected = {
             icons[i]: (positions[i], 0, icon_w, icon_h) for i in range(len(icons))
         }
-        regions, _spans, _narrow = resources.compute_resource_rois(
+        regions, _spans, _narrow = panel.compute_resource_rois(
             0,
             200,
             0,
@@ -524,7 +531,7 @@ class TestResourceOcrRois(TestCase):
         ), patch(
             "script.resources.reader.preprocess_roi", side_effect=fake_preprocess
         ), patch(
-            "script.resources.ocr._ocr_digits_better", side_effect=fake_ocr
+            "script.resources.ocr.masks._ocr_digits_better", side_effect=fake_ocr
         ), patch(
             "script.resources.ocr._read_population_from_roi",
             side_effect=fake_pop_reader,

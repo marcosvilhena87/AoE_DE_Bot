@@ -10,6 +10,7 @@ import pytesseract
 from . import CFG, ROOT, cache, common, logger, screen_utils, RESOURCE_ICON_ORDER
 from .panel import detect_resource_regions
 from . import ocr
+from .ocr import masks
 
 # Re-export cache utilities
 ResourceCache = cache.ResourceCache
@@ -28,7 +29,7 @@ _LAST_NO_DIGITS: set[str] = set()
 
 # OCR helpers
 preprocess_roi = ocr.preprocess_roi
-_ocr_digits_better = ocr._ocr_digits_better
+_ocr_digits_better = masks._ocr_digits_better
 execute_ocr = ocr.execute_ocr
 handle_ocr_failure = ocr.handle_ocr_failure
 _read_population_from_roi = ocr._read_population_from_roi
