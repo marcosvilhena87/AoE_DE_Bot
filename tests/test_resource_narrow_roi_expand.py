@@ -86,9 +86,9 @@ class TestNarrowROIExpansion(TestCase):
         regions = {"stone_stockpile": (50, 10, 40, 20)}
 
         def fake_detect(frame, required_icons, cache=None):
-            resources._NARROW_ROIS = {"stone_stockpile"}
-            resources._NARROW_ROI_DEFICITS = {"stone_stockpile": 20}
-            resources._LAST_REGION_SPANS = {"stone_stockpile": (50, 90)}
+            resources.cache._NARROW_ROIS = {"stone_stockpile"}
+            resources.cache._NARROW_ROI_DEFICITS = {"stone_stockpile": 20}
+            resources.cache._LAST_REGION_SPANS = {"stone_stockpile": (50, 90)}
             return regions
 
         with patch.object(resources, "detect_resource_regions", side_effect=fake_detect), \

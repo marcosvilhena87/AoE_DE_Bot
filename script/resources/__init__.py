@@ -27,7 +27,19 @@ RESOURCE_ICON_ORDER = [
 ]
 
 # Submodules
-from . import cache, panel, ocr
+from . import cache, ocr
+from .panel import (
+    detect_hud,
+    compute_resource_rois,
+    _get_resource_panel_cfg,
+    locate_resource_panel,
+    detect_resource_regions,
+    _auto_calibrate_from_icons,
+    _fallback_rois_from_slice,
+    _apply_custom_rois,
+    _recalibrate_low_variance,
+    _remove_overlaps,
+)
 from types import SimpleNamespace
 
 # Re-export cache and helper functions
@@ -50,18 +62,6 @@ def _screen_size():
     return monitor["width"], monitor["height"]
 
 input_utils = SimpleNamespace(_screen_size=_screen_size)
-
-# Panel functions
-detect_hud = panel.detect_hud
-compute_resource_rois = panel.compute_resource_rois
-_get_resource_panel_cfg = panel._get_resource_panel_cfg
-locate_resource_panel = panel.locate_resource_panel
-_auto_calibrate_from_icons = panel._auto_calibrate_from_icons
-_fallback_rois_from_slice = panel._fallback_rois_from_slice
-detect_resource_regions = panel.detect_resource_regions
-_apply_custom_rois = panel._apply_custom_rois
-_recalibrate_low_variance = panel._recalibrate_low_variance
-_remove_overlaps = panel._remove_overlaps
 
 # OCR functions
 preprocess_roi = ocr.preprocess_roi

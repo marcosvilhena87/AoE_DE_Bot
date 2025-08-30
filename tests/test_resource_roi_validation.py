@@ -106,7 +106,7 @@ class TestResourceRoiValidation(TestCase):
             return calibrated
 
         with patch(
-            "script.resources.panel._auto_calibrate_from_icons",
+            "script.resources.panel.calibration._auto_calibrate_from_icons",
             side_effect=fake_auto_calibrate,
         ) as mock_calib:
             regions = resources._recalibrate_low_variance(
