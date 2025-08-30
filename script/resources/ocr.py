@@ -13,6 +13,20 @@ from . import cache
 logger = logging.getLogger(__name__)
 
 
+def parse_confidences(data):
+    """Convert OCR confidence values to floats, ignoring negatives."""
+
+    confs = []
+    for c in data.get("conf", []):
+        try:
+            val = float(c)
+        except (ValueError, TypeError):
+            continue
+        if val >= 0:
+            confs.append(val)
+    return confs
+
+
 def preprocess_roi(roi):
     """Convert ROI to a blurred grayscale image."""
 
@@ -156,7 +170,7 @@ def execute_ocr(
     attempts = 0
     max_attempts = CFG.get("ocr_conf_max_attempts", 10)
     while digits and data.get("conf") and attempts < max_attempts:
-        confs = [float(c) for c in data.get("conf", []) if c not in ("-1", "")]
+        confs = parse_confidences(data)
         if confs and min(confs) >= conf_threshold:
             low_conf = False
             break

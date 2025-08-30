@@ -63,6 +63,28 @@ class TestIdleVillagerOCR(TestCase):
         )
         exec_mock.assert_not_called()
 
+    def test_idle_villager_ignores_negative_confidences(self):
+        def fake_detect(frame, required_icons, cache=None):
+            return {"idle_villager": (0, 0, 50, 50)}
+
+        frame = np.zeros((100, 100, 3), dtype=np.uint8)
+        with patch("script.resources.detect_resource_regions", side_effect=fake_detect), \
+             patch("script.screen_utils._grab_frame", return_value=frame), \
+             patch(
+                 "script.resources.pytesseract.image_to_data",
+                 return_value={"text": ["1", "2"], "conf": [-1, "95"]},
+             ) as img2data, \
+             patch("script.resources.execute_ocr") as exec_mock:
+            result, _ = resources.read_resources_from_hud(["idle_villager"])
+
+        self.assertEqual(result["idle_villager"], 12)
+        img2data.assert_called_once_with(
+            ANY,
+            config="--psm 7 -c tessedit_char_whitelist=0123456789",
+            output_type=resources.pytesseract.Output.DICT,
+        )
+        exec_mock.assert_not_called()
+
     def test_idle_villager_low_confidence_returns_none(self):
         def fake_detect(frame, required_icons, cache=None):
             return {"idle_villager": (0, 0, 50, 50)}
