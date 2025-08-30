@@ -169,7 +169,7 @@ def execute_ocr(
     best_mask = mask
     attempts = 0
     max_attempts = CFG.get("ocr_conf_max_attempts", 10)
-    while digits and data.get("conf") and attempts < max_attempts:
+    while digits and data.get("conf"):
         confs = parse_confidences(data)
         if confs and min(confs) >= conf_threshold:
             low_conf = False
@@ -186,9 +186,14 @@ def execute_ocr(
             conf_threshold,
         )
         attempts += 1
-    else:
-        if attempts >= max_attempts:
-            logger.debug("Reached OCR confidence iteration cap (%d)", max_attempts)
+        if attempts <= max_attempts:
+            digits, data, mask = _ocr_digits_better(gray)
+            if digits:
+                best_digits, best_data, best_mask = digits, data, mask
+            if attempts == max_attempts:
+                logger.debug(
+                    "Reached OCR confidence iteration cap (%d)", max_attempts
+                )
 
     if not digits and allow_fallback:
         text = pytesseract.image_to_string(
