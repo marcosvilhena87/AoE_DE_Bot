@@ -367,9 +367,10 @@ def _fallback_rois_from_slice(
         int(round(right_trim * slice_w))
     ] * len(RESOURCE_ICON_ORDER)
     icon_trims_zero = [0] * len(RESOURCE_ICON_ORDER)
-    min_widths = [90] * len(RESOURCE_ICON_ORDER)
 
-    max_widths = [width] * len(RESOURCE_ICON_ORDER)
+    cfg = _get_resource_panel_cfg()
+    max_widths = cfg.max_widths
+    min_widths = cfg.min_widths
     regions, spans, narrow = compute_resource_rois(
         left,
         left + width,
@@ -386,19 +387,20 @@ def _fallback_rois_from_slice(
     cache._NARROW_ROIS = set(narrow.keys())
     cache._NARROW_ROI_DEFICITS = narrow.copy()
 
-    for name in RESOURCE_ICON_ORDER[:-1]:
-        if name in regions:
-            l, t, w, hgt = regions[name]
-            if w < 90:
-                w = 90
-                regions[name] = (l, t, w, hgt)
-            spans[name] = (l, l + w)
+    for name in list(regions.keys()):
+        l, t, w, hgt = regions[name]
+        spans[name] = (l, l + w)
 
     if "idle_villager" in required_icons:
         idx_iv = RESOURCE_ICON_ORDER.index("idle_villager")
         left_iv = left + int(idx_iv * slice_w + pad_left_fallback[idx_iv])
         right_iv = left + int(width - pad_right_fallback[idx_iv])
-        width_iv = max(90, right_iv - left_iv)
+        max_iv = (
+            cfg.max_widths[idx_iv]
+            if idx_iv < len(cfg.max_widths)
+            else cfg.max_widths[-1]
+        )
+        width_iv = min(max_iv, right_iv - left_iv)
         regions["idle_villager"] = (left_iv, top, width_iv, height)
         spans["idle_villager"] = (left_iv, left_iv + width_iv)
 
