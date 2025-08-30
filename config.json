@@ -60,7 +60,7 @@
         "match_threshold": 0.8,
         "scales": [0.9, 0.95, 1.0, 1.05, 1.1],
         "roi_padding_left": [0, 0, 0, 0, 0, 0],
-        "roi_padding_right": [4, 0, 0, 0, 0, 0],
+        "roi_padding_right": [2, 0, 0, 0, 0, 0],
         "max_width": [120, 160, 160, 160, 160, 160],
         "min_width": [3, 3, 3, 3, 3, 2],
         "min_required_width": 0,
@@ -86,7 +86,7 @@
     "top_pct": 0.111,
     "height_pct": 0.025,
     "left_pct": 0.186,
-    "width_pct": 0.039
+    "width_pct": 0.036
   },
   "food_stockpile_roi": {
     "top_pct": 0.111,
