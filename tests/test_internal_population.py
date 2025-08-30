@@ -8,6 +8,22 @@ import numpy as np
 
 # Stub modules
 
+sys.modules.setdefault(
+    "cv2",
+    types.SimpleNamespace(
+        cvtColor=lambda src, code: src,
+        resize=lambda img, *a, **k: img,
+        threshold=lambda img, *a, **k: (None, img),
+        imread=lambda *a, **k: np.zeros((1, 1), dtype=np.uint8),
+        imwrite=lambda *a, **k: True,
+        IMREAD_GRAYSCALE=0,
+        COLOR_BGR2GRAY=0,
+        INTER_LINEAR=0,
+        THRESH_BINARY=0,
+        THRESH_OTSU=0,
+    ),
+)
+
 dummy_pg = types.SimpleNamespace(
     PAUSE=0,
     FAILSAFE=False,
