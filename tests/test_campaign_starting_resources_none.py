@@ -46,6 +46,8 @@ class TestCampaignNoStartingResources(TestCase):
         logger_mock = MagicMock()
         validate_mock = MagicMock()
 
+        dummy_module = types.SimpleNamespace(run_mission=lambda *a, **k: None)
+
         with patch("campaign.parse_scenario_info", return_value=info), \
             patch(
                 "campaign.argparse.ArgumentParser.parse_args",
@@ -56,7 +58,9 @@ class TestCampaignNoStartingResources(TestCase):
             patch("campaign.hud.wait_hud", return_value=({}, "asset")), \
             patch("campaign.resources.gather_hud_stats", return_value=({}, (0, 0))), \
             patch("campaign.resources.validate_starting_resources", validate_mock), \
-            patch("campaign.logging.getLogger", return_value=logger_mock):
+            patch("campaign.logging.getLogger", return_value=logger_mock), \
+            patch("campaign.resources.cv2.imwrite"), \
+            patch("importlib.import_module", return_value=dummy_module):
             campaign.main()
 
         validate_mock.assert_not_called()
