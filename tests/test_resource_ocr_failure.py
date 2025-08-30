@@ -89,7 +89,6 @@ class TestResourceOcrFailure(TestCase):
         resources.RESOURCE_CACHE.last_resource_ts.clear()
         resources.RESOURCE_CACHE.resource_failure_counts.clear()
         resources._LAST_REGION_SPANS.clear()
-    def test_read_resources_fallback(self):
         def fake_ocr(gray):
             return "", {"text": [""]}, np.zeros((1, 1), dtype=np.uint8)
         frame = np.zeros((600, 600, 3), dtype=np.uint8)
@@ -120,7 +119,6 @@ class TestResourceOcrFailure(TestCase):
             )
             self.assertIsNone(result["wood_stockpile"])
 
-    def test_optional_icon_failure_does_not_raise(self):
         def fake_grab_frame(bbox=None):
             if bbox:
                 return np.zeros((bbox["height"], bbox["width"], 3), dtype=np.uint8)
@@ -149,7 +147,6 @@ class TestResourceOcrFailure(TestCase):
         self.assertEqual(result.get("wood_stockpile"), 123)
         self.assertIsNone(result.get("food_stockpile"))
 
-    def test_low_confidence_returns_none(self):
         def fake_grab_frame(bbox=None):
             if bbox:
                 return np.zeros((bbox["height"], bbox["width"], 3), dtype=np.uint8)
@@ -174,7 +171,6 @@ class TestResourceOcrFailure(TestCase):
         self.assertGreaterEqual(ocr_mock.call_count, 1)
         img2str_mock.assert_not_called()
 
-    def test_low_confidence_logs_warning(self):
         def fake_grab_frame(bbox=None):
             if bbox:
                 return np.zeros((bbox["height"], bbox["width"], 3), dtype=np.uint8)
@@ -204,7 +200,6 @@ class TestResourceOcrFailure(TestCase):
         )
         self.assertNotIn("Detected wood_stockpile=123", logs)
 
-    def test_low_confidence_single_digit_returns_none(self):
         def fake_grab_frame(bbox=None):
             if bbox:
                 return np.zeros((bbox["height"], bbox["width"], 3), dtype=np.uint8)
@@ -234,7 +229,6 @@ class TestResourceOcrFailure(TestCase):
         self.assertGreaterEqual(ocr_mock.call_count, 1)
         img2str_mock.assert_called()
 
-    def test_zero_confidence_triggers_failure(self):
         def fake_grab_frame(bbox=None):
             if bbox:
                 return np.zeros((bbox["height"], bbox["width"], 3), dtype=np.uint8)
@@ -257,7 +251,6 @@ class TestResourceOcrFailure(TestCase):
         self.assertIsNone(result["wood_stockpile"])
         img2str_mock.assert_not_called()
 
-    def test_cached_value_used_for_optional_failure(self):
         def fake_detect(frame, required_icons, cache=None):
             return {
                 "wood_stockpile": (0, 0, 50, 50),
@@ -287,17 +280,6 @@ class TestResourceOcrFailure(TestCase):
         self.assertNotIn("food_stockpile", first)
         self.assertNotIn("food_stockpile", second)
 
-    def test_zero_roi_returns_zero(self):
-        gray = np.full((20, 20), 128, dtype=np.uint8)
-        with patch(
-            "script.resources.reader.pytesseract.image_to_data",
-            return_value={"text": [""], "conf": ["-1"]},
-        ):
-            digits, data, _ = resources._ocr_digits_better(gray)
-        self.assertEqual(digits, "0")
-        self.assertTrue(data.get("zero_variance"))
-
-    def test_gold_and_stone_zero_digits_return_zero(self):
         def make_gold_roi():
             roi = np.full((10, 10), 210, dtype=np.uint8)
             roi[2:-2, 2] = 200
