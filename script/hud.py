@@ -126,7 +126,8 @@ def read_population_from_hud(retries=1, conf_threshold=None, save_failed_roi=Fal
         )
     except common.PopulationReadError as primary_exc:
         logger.info(
-            "Triggering fallback to read population via resources.read_resources_from_hud"
+            "Triggering fallback to read population via resources.read_resources_from_hud after %s",
+            primary_exc,
         )
         fallback_exc = None
         try:
@@ -143,7 +144,7 @@ def read_population_from_hud(retries=1, conf_threshold=None, save_failed_roi=Fal
 
         if fallback_exc is not None:
             raise common.PopulationReadError(
-                f"{primary_exc} (fallback failed: {fallback_exc})"
+                f"{primary_exc}; fallback failed: {fallback_exc}"
             ) from fallback_exc
         raise
 

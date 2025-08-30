@@ -317,7 +317,7 @@ def handle_ocr_failure(
             )
 
 
-def _read_population_from_roi(roi, conf_threshold=None, save_debug=True):
+def _read_population_from_roi(roi, conf_threshold=None, roi_bbox=None):
     if conf_threshold is None:
         conf_threshold = CFG.get(
             "population_limit_ocr_conf_threshold",
@@ -325,7 +325,12 @@ def _read_population_from_roi(roi, conf_threshold=None, save_debug=True):
         )
 
     if roi.size == 0:
-        raise common.PopulationReadError("Population ROI has zero size")
+        msg = "Population ROI has zero size"
+        if roi_bbox is not None:
+            x, y, w, h = roi_bbox
+            msg = f"Population ROI has zero size at ({x}, {y}, {w}, {h})"
+        logger.error(msg)
+        raise common.PopulationReadError(msg)
 
     gray = preprocess_roi(roi)
     digits, data, mask, low_conf = execute_ocr(
@@ -342,20 +347,74 @@ def _read_population_from_roi(roi, conf_threshold=None, save_debug=True):
         return cur, cap
 
     text = "/".join(parts)
-    logger.warning(
-        "OCR failed for population; text='%s', conf=%s", text, confidences
-    )
+    debug_dir = ROOT / "debug"
+    debug_dir.mkdir(exist_ok=True)
+    ts = int(time.time() * 1000)
+    roi_path = debug_dir / f"population_roi_{ts}.png"
+    cv2.imwrite(str(roi_path), roi)
+    mask_path = None
+    if mask is not None:
+        mask_path = debug_dir / f"population_mask_{ts}.png"
+        cv2.imwrite(str(mask_path), mask)
 
-    if save_debug:
-        debug_dir = ROOT / "debug"
-        debug_dir.mkdir(exist_ok=True)
-        ts = int(time.time() * 1000)
-        cv2.imwrite(str(debug_dir / f"population_roi_{ts}.png"), roi)
-        if mask is not None:
-            cv2.imwrite(str(debug_dir / f"population_mask_{ts}.png"), mask)
-    raise common.PopulationReadError(
-        f"Failed to read population from HUD: text='{text}', confs={confidences}"
-    )
+    if roi_bbox is not None:
+        x, y, w, h = roi_bbox
+        if mask_path is not None:
+            logger.warning(
+                "OCR failed for population at ROI (%d, %d, %d, %d); text='%s', conf=%s; ROI saved to %s; threshold saved to %s",
+                x,
+                y,
+                w,
+                h,
+                text,
+                confidences,
+                roi_path,
+                mask_path,
+            )
+            msg = (
+                f"Failed to read population from HUD at ROI ({x}, {y}, {w}, {h}): "
+                f"text='{text}', confs={confidences}; ROI saved to {roi_path}; threshold saved to {mask_path}"
+            )
+        else:
+            logger.warning(
+                "OCR failed for population at ROI (%d, %d, %d, %d); text='%s', conf=%s; ROI saved to %s",
+                x,
+                y,
+                w,
+                h,
+                text,
+                confidences,
+                roi_path,
+            )
+            msg = (
+                f"Failed to read population from HUD at ROI ({x}, {y}, {w}, {h}): "
+                f"text='{text}', confs={confidences}; ROI saved to {roi_path}"
+            )
+    else:
+        if mask_path is not None:
+            logger.warning(
+                "OCR failed for population; text='%s', conf=%s; ROI saved to %s; threshold saved to %s",
+                text,
+                confidences,
+                roi_path,
+                mask_path,
+            )
+            msg = (
+                f"Failed to read population from HUD: text='{text}', confs={confidences}; "
+                f"ROI saved to {roi_path}; threshold saved to {mask_path}"
+            )
+        else:
+            logger.warning(
+                "OCR failed for population; text='%s', conf=%s; ROI saved to %s",
+                text,
+                confidences,
+                roi_path,
+            )
+            msg = (
+                f"Failed to read population from HUD: text='{text}', confs={confidences}; "
+                f"ROI saved to {roi_path}"
+            )
+    raise common.PopulationReadError(msg)
 
 
 def read_population_from_roi(
@@ -378,10 +437,7 @@ def read_population_from_roi(
             cur_pop, pop_cap = _read_population_from_roi(
                 roi,
                 conf_threshold=conf_threshold,
-                save_debug=(
-                    attempt == retries - 1
-                    and (CFG.get("debug") or save_failed_roi)
-                ),
+                roi_bbox=(x, y, w, h),
             )
             cache_obj.resource_failure_counts["population_limit"] = 0
             return cur_pop, pop_cap
@@ -432,7 +488,7 @@ def _extract_population(
         failure_count = cache_obj.resource_failure_counts.get("population_limit", 0)
         try:
             cur_pop, pop_cap = _read_population_from_roi(
-                roi, conf_threshold=conf_threshold
+                roi, conf_threshold=conf_threshold, roi_bbox=(x, y, w, h)
             )
             if results is not None:
                 results["population_limit"] = cur_pop

@@ -75,7 +75,7 @@ class TestGatherHudStats(TestCase):
             d = next(digits_iter)
             return d, {"text": [d]}
 
-        def fake_pop(roi, conf_threshold=None):
+        def fake_pop(roi, conf_threshold=None, roi_bbox=None):
             pop_shapes.append(roi.shape[:2])
             return 123, 200
 
@@ -133,7 +133,7 @@ class TestGatherHudStats(TestCase):
                 return "0", {"zero_variance": True}, None
             return "600", {"text": ["600"]}, None
 
-        def fake_pop(roi, conf_threshold=None):
+        def fake_pop(roi, conf_threshold=None, roi_bbox=None):
             return 123, 200
 
         with patch("tools.campaign_bot.locate_resource_panel", return_value={}), \
