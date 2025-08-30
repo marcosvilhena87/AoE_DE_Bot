@@ -54,7 +54,7 @@ def preprocess_roi(roi):
     return gray
 
 
-def _ocr_digits_better(gray, resource=None):
+def _ocr_digits_better(gray, color=None, resource=None):
     variance = float(np.var(gray))
     if variance < CFG.get("ocr_zero_variance", 15.0):
         return "0", {"zero_variance": True}, None
@@ -152,7 +152,10 @@ def _ocr_digits_better(gray, resource=None):
     digits, data, mask = _run_masks([adaptive, cv2.bitwise_not(adaptive)], 2)
 
     if not digits:
-        hsv = cv2.cvtColor(cv2.cvtColor(orig, cv2.COLOR_GRAY2BGR), cv2.COLOR_BGR2HSV)
+        if color is not None:
+            hsv = cv2.cvtColor(color, cv2.COLOR_BGR2HSV)
+        else:
+            hsv = cv2.cvtColor(cv2.cvtColor(orig, cv2.COLOR_GRAY2BGR), cv2.COLOR_BGR2HSV)
         if resource == "wood_stockpile":
             brown_mask = cv2.inRange(
                 hsv, np.array([10, 80, 40]), np.array([25, 255, 200])
@@ -183,6 +186,7 @@ def _ocr_digits_better(gray, resource=None):
 
 def execute_ocr(
     gray,
+    color=None,
     conf_threshold=None,
     allow_fallback=True,
     roi=None,
@@ -194,7 +198,7 @@ def execute_ocr(
         conf_threshold = CFG.get("ocr_conf_threshold", 60)
 
     try:
-        digits, data, mask = _ocr_digits_better(gray, resource=resource)
+        digits, data, mask = _ocr_digits_better(gray, color, resource=resource)
     except TypeError:
         digits, data, mask = _ocr_digits_better(gray)
     low_conf = False
@@ -228,7 +232,7 @@ def execute_ocr(
             digits, data, mask = best_digits, best_data, best_mask
             break
         try:
-            digits, data, mask = _ocr_digits_better(gray, resource=resource)
+            digits, data, mask = _ocr_digits_better(gray, color, resource=resource)
         except TypeError:
             digits, data, mask = _ocr_digits_better(gray)
         if digits:

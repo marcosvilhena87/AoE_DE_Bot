@@ -30,7 +30,9 @@ class DummyMSS:
 sys.modules.setdefault("pyautogui", dummy_pg)
 sys.modules.setdefault("mss", types.SimpleNamespace(mss=lambda: DummyMSS()))
 
+_OLD_TESS = os.environ.get("TESSERACT_CMD")
 _TESS_PATH = shutil.which("tesseract") or "/usr/bin/tesseract"
+os.environ["TESSERACT_CMD"] = _TESS_PATH
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import script.resources.ocr as ocr
@@ -38,8 +40,7 @@ import script.resources.ocr as ocr
 
 class TestWoodStockpileOCR(TestCase):
     def setUp(self):
-        self._old_cmd = os.environ.get("TESSERACT_CMD")
-        os.environ["TESSERACT_CMD"] = _TESS_PATH
+        self._old_cmd = _OLD_TESS
 
     def tearDown(self):
         if self._old_cmd is None:
@@ -50,9 +51,20 @@ class TestWoodStockpileOCR(TestCase):
         roi = np.full((60, 120, 3), (19, 69, 139), dtype=np.uint8)
         cv2.putText(roi, "123", (5, 50), cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 255, 255), 3)
         gray = ocr.preprocess_roi(roi)
-        digits, data, _mask, low_conf = ocr.execute_ocr(gray, resource="wood_stockpile")
+        digits, data, _mask, low_conf = ocr.execute_ocr(
+            gray, color=roi, resource="wood_stockpile"
+        )
         confs = ocr.parse_confidences(data)
         threshold = ocr.CFG.get("ocr_conf_threshold", 60)
         self.assertTrue(digits.isdigit())
         self.assertGreaterEqual(np.median(confs), threshold)
         self.assertFalse(low_conf)
+
+    def test_wood_stockpile_detects_80(self):
+        roi = np.full((60, 120, 3), (19, 69, 139), dtype=np.uint8)
+        cv2.putText(roi, "80", (5, 50), cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 255, 255), 3)
+        gray = ocr.preprocess_roi(roi)
+        digits, data, _mask, low_conf = ocr.execute_ocr(
+            gray, color=roi, resource="wood_stockpile"
+        )
+        self.assertEqual(digits, "80")

@@ -164,6 +164,7 @@ def _read_resources(
             try:
                 digits, data, mask, low_conf = execute_ocr(
                     gray,
+                    color=roi,
                     conf_threshold=res_conf_threshold,
                     roi=(x, y, w, h),
                     resource=name,
@@ -199,6 +200,7 @@ def _read_resources(
                     try:
                         digits_retry, data_retry, mask_retry, low_conf = execute_ocr(
                             gray,
+                            color=roi,
                             conf_threshold=min_conf,
                             roi=(x, y, w, h),
                             resource=name,
@@ -257,6 +259,7 @@ def _read_resources(
                 try:
                     digits_exp, data_exp, mask_exp, low_conf = execute_ocr(
                         gray_expanded,
+                        color=roi_expanded,
                         conf_threshold=res_conf_threshold,
                         roi=(x0, y0, x1 - x0, y1 - y0),
                         resource=name,
@@ -309,6 +312,7 @@ def _read_resources(
                     try:
                         digits_retry, data_retry, mask_retry, low_conf = execute_ocr(
                             gray_retry,
+                            color=roi_retry,
                             conf_threshold=res_conf_threshold,
                             allow_fallback=False,
                             roi=(cand_x, y, cand_w, h),
