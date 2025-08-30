@@ -126,8 +126,6 @@ def compute_resource_rois(
             )
             continue
 
-        spans[current] = (left, right)
-
         available_width = right - left
         max_w = max_widths[idx] if idx < len(max_widths) else max_widths[-1]
         width = min(max_w, available_width)
@@ -146,6 +144,9 @@ def compute_resource_rois(
                 available_width,
                 min_w,
             )
+
+        right = left + width
+        spans[current] = (left, right)
 
         regions[current] = (left, top, width, height)
         logger.debug(
