@@ -1,14 +1,22 @@
 
 import argparse
+import importlib
 import logging
+import re
 import time
 from pathlib import Path
 
 import script.common as common
 import script.hud as hud
-import script.screen_utils as screen_utils
 import script.resources as resources
+import script.screen_utils as screen_utils
 from script.config_utils import parse_scenario_info
+
+
+def _scenario_to_module(path: str) -> str:
+    p = Path(path).with_suffix("")
+    parts = [re.sub(r"\W", "_", part) for part in p.parts]
+    return ".".join(parts)
 
 
 def main():
@@ -136,6 +144,21 @@ def main():
             raise SystemExit("Failed to detect resources or population")
 
         logger.info("Setup complete.")
+        module_name = _scenario_to_module(args.scenario)
+        try:
+            mission = importlib.import_module(module_name)
+        except ModuleNotFoundError as e:
+            logger.error("Failed to import mission module '%s': %s", module_name, e)
+            raise SystemExit(f"Mission module '{module_name}' not found")
+        func = getattr(mission, "run_mission", None) or getattr(mission, "main", None)
+        if func is None:
+            logger.error(
+                "Mission module '%s' lacks 'run_mission' or 'main' entry point", module_name
+            )
+            raise SystemExit(
+                f"Mission module '{module_name}' lacks run_mission or main"
+            )
+        func()
     finally:
         screen_utils.teardown_sct()
 
