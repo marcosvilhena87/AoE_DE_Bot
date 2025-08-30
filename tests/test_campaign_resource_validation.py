@@ -58,6 +58,8 @@ class TestCampaignResourceValidation(TestCase):
 
         logger_mock = MagicMock()
 
+        dummy_module = types.SimpleNamespace(run_mission=lambda *a, **k: None)
+
         with tempfile.TemporaryDirectory() as tmpdir, \
             patch("campaign.parse_scenario_info", return_value=self.info), \
             patch(
@@ -71,18 +73,28 @@ class TestCampaignResourceValidation(TestCase):
             patch("campaign.screen_utils._grab_frame", return_value=np.zeros((10, 10, 3))), \
             patch("campaign.logging.getLogger", return_value=logger_mock), \
             patch.object(campaign.resources, "ROOT", Path(tmpdir)), \
-            patch("campaign.resources.cv2.imwrite"):
+            patch("campaign.resources.cv2.imwrite"), \
+            patch("importlib.import_module", return_value=dummy_module):
+            campaign.resources._NARROW_ROI_DEFICITS.clear()
             campaign.main()
 
         return logger_mock
 
     def test_retry_warns_and_continues_on_near_match(self):
-        res_seq = [{"wood_stockpile": 50}, {"wood_stockpile": 88}]
+        res_seq = [
+            {"wood_stockpile": 50},
+            {"wood_stockpile": 88},
+            {"wood_stockpile": 88},
+        ]
         logger_mock = self._run_main(res_seq)
         self.assertGreaterEqual(logger_mock.warning.call_count, 1)
 
     def test_retry_exits_when_far_off(self):
-        res_seq = [{"wood_stockpile": 50}, {"wood_stockpile": 40}]
+        res_seq = [
+            {"wood_stockpile": 50},
+            {"wood_stockpile": 40},
+            {"wood_stockpile": 30},
+        ]
         with self.assertRaises(SystemExit):
             self._run_main(res_seq)
 
