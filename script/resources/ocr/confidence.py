@@ -4,7 +4,13 @@ from __future__ import annotations
 
 
 def parse_confidences(data):
-    """Convert OCR confidence values to floats, ignoring non-positive entries."""
+    """Convert OCR confidence values to floats, clamping negatives to ``0``.
+
+    Any values that cannot be parsed as floats are ignored. Unlike the previous
+    behaviour, non-positive confidences are retained with negative numbers being
+    converted to ``0`` so that callers can explicitly treat them as unreliable
+    rather than silently discarding them.
+    """
 
     confs = []
     for c in data.get("conf", []):
@@ -12,8 +18,9 @@ def parse_confidences(data):
             val = float(c)
         except (ValueError, TypeError):
             continue
-        if val > 0:
-            confs.append(val)
+        if val < 0:
+            val = 0.0
+        confs.append(val)
     return confs
 
 

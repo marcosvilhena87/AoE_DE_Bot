@@ -199,7 +199,7 @@ class TestExecuteOcr(TestCase):
         img2str_mock.assert_not_called()
         ocr_mock.assert_called_once()
 
-    def test_execute_ocr_ignores_non_positive_confidences(self):
+    def test_execute_ocr_flags_non_positive_confidences(self):
         gray = np.zeros((5, 5), dtype=np.uint8)
         data = {"text": ["12"], "conf": [-1, "0", "95"]}
         with patch("script.resources.ocr.masks._ocr_digits_better", return_value=("12", data, None)), \
@@ -208,7 +208,7 @@ class TestExecuteOcr(TestCase):
                 gray, conf_threshold=60, resource="wood_stockpile"
             )
         self.assertEqual(digits, "12")
-        self.assertFalse(low_conf)
+        self.assertTrue(low_conf)
         img2str_mock.assert_not_called()
 
 
