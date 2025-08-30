@@ -351,13 +351,17 @@ def _read_resources(
             cache_obj.resource_failure_counts[name] = failure_count + 1
         else:
             value = int(digits)
-            results[name] = value
-            if not low_conf:
-                cache_obj.last_resource_values[name] = value
-                cache_obj.last_resource_ts[name] = time.time()
-                cache_obj.resource_failure_counts[name] = 0
-            else:
+            if low_conf and CFG.get("treat_low_conf_as_failure", True):
+                results[name] = None
                 low_confidence.add(name)
+            else:
+                results[name] = value
+                if not low_conf:
+                    cache_obj.last_resource_values[name] = value
+                    cache_obj.last_resource_ts[name] = time.time()
+                    cache_obj.resource_failure_counts[name] = 0
+                else:
+                    low_confidence.add(name)
             logger.info("Detected %s=%d", name, value)
 
     filtered_regions = {n: regions[n] for n in resource_icons if n in regions}

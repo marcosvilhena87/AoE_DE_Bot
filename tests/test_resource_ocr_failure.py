@@ -101,19 +101,19 @@ class TestResourceOcrFailure(TestCase):
                 "population_limit": (200, 0, 50, 50),
                 "idle_villager": (250, 0, 50, 50),
             },
-        ), patch("script.resources._ocr_digits_better", side_effect=fake_ocr), patch(
+        ), patch("script.resources.ocr._ocr_digits_better", side_effect=fake_ocr), patch(
             "script.resources.pytesseract.image_to_data",
             return_value={"text": [""], "conf": ["0"]},
         ), patch(
             "script.resources.pytesseract.image_to_string", return_value="123"
-        ), patch("script.resources._read_population_from_roi", return_value=(0, 0)):
+        ), patch("script.resources.ocr._read_population_from_roi", return_value=(0, 0)):
             icons = resources.RESOURCE_ICON_ORDER[:-1]
             result, _ = resources._read_resources(
                 frame,
                 icons,
                 icons,
             )
-            self.assertEqual(result["wood_stockpile"], 123)
+            self.assertIsNone(result["wood_stockpile"])
 
     def test_optional_icon_failure_does_not_raise(self):
         def fake_grab_frame(bbox=None):
@@ -137,14 +137,14 @@ class TestResourceOcrFailure(TestCase):
 
         with patch("script.resources.detect_resource_regions", side_effect=fake_detect), \
              patch("script.screen_utils._grab_frame", side_effect=fake_grab_frame), \
-             patch("script.resources._ocr_digits_better", side_effect=fake_ocr), \
+             patch("script.resources.ocr._ocr_digits_better", side_effect=fake_ocr), \
              patch("script.resources.pytesseract.image_to_string", return_value=""), \
              patch("script.resources.cv2.imwrite"):
             result, _ = resources.read_resources_from_hud(["wood_stockpile"])
         self.assertEqual(result.get("wood_stockpile"), 123)
         self.assertIsNone(result.get("food_stockpile"))
 
-    def test_low_confidence_triggers_retry(self):
+    def test_low_confidence_returns_none(self):
         def fake_grab_frame(bbox=None):
             if bbox:
                 return np.zeros((bbox["height"], bbox["width"], 3), dtype=np.uint8)
@@ -159,16 +159,16 @@ class TestResourceOcrFailure(TestCase):
 
         with patch("script.resources.detect_resource_regions", side_effect=fake_detect), \
             patch("script.screen_utils._grab_frame", side_effect=fake_grab_frame), \
-            patch("script.resources._ocr_digits_better", side_effect=fake_ocr) as ocr_mock, \
+            patch("script.resources.ocr._ocr_digits_better", side_effect=fake_ocr) as ocr_mock, \
             patch("script.resources.pytesseract.image_to_string", return_value="") as img2str_mock, \
             patch("script.resources.cv2.imwrite"):
             result, _ = resources.read_resources_from_hud(["wood_stockpile"])
 
-        self.assertEqual(result["wood_stockpile"], 123)
-        self.assertGreaterEqual(ocr_mock.call_count, 2)
-        img2str_mock.assert_called()
+        self.assertIsNone(result["wood_stockpile"])
+        self.assertEqual(ocr_mock.call_count, 1)
+        img2str_mock.assert_not_called()
 
-    def test_low_confidence_single_digit_triggers_retry(self):
+    def test_low_confidence_single_digit_returns_none(self):
         def fake_grab_frame(bbox=None):
             if bbox:
                 return np.zeros((bbox["height"], bbox["width"], 3), dtype=np.uint8)
@@ -188,14 +188,14 @@ class TestResourceOcrFailure(TestCase):
 
         with patch("script.resources.detect_resource_regions", side_effect=fake_detect), \
             patch("script.screen_utils._grab_frame", side_effect=fake_grab_frame), \
-            patch("script.resources._ocr_digits_better", side_effect=fake_ocr) as ocr_mock, \
+            patch("script.resources.ocr._ocr_digits_better", side_effect=fake_ocr) as ocr_mock, \
             patch("script.resources.pytesseract.image_to_string", return_value="") as img2str_mock, \
             patch("script.resources.cv2.imwrite"):
             result, _ = resources.read_resources_from_hud(["wood_stockpile"])
 
-        self.assertEqual(result["wood_stockpile"], 7)
-        self.assertGreaterEqual(ocr_mock.call_count, 2)
-        self.assertGreaterEqual(img2str_mock.call_count, 1)
+        self.assertIsNone(result["wood_stockpile"])
+        self.assertEqual(ocr_mock.call_count, 1)
+        img2str_mock.assert_not_called()
 
     def test_zero_confidence_triggers_failure(self):
         def fake_grab_frame(bbox=None):
@@ -212,12 +212,12 @@ class TestResourceOcrFailure(TestCase):
 
         with patch("script.resources.detect_resource_regions", side_effect=fake_detect), \
             patch("script.screen_utils._grab_frame", side_effect=fake_grab_frame), \
-            patch("script.resources._ocr_digits_better", side_effect=fake_ocr), \
+            patch("script.resources.ocr._ocr_digits_better", side_effect=fake_ocr), \
             patch("script.resources.pytesseract.image_to_string", return_value="") as img2str_mock, \
             patch("script.resources.cv2.imwrite"):
             result, _ = resources.read_resources_from_hud(["wood_stockpile"])
-        self.assertEqual(result["wood_stockpile"], 7)
-        self.assertGreaterEqual(img2str_mock.call_count, 1)
+        self.assertIsNone(result["wood_stockpile"])
+        img2str_mock.assert_not_called()
 
     def test_cached_value_used_for_optional_failure(self):
         def fake_detect(frame, required_icons, cache=None):
@@ -240,7 +240,7 @@ class TestResourceOcrFailure(TestCase):
 
         with patch("script.resources.detect_resource_regions", side_effect=fake_detect), \
              patch("script.screen_utils._grab_frame", return_value=frame), \
-             patch("script.resources._ocr_digits_better", side_effect=fake_ocr), \
+             patch("script.resources.ocr._ocr_digits_better", side_effect=fake_ocr), \
              patch("script.resources.pytesseract.image_to_string", return_value=""), \
              patch("script.resources.cv2.imwrite"):
             first, _ = resources.read_resources_from_hud(["wood_stockpile"])
@@ -290,15 +290,13 @@ class TestResourceOcrFailure(TestCase):
         regions = {"wood_stockpile": (0, 0, 10, 10)}
         results = {"wood_stockpile": None}
         with patch("script.resources.cv2.imwrite"), \
-            patch("script.resources.logger.error") as err_mock, \
+            patch("script.resources.ocr.logger.error") as err_mock, \
             patch("script.resources.pytesseract.pytesseract.tesseract_cmd", "/usr/bin/true"), \
-            patch.object(resources, "_NARROW_ROIS", {"wood_stockpile"}):
-            with self.assertRaises(common.ResourceReadError) as ctx:
-                resources.handle_ocr_failure(
-                    frame, regions, results, ["wood_stockpile"]
-                )
+            patch.object(resources.cache, "_NARROW_ROIS", {"wood_stockpile"}):
+            resources.handle_ocr_failure(
+                frame, regions, results, ["wood_stockpile"]
+            )
         self.assertIn("narrow ROI span", err_mock.call_args[0][1])
-        self.assertIn("narrow ROI span", str(ctx.exception))
 
     def test_overlapping_rois_are_trimmed(self):
         regions = {
@@ -456,7 +454,7 @@ class TestResourceOcrRois(TestCase):
                 (1, 1), dtype=np.uint8
             )
 
-        def fake_pop_reader(roi):
+        def fake_pop_reader(roi, conf_threshold=None):
             gray = roi[..., 0] if roi.ndim == 3 else roi
             assert gray.shape[1] > 0 and gray.shape[0] > 0
             assert not np.any(gray == icon_color)
@@ -470,10 +468,12 @@ class TestResourceOcrRois(TestCase):
         ), patch(
             "script.resources.preprocess_roi", side_effect=fake_preprocess
         ), patch(
-            "script.resources._ocr_digits_better", side_effect=fake_ocr
+            "script.resources.ocr._ocr_digits_better", side_effect=fake_ocr
         ), patch(
-            "script.resources._read_population_from_roi",
+            "script.resources.ocr._read_population_from_roi",
             side_effect=fake_pop_reader,
+        ), patch(
+            "script.resources.pytesseract.pytesseract.tesseract_cmd", "/usr/bin/true"
         ):
             results, pop = resources._read_resources(frame, required, required)
 

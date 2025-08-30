@@ -13,6 +13,8 @@
   "//ocr_conf_min": "Lowest confidence allowed after adaptive decay.",
   "ocr_conf_decay": 0.8,
   "//ocr_conf_decay": "Multiplier applied to the confidence threshold after each failed OCR attempt.",
+  "treat_low_conf_as_failure": true,
+  "//treat_low_conf_as_failure": "Return None when OCR confidence is below threshold.",
   "wood_stockpile_ocr_conf_threshold": 45,
   "food_stockpile_ocr_conf_threshold": 45,
   "gold_stockpile_ocr_conf_threshold": 45,

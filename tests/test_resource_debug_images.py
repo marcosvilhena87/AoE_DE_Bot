@@ -153,13 +153,14 @@ class TestResourceDebugImages(TestCase):
 
         with tempfile.TemporaryDirectory() as tmpdir, \
              patch("script.resources.ROOT", Path(tmpdir)), \
+             patch("script.resources.ocr.ROOT", Path(tmpdir)), \
              patch("script.resources._RESOURCE_DEBUG_COOLDOWN", 60):
 
-            resources.handle_ocr_failure(frame, regions, results, [], cache=cache)
+            resources.handle_ocr_failure(frame, regions, results, [], cache_obj=cache)
             debug_dir = Path(tmpdir) / "debug"
             initial = {p.name for p in debug_dir.iterdir()}
 
-            resources.handle_ocr_failure(frame, regions, results, [], cache=cache)
+            resources.handle_ocr_failure(frame, regions, results, [], cache_obj=cache)
             after = {p.name for p in debug_dir.iterdir()}
 
         self.assertEqual(initial, after)
