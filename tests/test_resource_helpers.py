@@ -121,17 +121,17 @@ class TestExecuteOcr(TestCase):
         self.assertTrue(low_conf)
         img2str_mock.assert_not_called()
 
-    def test_execute_ocr_warns_low_min_confidence(self):
+    def test_execute_ocr_accepts_mixed_confidence_digits(self):
         gray = np.zeros((5, 5), dtype=np.uint8)
-        data = {"text": ["78"], "conf": ["80", "30"]}
-        with patch("script.resources.ocr._ocr_digits_better", return_value=("78", data, None)), \
+        data = {"text": ["789"], "conf": ["90", "10", "90"]}
+        with patch("script.resources.ocr._ocr_digits_better", return_value=("789", data, None)), \
              patch("script.resources.pytesseract.image_to_string", return_value="") as img2str_mock, \
              patch.dict(resources.CFG, {"ocr_conf_decay": 1.0}, clear=False):
             digits, data_out, _, low_conf = resources.execute_ocr(
-                gray, conf_threshold=45, resource="wood_stockpile"
+                gray, conf_threshold=60, resource="wood_stockpile"
             )
-        self.assertEqual(digits, "78")
-        self.assertTrue(low_conf)
+        self.assertEqual(digits, "789")
+        self.assertFalse(low_conf)
         img2str_mock.assert_not_called()
 
     def test_execute_ocr_accepts_low_conf_single_digit(self):
