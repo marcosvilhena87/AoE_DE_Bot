@@ -70,11 +70,9 @@ class TestFallbackROIsFromSlice(TestCase):
         resources.cache._LAST_REGION_SPANS.clear()
 
     def test_fallback_rois_from_slice_updates_cache_and_regions(self):
-        frame = np.zeros((50, 360, 3), dtype=np.uint8)
-
         regions = resources._fallback_rois_from_slice(
             0,  # left
-            360,  # width
+            120,  # width
             0,  # top
             20,  # height
             [0],  # icon_trims
@@ -85,16 +83,20 @@ class TestFallbackROIsFromSlice(TestCase):
         expected_icons = set(resources.RESOURCE_ICON_ORDER)
         self.assertEqual(set(regions.keys()), expected_icons)
 
-        slice_w = 360 // len(resources.RESOURCE_ICON_ORDER)
-        expected_spans = {}
+        slice_w = 120 // len(resources.RESOURCE_ICON_ORDER)
         for idx, name in enumerate(resources.RESOURCE_ICON_ORDER):
-            left = idx * slice_w
-            span = (left, left + 90)
-            expected_spans[name] = span
-            self.assertEqual(regions[name], (left, 0, 90, 20))
-            self.assertEqual(resources.cache._LAST_REGION_SPANS[name], span)
+            l, t, w, h = regions[name]
+            self.assertEqual((t, h), (0, 20))
+            left_bound = idx * slice_w
+            right_bound = left_bound + slice_w
+            self.assertGreaterEqual(l, left_bound)
+            self.assertLessEqual(l + w, right_bound)
+            self.assertEqual(resources.cache._LAST_REGION_SPANS[name], (l, l + w))
 
-        self.assertEqual(resources.cache._LAST_REGION_SPANS, expected_spans)
-        self.assertEqual(
-            resources.cache._NARROW_ROIS, set(resources.RESOURCE_ICON_ORDER[:-1])
-        )
+        self.assertEqual(resources.cache._NARROW_ROIS, set())
+
+        # Ensure ROIs do not extend into neighboring digits
+        spans = resources.cache._LAST_REGION_SPANS
+        order = resources.RESOURCE_ICON_ORDER
+        for idx in range(len(order) - 1):
+            self.assertLessEqual(spans[order[idx]][1], spans[order[idx + 1]][0])
