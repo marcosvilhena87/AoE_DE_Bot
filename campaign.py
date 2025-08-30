@@ -25,7 +25,7 @@ def main():
     parser.add_argument(
         "--scenario",
         default=common.CFG.get(
-            "scenario_path", "campaigns/Ascent_of_Egypt/1.Hunting.txt"
+            "scenario_path", "campaigns/Ascent_of_Egypt/1_Hunting.txt"
         ),
         help="Path to scenario text file",
     )
