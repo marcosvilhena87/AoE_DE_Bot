@@ -54,7 +54,7 @@ def preprocess_roi(roi):
     return gray
 
 
-def _ocr_digits_better(gray):
+def _ocr_digits_better(gray, resource=None):
     variance = float(np.var(gray))
     if variance < CFG.get("ocr_zero_variance", 15.0):
         return "0", {"zero_variance": True}, None
@@ -129,6 +129,8 @@ def _ocr_digits_better(gray):
     thresh = cv2.adaptiveThreshold(
         gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2
     )
+    if resource == "wood_stockpile":
+        thresh = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel, iterations=1)
     if _is_nearly_empty(thresh):
         _otsu_ret, thresh = cv2.threshold(
             gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU
@@ -141,6 +143,8 @@ def _ocr_digits_better(gray):
         gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 11, 2
     )
     adaptive = cv2.dilate(adaptive, kernel, iterations=1)
+    if resource == "wood_stockpile":
+        adaptive = cv2.morphologyEx(adaptive, cv2.MORPH_CLOSE, kernel, iterations=1)
     if _is_nearly_empty(adaptive):
         _otsu_ret, adaptive = cv2.threshold(
             gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU
@@ -149,15 +153,25 @@ def _ocr_digits_better(gray):
 
     if not digits:
         hsv = cv2.cvtColor(cv2.cvtColor(orig, cv2.COLOR_GRAY2BGR), cv2.COLOR_BGR2HSV)
-        white_mask = cv2.inRange(hsv, np.array([0, 0, 200]), np.array([180, 30, 255]))
-        yellow_mask = cv2.inRange(hsv, np.array([20, 100, 180]), np.array([40, 255, 255]))
-        gray_mask = cv2.inRange(hsv, np.array([0, 0, 160]), np.array([180, 50, 220]))
-        color_mask = cv2.bitwise_or(white_mask, yellow_mask)
-        color_mask = cv2.bitwise_or(color_mask, gray_mask)
-        digits, data, mask = _run_masks([color_mask, cv2.bitwise_not(color_mask)], 4)
-        if not digits:
-            closed = cv2.morphologyEx(color_mask, cv2.MORPH_CLOSE, kernel, iterations=1)
-            digits, data, mask = _run_masks([closed, cv2.bitwise_not(closed)], 6)
+        if resource == "wood_stockpile":
+            brown_mask = cv2.inRange(
+                hsv, np.array([10, 80, 40]), np.array([25, 255, 200])
+            )
+            digit_mask = cv2.bitwise_not(brown_mask)
+            digits, data, mask = _run_masks([digit_mask, cv2.bitwise_not(digit_mask)], 4)
+            if not digits:
+                closed = cv2.morphologyEx(digit_mask, cv2.MORPH_CLOSE, kernel, iterations=1)
+                digits, data, mask = _run_masks([closed, cv2.bitwise_not(closed)], 6)
+        else:
+            white_mask = cv2.inRange(hsv, np.array([0, 0, 200]), np.array([180, 30, 255]))
+            yellow_mask = cv2.inRange(hsv, np.array([20, 100, 180]), np.array([40, 255, 255]))
+            gray_mask = cv2.inRange(hsv, np.array([0, 0, 160]), np.array([180, 50, 220]))
+            color_mask = cv2.bitwise_or(white_mask, yellow_mask)
+            color_mask = cv2.bitwise_or(color_mask, gray_mask)
+            digits, data, mask = _run_masks([color_mask, cv2.bitwise_not(color_mask)], 4)
+            if not digits:
+                closed = cv2.morphologyEx(color_mask, cv2.MORPH_CLOSE, kernel, iterations=1)
+                digits, data, mask = _run_masks([closed, cv2.bitwise_not(closed)], 6)
 
     if not digits:
         variance = float(np.var(orig))
@@ -179,7 +193,10 @@ def execute_ocr(
     if conf_threshold is None:
         conf_threshold = CFG.get("ocr_conf_threshold", 60)
 
-    digits, data, mask = _ocr_digits_better(gray)
+    try:
+        digits, data, mask = _ocr_digits_better(gray, resource=resource)
+    except TypeError:
+        digits, data, mask = _ocr_digits_better(gray)
     low_conf = False
     best_digits = digits
     best_data = data
@@ -193,6 +210,9 @@ def execute_ocr(
             low_conf = False
             break
         low_conf = True
+        if metric == 0:
+            digits, data, mask = best_digits, best_data, best_mask
+            break
         if conf_threshold <= min_conf:
             digits, data, mask = best_digits, best_data, best_mask
             break
@@ -204,14 +224,19 @@ def execute_ocr(
             conf_threshold,
         )
         attempts += 1
-        if attempts <= max_attempts:
+        if conf_threshold == old_threshold or attempts > max_attempts or conf_threshold <= metric:
+            digits, data, mask = best_digits, best_data, best_mask
+            break
+        try:
+            digits, data, mask = _ocr_digits_better(gray, resource=resource)
+        except TypeError:
             digits, data, mask = _ocr_digits_better(gray)
-            if digits:
-                best_digits, best_data, best_mask = digits, data, mask
-            if attempts == max_attempts:
-                logger.debug(
-                    "Reached OCR confidence iteration cap (%d)", max_attempts
-                )
+        if digits:
+            best_digits, best_data, best_mask = digits, data, mask
+        if attempts == max_attempts:
+            logger.debug(
+                "Reached OCR confidence iteration cap (%d)", max_attempts
+            )
 
     # Re-evaluate confidence using the chosen metric after any decay loop
     if digits and data.get("conf"):
