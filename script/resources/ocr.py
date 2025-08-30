@@ -27,6 +27,21 @@ def parse_confidences(data):
     return confs
 
 
+def _sanitize_digits(digits: str) -> str:
+    """Trim OCR output to at most three significant digits.
+
+    Trailing zeros are stripped first; if the result still contains more
+    than three digits, only the three most significant digits are kept.
+    """
+
+    if len(digits) <= 3:
+        return digits
+    trimmed = digits.rstrip("0")
+    if len(trimmed) <= 3:
+        return trimmed
+    return trimmed[:3]
+
+
 def preprocess_roi(roi):
     """Convert ROI to a blurred grayscale image."""
 
@@ -207,6 +222,7 @@ def execute_ocr(
             mask = None
             low_conf = True
     if not digits and best_digits:
+        best_digits = _sanitize_digits(best_digits)
         return best_digits, best_data, best_mask, True
     if not digits:
         debug_dir = ROOT / "debug"
@@ -259,7 +275,10 @@ def execute_ocr(
                     roi_path,
                     text_path,
                 )
+        digits = _sanitize_digits(digits)
         return digits, data, mask, True
+    if digits:
+        digits = _sanitize_digits(digits)
     return digits, data, mask, low_conf
 
 
