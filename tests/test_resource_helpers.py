@@ -263,6 +263,37 @@ class TestHandleOcrFailure(TestCase):
         self.assertEqual(warn_mock.call_count, 1)
 
 
+class TestReadResourcesLowConfFallback(TestCase):
+    def test_low_confidence_uses_cached_value(self):
+        frame = np.zeros((20, 20, 3), dtype=np.uint8)
+        cache = resources.ResourceCache()
+        cache.last_resource_values["wood_stockpile"] = 77
+        with patch(
+            "script.resources.detect_resource_regions",
+            return_value={"wood_stockpile": (0, 0, 10, 10)},
+        ), patch(
+            "script.resources.preprocess_roi",
+            return_value=np.zeros((10, 10), dtype=np.uint8),
+        ), patch(
+            "script.resources.execute_ocr",
+            return_value=("123", {"text": ["123"]}, None, True),
+        ), patch.dict(
+            resources.CFG,
+            {
+                "treat_low_conf_as_failure": True,
+                "wood_stockpile_low_conf_fallback": True,
+            },
+            clear=False,
+        ), patch("script.resources.handle_ocr_failure"):
+            result, _ = resources._read_resources(
+                frame,
+                ["wood_stockpile"],
+                ["wood_stockpile"],
+                cache_obj=cache,
+            )
+        self.assertEqual(result["wood_stockpile"], 77)
+
+
 class TestValidateStartingResources(TestCase):
     def test_deviation_raises_error(self):
         with self.assertRaises(ValueError):
