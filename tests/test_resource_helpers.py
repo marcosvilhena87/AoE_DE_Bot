@@ -291,3 +291,32 @@ class TestValidateStartingResources(TestCase):
                 )
         imwrite_mock.assert_called_once()
         self.assertIn(str(expected_path), str(ctx.exception))
+
+    def test_aggregates_all_discrepancies_and_saves_each_roi(self):
+        frame = np.zeros((10, 10, 3), dtype=np.uint8)
+        rois = {
+            "wood_stockpile": (0, 0, 5, 5),
+            "food_stockpile": (5, 5, 5, 5),
+        }
+        with patch("script.resources.cv2.imwrite") as imwrite_mock, \
+             patch("script.resources.logger.error") as error_mock, \
+             patch("script.resources.time.time", side_effect=[1.0, 2.0]):
+            with self.assertRaises(ValueError) as ctx:
+                resources.validate_starting_resources(
+                    {"wood_stockpile": 50, "food_stockpile": 30},
+                    {
+                        "wood_stockpile": 80,
+                        "food_stockpile": 60,
+                        "stone_stockpile": 40,
+                    },
+                    tolerance=10,
+                    raise_on_error=True,
+                    frame=frame,
+                    rois=rois,
+                )
+        self.assertEqual(imwrite_mock.call_count, 2)
+        self.assertEqual(error_mock.call_count, 3)
+        msg = str(ctx.exception)
+        self.assertIn("wood_stockpile reading 50", msg)
+        self.assertIn("food_stockpile reading 30", msg)
+        self.assertIn("Missing OCR reading for 'stone_stockpile'", msg)

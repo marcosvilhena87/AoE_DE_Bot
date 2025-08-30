@@ -491,15 +491,16 @@ def validate_starting_resources(
 ) -> None:
     if not expected:
         return
-
+    errors: list[str] = []
     for name, exp in expected.items():
         actual = current.get(name)
         if actual is None:
             msg = f"Missing OCR reading for '{name}'"
             if raise_on_error:
                 logger.error(msg)
-                raise ValueError(msg)
-            logger.warning(msg)
+                errors.append(msg)
+            else:
+                logger.warning(msg)
             continue
 
         if abs(actual - exp) > tolerance:
@@ -521,8 +522,12 @@ def validate_starting_resources(
                 msg += f"; ROI saved to {roi_path}"
             if raise_on_error:
                 logger.error(msg)
-                raise ValueError(msg)
-            logger.warning(msg)
+                errors.append(msg)
+            else:
+                logger.warning(msg)
+
+    if errors and raise_on_error:
+        raise ValueError("; ".join(errors))
 
 
 __all__ = [
