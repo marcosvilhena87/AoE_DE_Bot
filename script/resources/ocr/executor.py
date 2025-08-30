@@ -54,8 +54,9 @@ def execute_ocr(
     max_attempts = CFG.get("ocr_conf_max_attempts", 10)
     while digits and data.get("conf"):
         confs = parse_confidences(data)
-        metric = np.median(confs) if confs else 0
-        if confs and metric >= conf_threshold:
+        non_zero = [c for c in confs if c > 0]
+        metric = np.median(non_zero) if non_zero else 0
+        if non_zero and metric >= conf_threshold:
             low_conf = False
             break
         low_conf = True
@@ -103,8 +104,9 @@ def execute_ocr(
     # Re-evaluate confidence using the chosen metric after any decay loop
     if digits and data.get("conf"):
         confs = parse_confidences(data)
-        metric = np.median(confs) if confs else 0
-        low_conf = not (confs and metric >= conf_threshold)
+        non_zero = [c for c in confs if c > 0]
+        metric = np.median(non_zero) if non_zero else 0
+        low_conf = not (non_zero and metric >= conf_threshold)
 
     if not digits and allow_fallback:
         text = pytesseract.image_to_string(
