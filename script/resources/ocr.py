@@ -164,10 +164,12 @@ def execute_ocr(
         if conf_threshold <= min_conf:
             digits, data, mask = best_digits, best_data, best_mask
             break
-        prev_conf = conf_threshold
+        old_threshold = conf_threshold
         conf_threshold = max(min_conf, conf_threshold * decay)
         logger.debug(
-            "Lowering OCR confidence threshold from %d to %d", prev_conf, conf_threshold
+            "Lowering OCR confidence threshold from %d to %d",
+            old_threshold,
+            conf_threshold,
         )
         attempts += 1
     else:
