@@ -367,6 +367,11 @@ def _read_resources(
                     )
                 else:
                     results[name] = None
+                    logger.warning(
+                        "Discarding %s=%d due to low-confidence OCR",
+                        name,
+                        value,
+                    )
                 low_confidence.add(name)
             else:
                 results[name] = value
@@ -376,7 +381,8 @@ def _read_resources(
                     cache_obj.resource_failure_counts[name] = 0
                 else:
                     low_confidence.add(name)
-            logger.info("Detected %s=%d", name, value)
+            if results.get(name) is not None:
+                logger.info("Detected %s=%d", name, value)
 
     filtered_regions = {n: regions[n] for n in resource_icons if n in regions}
     required_for_ocr = [n for n in required_icons if n != "population_limit"]

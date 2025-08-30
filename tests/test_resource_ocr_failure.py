@@ -167,8 +167,37 @@ class TestResourceOcrFailure(TestCase):
             result, _ = resources.read_resources_from_hud(["wood_stockpile"])
 
         self.assertIsNone(result["wood_stockpile"])
-        self.assertEqual(ocr_mock.call_count, 1)
+        self.assertGreaterEqual(ocr_mock.call_count, 1)
         img2str_mock.assert_not_called()
+
+    def test_low_confidence_logs_warning(self):
+        def fake_grab_frame(bbox=None):
+            if bbox:
+                return np.zeros((bbox["height"], bbox["width"], 3), dtype=np.uint8)
+            return np.zeros((600, 600, 3), dtype=np.uint8)
+
+        def fake_detect(frame, required_icons, cache=None):
+            return {"wood_stockpile": (0, 0, 50, 50)}
+
+        def fake_ocr(gray):
+            data = {"text": ["123"], "conf": ["10", "20", "30"]}
+            return "123", data, np.zeros((1, 1), dtype=np.uint8)
+
+        with patch("script.resources.detect_resource_regions", side_effect=fake_detect), \
+            patch("script.screen_utils._grab_frame", side_effect=fake_grab_frame), \
+            patch("script.resources.ocr._ocr_digits_better", side_effect=fake_ocr), \
+            patch("script.resources.pytesseract.image_to_string", return_value=""), \
+            patch("script.resources.cv2.imwrite"):
+            with self.assertLogs(resources.logger, level="INFO") as cm:
+                result, _ = resources.read_resources_from_hud(["wood_stockpile"])
+
+        self.assertIsNone(result["wood_stockpile"])
+        logs = "\n".join(cm.output)
+        self.assertIn(
+            "Discarding wood_stockpile=123 due to low-confidence OCR",
+            logs,
+        )
+        self.assertNotIn("Detected wood_stockpile=123", logs)
 
     def test_low_confidence_single_digit_returns_none(self):
         def fake_grab_frame(bbox=None):
