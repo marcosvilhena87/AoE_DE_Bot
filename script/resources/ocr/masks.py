@@ -119,17 +119,41 @@ def _ocr_digits_better(gray, color=None, resource=None, whitelist="0123456789"):
     adaptive = cv2.adaptiveThreshold(
         gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 11, 2
     )
-    adaptive = cv2.dilate(adaptive, kernel, iterations=1)
-    if resource == "wood_stockpile":
-        ws_kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, (3, 3))
-        adaptive = cv2.morphologyEx(adaptive, cv2.MORPH_CLOSE, ws_kernel, iterations=1)
-        adaptive = cv2.dilate(adaptive, ws_kernel, iterations=0)
+    if resource == "population_limit":
+        _otsu_ret, otsu = cv2.threshold(
+            gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU
+        )
+        digits, data, mask = _run_masks(
+            [otsu, cv2.bitwise_not(otsu)],
+            psms,
+            debug,
+            debug_dir,
+            ts,
+            2,
+            whitelist=whitelist,
+        )
+        if digits:
+            return digits, data, mask
+        pl_kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, (3, 3))
+        adaptive = cv2.morphologyEx(adaptive, cv2.MORPH_OPEN, pl_kernel, iterations=1)
+    else:
+        adaptive = cv2.dilate(adaptive, kernel, iterations=1)
+        if resource == "wood_stockpile":
+            ws_kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, (3, 3))
+            adaptive = cv2.morphologyEx(adaptive, cv2.MORPH_CLOSE, ws_kernel, iterations=1)
+            adaptive = cv2.dilate(adaptive, ws_kernel, iterations=0)
     if _is_nearly_empty(adaptive):
         _otsu_ret, adaptive = cv2.threshold(
             gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU
         )
     digits, data, mask = _run_masks(
-        [adaptive, cv2.bitwise_not(adaptive)], psms, debug, debug_dir, ts, 2, whitelist=whitelist
+        [adaptive, cv2.bitwise_not(adaptive)],
+        psms,
+        debug,
+        debug_dir,
+        ts,
+        4 if resource == "population_limit" else 2,
+        whitelist=whitelist,
     )
 
     if not digits or (resource == "wood_stockpile" and len(digits) <= 1):
