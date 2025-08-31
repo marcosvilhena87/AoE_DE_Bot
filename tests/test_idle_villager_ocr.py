@@ -1,6 +1,7 @@
 import os
 import sys
 import types
+import time
 from unittest import TestCase
 from unittest.mock import patch, ANY
 
@@ -40,6 +41,7 @@ class TestIdleVillagerOCR(TestCase):
         resources.RESOURCE_CACHE.last_resource_values.clear()
         resources.RESOURCE_CACHE.last_resource_ts.clear()
         resources.RESOURCE_CACHE.resource_failure_counts.clear()
+        getattr(resources.RESOURCE_CACHE, "resource_low_conf_counts", {}).clear()
 
     def test_idle_villager_high_confidence_ocr(self):
         def fake_detect(frame, required_icons, cache=None):
@@ -141,3 +143,27 @@ class TestIdleVillagerOCR(TestCase):
             output_type=resources.pytesseract.Output.DICT,
         )
         exec_mock.assert_not_called()
+
+    def test_idle_villager_zero_confidence_falls_back_after_streak(self):
+        def fake_detect(frame, required_icons, cache=None):
+            return {"idle_villager": (0, 0, 50, 50)}
+
+        frame = np.zeros((100, 100, 3), dtype=np.uint8)
+        low_conf = {"text": ["1", "2"], "conf": ["0", "0"]}
+        with patch(
+            "script.resources.reader.core.detect_resource_regions",
+            side_effect=fake_detect,
+        ), patch("script.screen_utils._grab_frame", return_value=frame), patch(
+            "script.resources.reader.pytesseract.image_to_data",
+            return_value=low_conf,
+        ):
+            resources.RESOURCE_CACHE.last_resource_values["idle_villager"] = 7
+            resources.RESOURCE_CACHE.last_resource_ts["idle_villager"] = time.time()
+            first, _ = resources.read_resources_from_hud(["idle_villager"])
+            second, _ = resources.read_resources_from_hud(["idle_villager"])
+            third, _ = resources.read_resources_from_hud(["idle_villager"])
+
+        self.assertEqual(first["idle_villager"], 12)
+        self.assertEqual(second["idle_villager"], 12)
+        self.assertEqual(third["idle_villager"], 7)
+        self.assertEqual(resources.RESOURCE_CACHE.last_resource_values["idle_villager"], 7)

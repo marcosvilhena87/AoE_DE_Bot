@@ -64,6 +64,8 @@ def _read_resources(
     debug_images = {}
     low_confidence = set()
     no_digits = set()
+    low_conf_counts = getattr(cache_obj, "resource_low_conf_counts", {})
+    cache_obj.resource_low_conf_counts = low_conf_counts
     for name in resource_icons:
         res_conf_threshold = CFG.get(f"{name}_ocr_conf_threshold", conf_threshold)
         if name not in regions:
@@ -82,15 +84,23 @@ def _read_resources(
                 output_type=pytesseract.Output.DICT,
             )
             texts = [t for t in data.get("text", []) if t.strip()]
-            confidences = [c for c in parse_confidences(data) if c > 0]
-            if texts and confidences and any(
-                c >= res_conf_threshold for c in confidences
-            ):
-                digits = "".join(filter(str.isdigit, "".join(texts)))
-            else:
-                digits = None
-            mask = gray
+            raw_digits = "".join(filter(str.isdigit, "".join(texts))) if texts else None
+            confidences = parse_confidences(data)
+            digits = None
             low_conf = False
+            if raw_digits:
+                if confidences and any(c >= res_conf_threshold for c in confidences):
+                    digits = raw_digits
+                elif confidences and any(c > 0 for c in confidences):
+                    digits = None
+                else:
+                    digits = raw_digits
+                    low_conf = True
+            mask = gray
+            if digits and low_conf:
+                low_conf_counts[name] = low_conf_counts.get(name, 0) + 1
+            else:
+                low_conf_counts[name] = 0
         else:
             digits, data, mask, low_conf = execute_ocr(
                 gray,
@@ -250,6 +260,29 @@ def _read_resources(
             cache_obj.resource_failure_counts[name] = failure_count + 1
         else:
             value = int(digits)
+            if name == "idle_villager":
+                count = low_conf_counts.get(name, 0)
+                if low_conf:
+                    threshold = CFG.get("idle_villager_low_conf_streak", 3)
+                    if count >= threshold and name in cache_obj.last_resource_values:
+                        results[name] = cache_obj.last_resource_values[name]
+                        cache_hits.add(name)
+                        logger.warning(
+                            "Using cached value for %s due to %d consecutive low-confidence OCR results",
+                            name,
+                            count,
+                        )
+                    else:
+                        results[name] = value
+                    low_confidence.add(name)
+                else:
+                    results[name] = value
+                    cache_obj.last_resource_values[name] = value
+                    cache_obj.last_resource_ts[name] = time.time()
+                    cache_obj.resource_failure_counts[name] = 0
+                if results.get(name) is not None:
+                    logger.info("Detected %s=%d", name, results[name])
+                continue
             if (
                 low_conf
                 and CFG.get("treat_low_conf_as_failure", True)
