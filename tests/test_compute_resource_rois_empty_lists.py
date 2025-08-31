@@ -23,13 +23,14 @@ BASE_PARAMS = {
     "icon_trims": [0],
     "max_widths": [10],
     "min_widths": [1],
+    "min_pop_width": 0,
 }
 ORDER = ["pad_left", "pad_right", "icon_trims", "max_widths", "min_widths"]
 
 
 @pytest.mark.parametrize("missing", ORDER)
 def test_empty_config_lists_raise_value_error(missing):
-    params = [BASE_PARAMS[key] for key in ORDER]
+    params = [BASE_PARAMS[key] for key in ORDER] + [BASE_PARAMS["min_pop_width"]]
     idx = ORDER.index(missing)
     params[idx] = []
     proc = subprocess.run(

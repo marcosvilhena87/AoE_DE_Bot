@@ -117,6 +117,7 @@ def locate_resource_panel(frame, cache_obj: cache.ResourceCache = cache.RESOURCE
         cfg.icon_trims,
         cfg.max_widths,
         cfg.min_widths,
+        cfg.min_pop_width,
         cfg.min_requireds,
         detected,
     )

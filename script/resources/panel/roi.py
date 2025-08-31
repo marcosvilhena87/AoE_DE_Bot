@@ -17,6 +17,7 @@ def compute_resource_rois(
     icon_trims,
     max_widths,
     min_widths,
+    min_pop_width,
     min_requireds=None,
     detected=None,
 ):
@@ -110,7 +111,13 @@ def compute_resource_rois(
                 min_w,
             )
 
-        right = left + width
+        if current == "population_limit" and width < min_pop_width:
+            width = min_pop_width
+            right = min(panel_right, left + width)
+            left = max(panel_left, right - width)
+            width = right - left
+        else:
+            right = left + width
         if current == "wood_stockpile":
             pad = max(1, int(round(cur_w * 0.25)))
             left = max(panel_left, left - pad)
@@ -175,6 +182,7 @@ def _fallback_rois_from_slice(
         icon_trims_zero,
         max_widths,
         min_widths,
+        cfg.min_pop_width,
         detected=detected,
     )
 
