@@ -247,6 +247,10 @@ def _read_resources(
                             roi, gray = roi_retry, gray_retry
                             x, w = cand_x, expanded_w
                             break
+        if digits and low_conf:
+            low_conf_counts[name] = low_conf_counts.get(name, 0) + 1
+        else:
+            low_conf_counts[name] = 0
         debug_images[name] = (gray, mask)
         if CFG.get("ocr_debug"):
             debug_dir = ROOT / "debug"
@@ -299,8 +303,23 @@ def _read_resources(
             cache_obj.resource_failure_counts[name] = failure_count + 1
         else:
             value = int(digits)
+            count = low_conf_counts.get(name, 0)
+            if low_conf and name != "idle_villager":
+                threshold = CFG.get(
+                    f"{name}_low_conf_streak",
+                    CFG.get("resource_low_conf_streak", 3),
+                )
+                if count >= threshold and name in cache_obj.last_resource_values:
+                    results[name] = cache_obj.last_resource_values[name]
+                    cache_hits.add(name)
+                    logger.warning(
+                        "Using cached value for %s due to %d consecutive low-confidence OCR results",
+                        name,
+                        count,
+                    )
+                    low_confidence.add(name)
+                    continue
             if name == "idle_villager":
-                count = low_conf_counts.get(name, 0)
                 if low_conf:
                     threshold = CFG.get("idle_villager_low_conf_streak", 5)
                     if count >= threshold and name in cache_obj.last_resource_values:
