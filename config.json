@@ -25,7 +25,7 @@
     "idle_villager_low_conf_fallback": false,
     "//*_low_conf_fallback": "Use cached value when OCR confidence is low.",
     "wood_stockpile_ocr_conf_threshold": 45,
-    "food_stockpile_ocr_conf_threshold": 45,
+    "food_stockpile_ocr_conf_threshold": 40,
     "gold_stockpile_ocr_conf_threshold": 45,
   "stone_stockpile_ocr_conf_threshold": 45,
   "population_limit_ocr_conf_threshold": 45,
