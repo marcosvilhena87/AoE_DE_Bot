@@ -116,6 +116,28 @@ class TestNoDigits(TestCase):
             )
         self.assertIsNone(result["wood_stockpile"])
 
+    def test_zero_confidence_digits_use_cache(self):
+        def fake_ocr(gray):
+            return "123", {"text": ["123"], "conf": ["0", "0", "0"]}, np.zeros((1, 1), dtype=np.uint8)
+
+        frame = np.zeros((600, 600, 3), dtype=np.uint8)
+
+        resources.RESOURCE_CACHE.last_resource_values["wood_stockpile"] = 456
+        with patch.dict(resources.CFG, {"wood_stockpile_low_conf_fallback": True}, clear=False), \
+            patch(
+                "script.resources.reader.detect_resource_regions",
+                return_value={"wood_stockpile": (0, 0, 50, 50)},
+            ), patch("script.resources.ocr.masks._ocr_digits_better", side_effect=fake_ocr), \
+            patch("script.resources.reader.pytesseract.image_to_string", return_value=""), \
+            patch("script.resources.reader.cv2.imwrite"):
+            result, _ = resources._read_resources(
+                frame,
+                ["wood_stockpile"],
+                ["wood_stockpile"],
+            )
+
+        self.assertEqual(result["wood_stockpile"], 456)
+
     def test_optional_icon_failure_does_not_raise(self):
         def fake_grab_frame(bbox=None):
             if bbox:

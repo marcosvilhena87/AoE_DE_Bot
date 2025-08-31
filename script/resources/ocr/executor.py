@@ -192,6 +192,7 @@ def execute_ocr(
         digits = _sanitize_digits(digits)
         if zero_conf:
             data["zero_conf"] = True
+            low_conf = True
     return digits, data, mask, low_conf
 
 
