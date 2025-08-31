@@ -46,6 +46,14 @@ class TestHudAnchor(TestCase):
         resources.RESOURCE_CACHE.last_resource_ts.clear()
         resources.RESOURCE_CACHE.resource_failure_counts.clear()
 
+    def test_wait_hud_raises_without_template(self):
+        with patch.object(hud.screen_utils, "HUD_TEMPLATE", None), \
+             patch("script.screen_utils._grab_frame") as grab_mock:
+            with self.assertRaises(RuntimeError) as ctx:
+                hud.wait_hud(timeout=1)
+        grab_mock.assert_not_called()
+        self.assertIn(ASSET, str(ctx.exception))
+
     def test_wait_hud_sets_asset(self):
         common.HUD_ANCHOR = None
         fake_frame = np.zeros((100, 100, 3), dtype=np.uint8)
