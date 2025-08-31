@@ -134,8 +134,11 @@ def _ocr_digits_better(gray, color=None, resource=None, whitelist="0123456789"):
         )
         if digits:
             return digits, data, mask
-        pl_kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, (3, 3))
-        adaptive = cv2.morphologyEx(adaptive, cv2.MORPH_OPEN, pl_kernel, iterations=1)
+        # Morphological opening with a cross-shaped kernel would remove
+        # diagonal strokes (e.g. the '/' separating current and maximum
+        # population). Skip this step to preserve such characters.
+        # pl_kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, (3, 3))
+        # adaptive = cv2.morphologyEx(adaptive, cv2.MORPH_OPEN, pl_kernel, iterations=1)
     else:
         adaptive = cv2.dilate(adaptive, kernel, iterations=1)
         if resource == "wood_stockpile":
