@@ -190,6 +190,15 @@ expected value of `0` from the optional list passed to `gather_hud_stats` to
 avoid spurious OCR readings. Explicitly provide such icons in
 `optional_icons` if they still need to be read.
 
+### Skipping starting resource validation
+
+The campaign launcher compares the resources read from the HUD with the
+expected values defined in each scenario. When OCR repeatedly misreads the
+initial numbers, set `skip_starting_resource_validation` to `true` in
+`config.json` to bypass this check. The script will still log the initial
+resource readings, allowing you to troubleshoot without blocking mission
+progress.
+
 ### Manual ROI overrides
 
 Automatic ROI detection may fail on unusual HUD layouts. Optional sections in
