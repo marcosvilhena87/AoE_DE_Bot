@@ -15,6 +15,8 @@
   "//ocr_conf_decay": "Multiplier applied to the confidence threshold after each failed OCR attempt.",
   "ocr_conf_max_attempts": 10,
   "//ocr_conf_max_attempts": "Full OCR retries before only lowering the confidence threshold.",
+  "allow_low_conf_population": false,
+  "//allow_low_conf_population": "Accept population digits even when confidence is below the threshold; logs a warning instead of raising.",
     "treat_low_conf_as_failure": true,
     "//treat_low_conf_as_failure": "Return None when OCR confidence is below threshold.",
     "wood_stockpile_low_conf_fallback": true,
