@@ -40,8 +40,8 @@ def compute_resource_rois(
     spans = {}
     narrow = {}
 
-    for idx, current in enumerate(RESOURCE_ICON_ORDER[:-1]):
-        next_name = RESOURCE_ICON_ORDER[idx + 1]
+    for idx, current in enumerate(RESOURCE_ICON_ORDER):
+        next_name = RESOURCE_ICON_ORDER[idx + 1] if idx + 1 < len(RESOURCE_ICON_ORDER) else None
         cur_bounds = detected.get(current)
         if cur_bounds is None:
             continue
@@ -49,7 +49,7 @@ def compute_resource_rois(
         pad_l = pad_left[idx] if idx < len(pad_left) else pad_left[-1]
         pad_r = pad_right[idx] if idx < len(pad_right) else pad_right[-1]
 
-        if current == "food_stockpile":
+        if current in ("food_stockpile", "idle_villager"):
             pad_l = max(pad_l, 3)
             pad_r = max(pad_r, 3)
 
@@ -60,7 +60,7 @@ def compute_resource_rois(
         )
         cur_right = panel_left + cur_x + cur_w - cur_trim
 
-        next_bounds = detected.get(next_name)
+        next_bounds = detected.get(next_name) if next_name else None
         if next_bounds is not None:
             next_x, _ny, next_w, _nh = next_bounds
             next_trim_val = icon_trims[idx + 1] if idx + 1 < len(icon_trims) else icon_trims[-1]
@@ -98,7 +98,9 @@ def compute_resource_rois(
             width = max(width, min_req)
 
         min_w = min_widths[idx] if idx < len(min_widths) else min_widths[-1]
-        if available_width < min_w:
+        if available_width >= min_w:
+            width = max(width, min_w)
+        else:
             width = available_width
             narrow[current] = min_w - available_width
             logger.warning(
@@ -176,8 +178,10 @@ def _fallback_rois_from_slice(
         detected=detected,
     )
 
-    cache._NARROW_ROIS = set(narrow.keys())
-    cache._NARROW_ROI_DEFICITS = narrow.copy()
+    cache._NARROW_ROIS.clear()
+    cache._NARROW_ROIS.update(narrow.keys())
+    cache._NARROW_ROI_DEFICITS.clear()
+    cache._NARROW_ROI_DEFICITS.update(narrow)
 
     for name in list(regions.keys()):
         l, t, w, hgt = regions[name]
@@ -192,7 +196,15 @@ def _fallback_rois_from_slice(
             if idx_iv < len(cfg.max_widths)
             else cfg.max_widths[-1]
         )
-        width_iv = min(max_iv, right_iv - left_iv)
+        min_iv = (
+            cfg.min_widths[idx_iv]
+            if idx_iv < len(cfg.min_widths)
+            else cfg.min_widths[-1]
+        )
+        avail_iv = right_iv - left_iv
+        width_iv = min(max_iv, avail_iv)
+        if avail_iv >= min_iv:
+            width_iv = max(width_iv, min_iv)
         regions["idle_villager"] = (left_iv, top, width_iv, height)
         spans["idle_villager"] = (left_iv, left_iv + width_iv)
 

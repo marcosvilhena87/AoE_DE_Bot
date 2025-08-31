@@ -110,6 +110,32 @@ class TestComputeResourceROIs(TestCase):
 
         self.assertEqual(result, {"wood_stockpile"})
 
+    def test_food_and_idle_rois_accommodate_three_digits(self):
+        detected = {
+            "wood_stockpile": (0, 0, 10, 10),
+            "food_stockpile": (50, 0, 10, 10),
+            "gold_stockpile": (100, 0, 10, 10),
+            "stone_stockpile": (150, 0, 10, 10),
+            "population_limit": (200, 0, 10, 10),
+            "idle_villager": (250, 0, 10, 10),
+        }
+        regions, spans, narrow = resources.compute_resource_rois(
+            0,
+            320,
+            0,
+            20,
+            [0, 3, 0, 0, 0, 3],
+            [4, 3, 0, 0, 0, 3],
+            [0] * 6,
+            [999] * 6,
+            [30] * 6,
+            detected=detected,
+        )
+        self.assertGreaterEqual(regions["food_stockpile"][2], 30)
+        self.assertGreaterEqual(regions["idle_villager"][2], 30)
+        self.assertNotIn("food_stockpile", narrow)
+        self.assertNotIn("idle_villager", narrow)
+
 
 class TestNarrowROIExpansion(TestCase):
     def setUp(self):
@@ -133,10 +159,11 @@ class TestNarrowROIExpansion(TestCase):
         regions = {"stone_stockpile": (50, 10, 40, 20)}
 
         def fake_detect(frame, required_icons, cache=None):
-            reader.cache._NARROW_ROIS = {"stone_stockpile"}
-            reader.cache._NARROW_ROI_DEFICITS.clear()
-            reader.cache._NARROW_ROI_DEFICITS["stone_stockpile"] = 20
-            reader.cache._LAST_REGION_SPANS = {"stone_stockpile": (50, 90)}
+            reader._NARROW_ROIS.clear()
+            reader._NARROW_ROIS.add("stone_stockpile")
+            reader._NARROW_ROI_DEFICITS.clear()
+            reader._NARROW_ROI_DEFICITS["stone_stockpile"] = 20
+            reader._LAST_REGION_SPANS = {"stone_stockpile": (50, 90)}
             return regions
 
         with patch("script.resources.reader.core.detect_resource_regions", side_effect=fake_detect), \
