@@ -224,7 +224,16 @@ def handle_ocr_failure(
         if name == "idle_villager":
             limit = CFG.get("idle_villager_low_conf_streak", 5)
         if count >= limit:
-            fallback = cache_obj.last_resource_values.get(name, 0)
+            fallback = cache_obj.last_resource_values.get(name)
+            if fallback is None and name == "idle_villager":
+                logger.warning(
+                    "No cached value for %s after %d low-confidence OCR results",
+                    name,
+                    count,
+                )
+                continue
+            if fallback is None:
+                fallback = 0
             results[name] = fallback
             logger.warning(
                 "Using fallback value %s=%d after %d low-confidence OCR results",
@@ -241,7 +250,16 @@ def handle_ocr_failure(
     for name in list(failed):
         count = cache_obj.resource_failure_counts.get(name, 0)
         if count >= retry_limit:
-            fallback = cache_obj.last_resource_values.get(name, 0)
+            fallback = cache_obj.last_resource_values.get(name)
+            if fallback is None and name == "idle_villager":
+                logger.warning(
+                    "No cached value for %s after %d OCR failures",
+                    name,
+                    count,
+                )
+                continue
+            if fallback is None:
+                fallback = 0
             results[name] = fallback
             logger.warning(
                 "Using fallback value %s=%d after %d OCR failures",

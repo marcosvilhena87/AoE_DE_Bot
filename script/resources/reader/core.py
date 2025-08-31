@@ -332,6 +332,8 @@ def _read_resources(
                         )
                     else:
                         results[name] = value
+                        cache_obj.last_resource_values[name] = value
+                        cache_obj.last_resource_ts[name] = time.time()
                     low_confidence.add(name)
                 else:
                     results[name] = value
