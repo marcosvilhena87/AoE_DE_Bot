@@ -49,7 +49,10 @@
     "//population_ocr_roi_expand_growth": "Exponent controlling population ROI growth rate; >1 grows faster.",
     "ocr_kernel_size": 1,
     "ocr_top_crop": 2,
-    "ocr_top_crop_overrides": {},
+    "ocr_top_crop_overrides": {
+      "population_limit": 0,
+      "idle_villager": 0
+    },
     "ocr_blur_kernel": 1,
     "//ocr_blur_kernel": "Median blur kernel before OCR; set >1 to enable or 0 to disable.",
   "ocr_bilateral": [7, 60, 60],

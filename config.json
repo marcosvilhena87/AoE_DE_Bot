@@ -49,7 +49,9 @@
     "ocr_top_crop": 1,
     "ocr_top_crop_overrides": {
       "wood_stockpile": 0,
-      "food_stockpile": 0
+      "food_stockpile": 0,
+      "population_limit": 0,
+      "idle_villager": 0
     },
     "//ocr_top_crop_overrides": "Disable top cropping for wood and food stockpiles to avoid clipping digits.",
     "ocr_blur_kernel": 1,
