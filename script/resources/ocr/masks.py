@@ -90,7 +90,8 @@ def _ocr_digits_better(gray, color=None, resource=None, whitelist="0123456789"):
         gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2
     )
     if resource == "wood_stockpile":
-        thresh = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel, iterations=1)
+        thresh = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel, iterations=2)
+        thresh = cv2.dilate(thresh, kernel, iterations=1)
     if _is_nearly_empty(thresh):
         _otsu_ret, thresh = cv2.threshold(
             gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU
@@ -106,7 +107,8 @@ def _ocr_digits_better(gray, color=None, resource=None, whitelist="0123456789"):
     )
     adaptive = cv2.dilate(adaptive, kernel, iterations=1)
     if resource == "wood_stockpile":
-        adaptive = cv2.morphologyEx(adaptive, cv2.MORPH_CLOSE, kernel, iterations=1)
+        adaptive = cv2.morphologyEx(adaptive, cv2.MORPH_CLOSE, kernel, iterations=2)
+        adaptive = cv2.dilate(adaptive, kernel, iterations=1)
     if _is_nearly_empty(adaptive):
         _otsu_ret, adaptive = cv2.threshold(
             gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU
@@ -116,17 +118,33 @@ def _ocr_digits_better(gray, color=None, resource=None, whitelist="0123456789"):
     )
 
     if not digits:
+        if resource == "wood_stockpile" and color is not None:
+            hsv_ws = cv2.cvtColor(color, cv2.COLOR_BGR2HSV)
+            white = cv2.inRange(hsv_ws, np.array([0, 0, 200]), np.array([180, 50, 255]))
+            white = cv2.morphologyEx(white, cv2.MORPH_CLOSE, kernel, iterations=2)
+            white = cv2.dilate(white, kernel, iterations=1)
+            digits, data, mask = _run_masks(
+                [white, cv2.bitwise_not(white)],
+                psms,
+                debug,
+                debug_dir,
+                ts,
+                4,
+                whitelist=whitelist,
+            )
+
+    if not digits:
         if color is not None:
             hsv = cv2.cvtColor(color, cv2.COLOR_BGR2HSV)
         else:
             hsv = cv2.cvtColor(cv2.cvtColor(orig, cv2.COLOR_GRAY2BGR), cv2.COLOR_BGR2HSV)
         base_masks, closed_masks = color_mask_sets(hsv, resource, kernel)
         digits, data, mask = _run_masks(
-            base_masks, psms, debug, debug_dir, ts, 4, whitelist=whitelist
+            base_masks, psms, debug, debug_dir, ts, 6, whitelist=whitelist
         )
         if not digits:
             digits, data, mask = _run_masks(
-                closed_masks, psms, debug, debug_dir, ts, 6, whitelist=whitelist
+                closed_masks, psms, debug, debug_dir, ts, 8, whitelist=whitelist
             )
 
     if not digits:
