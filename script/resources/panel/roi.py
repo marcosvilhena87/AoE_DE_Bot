@@ -1,10 +1,12 @@
 """Resource ROI computations."""
 import logging
 
-from .. import RESOURCE_ICON_ORDER, cache
+from .. import CFG, RESOURCE_ICON_ORDER, cache
 from . import _get_resource_panel_cfg
 
 logger = logging.getLogger(__name__)
+
+_THREE_DIGIT_SPAN = 30
 
 
 def compute_resource_rois(
@@ -50,11 +52,14 @@ def compute_resource_rois(
         pad_l = pad_left[idx] if idx < len(pad_left) else pad_left[-1]
         pad_r = pad_right[idx] if idx < len(pad_right) else pad_right[-1]
 
+        cur_x, _cy, cur_w, _ch = cur_bounds
+        pad_extra = 0
+        if current in ("wood_stockpile", "food_stockpile"):
+            pad_extra = max(1, int(round(cur_w * 0.25)))
         if current in ("food_stockpile", "idle_villager"):
             pad_l = max(pad_l, 3)
             pad_r = max(pad_r, 3)
 
-        cur_x, _cy, cur_w, _ch = cur_bounds
         cur_trim_val = icon_trims[idx] if idx < len(icon_trims) else icon_trims[-1]
         cur_trim = int(round(cur_trim_val * cur_w)) if 0 <= cur_trim_val <= 1 else int(
             round(cur_trim_val)
@@ -71,6 +76,19 @@ def compute_resource_rois(
             next_left = panel_left + next_x - next_trim
         else:
             next_left = panel_right
+
+        min_req = min_requireds[idx] if idx < len(min_requireds) else min_requireds[-1]
+        min_w = min_widths[idx] if idx < len(min_widths) else min_widths[-1]
+        min_span = max(_THREE_DIGIT_SPAN, min_req, min_w)
+        gap = next_left - cur_right
+        if gap - pad_l - pad_r < min_span:
+            deficit = min_span - (gap - pad_l - pad_r)
+            reduce_l = (
+                min(pad_l - pad_extra, deficit // 2) if pad_l > pad_extra else 0
+            )
+            reduce_r = min(pad_r, deficit - reduce_l)
+            pad_l -= reduce_l
+            pad_r -= reduce_r
 
         left = cur_right + pad_l
         right = next_left - pad_r
@@ -125,6 +143,9 @@ def compute_resource_rois(
             width = right - left
 
         spans[current] = (left, right)
+
+        if CFG.get("ocr_debug"):
+            logger.info("Span for '%s': (%d, %d)", current, left, right)
 
         regions[current] = (left, top, width, height)
         logger.debug(
