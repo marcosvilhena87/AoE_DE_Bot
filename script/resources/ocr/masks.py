@@ -105,7 +105,10 @@ def _ocr_digits_better(gray, color=None, resource=None, whitelist="0123456789"):
     if resource == "wood_stockpile":
         ws_kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, (3, 3))
         thresh = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, ws_kernel, iterations=1)
-        thresh = cv2.dilate(thresh, ws_kernel, iterations=0)
+        # Skip dilation when the ROI already exhibits good contrast to avoid
+        # eroding loops in digits like "8".
+        if variance < CFG.get("ocr_ws_dilate_var", 5000):
+            thresh = cv2.dilate(thresh, ws_kernel, iterations=1)
     if _is_nearly_empty(thresh):
         _otsu_ret, thresh = cv2.threshold(
             gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU
@@ -114,7 +117,10 @@ def _ocr_digits_better(gray, color=None, resource=None, whitelist="0123456789"):
         [thresh, cv2.bitwise_not(thresh)], psms, debug, debug_dir, ts, 0, whitelist=whitelist
     )
     if digits and (resource != "wood_stockpile" or len(digits) > 1):
-        return digits, data, mask
+        confs = parse_confidences(data)
+        threshold = CFG.get("ocr_conf_threshold", 60)
+        if confs and max(confs) >= threshold:
+            return digits, data, mask
 
     block_size = 21 if resource == "population_limit" else 11
     adaptive = cv2.adaptiveThreshold(
@@ -145,7 +151,8 @@ def _ocr_digits_better(gray, color=None, resource=None, whitelist="0123456789"):
         if resource == "wood_stockpile":
             ws_kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, (3, 3))
             adaptive = cv2.morphologyEx(adaptive, cv2.MORPH_CLOSE, ws_kernel, iterations=1)
-            adaptive = cv2.dilate(adaptive, ws_kernel, iterations=0)
+            if variance < CFG.get("ocr_ws_dilate_var", 5000):
+                adaptive = cv2.dilate(adaptive, ws_kernel, iterations=1)
     if _is_nearly_empty(adaptive):
         _otsu_ret, adaptive = cv2.threshold(
             gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU
@@ -160,13 +167,18 @@ def _ocr_digits_better(gray, color=None, resource=None, whitelist="0123456789"):
         whitelist=whitelist,
     )
 
-    if not digits or (resource == "wood_stockpile" and len(digits) <= 1):
+    if (
+        not digits
+        or (resource == "wood_stockpile" and len(digits) <= 1)
+        or (parse_confidences(data) and max(parse_confidences(data)) < CFG.get("ocr_conf_threshold", 60))
+    ):
         if resource == "wood_stockpile" and color is not None:
             hsv_ws = cv2.cvtColor(color, cv2.COLOR_BGR2HSV)
             white = cv2.inRange(hsv_ws, np.array([0, 0, 200]), np.array([180, 50, 255]))
             ws_kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, (3, 3))
             white = cv2.morphologyEx(white, cv2.MORPH_CLOSE, ws_kernel, iterations=1)
-            white = cv2.dilate(white, ws_kernel, iterations=0)
+            if variance < CFG.get("ocr_ws_dilate_var", 5000):
+                white = cv2.dilate(white, ws_kernel, iterations=1)
             digits, data, mask = _run_masks(
                 [white, cv2.bitwise_not(white)],
                 psms,
