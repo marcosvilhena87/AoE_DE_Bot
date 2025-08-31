@@ -29,9 +29,10 @@ class TestComputeResourceROIs(TestCase):
         roi = regions["wood_stockpile"]
         span_left = 7  # icon_right + pad_left
         span_right = 13  # next_icon_left - pad_right
-        self.assertEqual(roi[0], span_left)
-        self.assertEqual(roi[0] + roi[2], span_right)
-        self.assertEqual(roi[2], span_right - span_left)
+        pad_extra = int(round(detected["wood_stockpile"][2] * 0.25))
+        self.assertEqual(roi[0], span_left - pad_extra)
+        self.assertEqual(roi[0] + roi[2], span_right + pad_extra)
+        self.assertEqual(roi[2], span_right - span_left + 2 * pad_extra)
         self.assertIn("wood_stockpile", narrow)
         self.assertEqual(narrow["wood_stockpile"], 14)
 
@@ -133,16 +134,13 @@ class TestNarrowROIExpansion(TestCase):
 
         def fake_detect(frame, required_icons, cache=None):
             reader.cache._NARROW_ROIS = {"stone_stockpile"}
-            reader.cache._NARROW_ROI_DEFICITS = {"stone_stockpile": 20}
+            reader.cache._NARROW_ROI_DEFICITS.clear()
+            reader.cache._NARROW_ROI_DEFICITS["stone_stockpile"] = 20
             reader.cache._LAST_REGION_SPANS = {"stone_stockpile": (50, 90)}
             return regions
 
-        with patch.object(reader, "detect_resource_regions", side_effect=fake_detect), \
-            patch.object(
-                reader,
-                "execute_ocr",
-                return_value=("123", {"text": ["123"]}, np.zeros((1, 1), dtype=np.uint8), False),
-            ) as ocr_mock:
+        with patch("script.resources.reader.core.detect_resource_regions", side_effect=fake_detect), \
+            patch("script.resources.reader.core.execute_ocr", return_value=("123", {"text": ["123"]}, np.zeros((1, 1), dtype=np.uint8), False)) as ocr_mock:
             results, _ = reader._read_resources(
                 frame, ["stone_stockpile"], ["stone_stockpile"]
             )
