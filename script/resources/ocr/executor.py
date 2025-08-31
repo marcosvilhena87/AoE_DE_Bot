@@ -3,6 +3,7 @@ from __future__ import annotations
 """OCR execution and fallback helpers."""
 
 import logging
+import re
 import time
 
 import cv2
@@ -404,13 +405,23 @@ def _read_population_from_roi(roi, conf_threshold=None, roi_bbox=None, failure_c
     raw_text = "".join(filter(None, data.get("text", [])))
     parts = [p for p in raw_text.split("/") if p]
     confidences = parse_confidences(data)
+    zero_conf = data.get("zero_conf") or (confidences and all(c == 0 for c in confidences))
     allow_low_conf = CFG.get("allow_low_conf_population", False)
     retry_limit = CFG.get("ocr_retry_limit", 3)
     low_conf_fallback = CFG.get("population_limit_low_conf_fallback", False)
+    pattern_ok = bool(re.fullmatch(r"\d+/\d+", raw_text))
     if len(parts) >= 2:
         cur = int("".join(filter(str.isdigit, parts[0])) or 0)
         cap = int("".join(filter(str.isdigit, parts[1])) or 0)
         if not low_conf:
+            return cur, cap
+        if zero_conf and pattern_ok and (allow_low_conf or low_conf_fallback):
+            logger.warning(
+                "Returning zero-confidence population %d/%d; conf=%s",
+                cur,
+                cap,
+                confidences,
+            )
             return cur, cap
         if allow_low_conf or (low_conf_fallback and failure_count >= retry_limit - 1):
             logger.warning(

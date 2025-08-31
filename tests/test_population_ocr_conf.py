@@ -109,3 +109,35 @@ class TestPopulationOcrConfidence(TestCase):
                 roi, conf_threshold=60, failure_count=2
             )
             self.assertEqual((cur, cap), (12, 34))
+
+    def test_zero_confidence_requires_flag(self):
+        roi = np.zeros((10, 10, 3), dtype=np.uint8)
+        with patch(
+            "script.resources.ocr.executor.execute_ocr",
+            return_value=(
+                "12/34",
+                {"text": ["12/34"], "conf": ["0", "0"], "zero_conf": True},
+                None,
+                True,
+            ),
+        ):
+            with self.assertRaises(resources.common.PopulationReadError):
+                resources._read_population_from_roi(roi, conf_threshold=60)
+
+    def test_zero_confidence_allowed_with_fallback_flag(self):
+        roi = np.zeros((10, 10, 3), dtype=np.uint8)
+        with patch.dict(
+            resources.common.CFG,
+            {"population_limit_low_conf_fallback": True},
+            clear=False,
+        ), patch(
+            "script.resources.ocr.executor.execute_ocr",
+            return_value=(
+                "12/34",
+                {"text": ["12/34"], "conf": ["0", "0"], "zero_conf": True},
+                None,
+                True,
+            ),
+        ):
+            cur, cap = resources._read_population_from_roi(roi, conf_threshold=60)
+        self.assertEqual((cur, cap), (12, 34))
