@@ -415,11 +415,39 @@ def validate_starting_resources(
     if not expected:
         return
     errors: list[str] = []
+
+    def _save_debug(name: str):
+        if frame is None or rois is None or name not in rois:
+            return None
+        x, y, w, h = rois[name]
+        debug_dir = ROOT / "debug"
+        debug_dir.mkdir(exist_ok=True)
+        ts = int(time.time() * 1000)
+        roi_img = frame[y : y + h, x : x + w]
+        roi_path = debug_dir / f"resource_roi_{name}_{ts}.png"
+        gray = preprocess_roi(roi_img)
+        gray_path = debug_dir / f"resource_gray_{name}_{ts}.png"
+        _, mask = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        thresh_path = debug_dir / f"resource_thresh_{name}_{ts}.png"
+        cv2.imwrite(str(roi_path), roi_img)
+        cv2.imwrite(str(gray_path), gray)
+        cv2.imwrite(str(thresh_path), mask)
+        return x, y, w, h, roi_path, gray_path, thresh_path
+
     for name, exp in expected.items():
         actual = current.get(name)
+
         if actual is None:
             if name in _LAST_LOW_CONFIDENCE:
-                msg = f"Low-confidence OCR for '{name}'"
+                debug = _save_debug(name)
+                if debug is not None:
+                    x, y, w, h, roi_path, gray_path, thresh_path = debug
+                    msg = (
+                        f"Low-confidence OCR for '{name}' at ROI (x={x}, y={y}, w={w}, h={h}); "
+                        f"ROI saved to {roi_path}; gray saved to {gray_path}; threshold saved to {thresh_path}"
+                    )
+                else:
+                    msg = f"Low-confidence OCR for '{name}'"
             else:
                 msg = f"Missing OCR reading for '{name}'"
             if raise_on_error:
@@ -430,23 +458,30 @@ def validate_starting_resources(
             continue
 
         tol = tolerance if tolerances is None else tolerances.get(name, tolerance)
-        if abs(actual - exp) > tol:
-            roi_path = None
-            if frame is not None and rois and name in rois:
-                x, y, w, h = rois[name]
-                debug_dir = ROOT / "debug"
-                debug_dir.mkdir(exist_ok=True)
-                ts = int(time.time() * 1000)
-                roi_img = frame[y : y + h, x : x + w]
-                roi_path = debug_dir / f"resource_roi_{name}_{ts}.png"
-                cv2.imwrite(str(roi_path), roi_img)
+        deviation = abs(actual - exp)
+        need_debug = name in _LAST_LOW_CONFIDENCE or deviation > tol
+        debug = _save_debug(name) if need_debug else None
 
+        debug_info = ""
+        if debug is not None:
+            x, y, w, h, roi_path, gray_path, thresh_path = debug
+            debug_info = (
+                f"; ROI (x={x}, y={y}, w={w}, h={h}) saved to {roi_path}; "
+                f"gray saved to {gray_path}; threshold saved to {thresh_path}"
+            )
+
+        if deviation > tol:
             msg = (
                 f"{name} reading {actual} deviates from expected {exp} "
-                f"(±{tol})"
+                f"(±{tol}){debug_info}"
             )
-            if roi_path is not None:
-                msg += f"; ROI saved to {roi_path}"
+            if raise_on_error:
+                logger.error(msg)
+                errors.append(msg)
+            else:
+                logger.warning(msg)
+        elif name in _LAST_LOW_CONFIDENCE:
+            msg = f"Low-confidence OCR for '{name}'{debug_info}"
             if raise_on_error:
                 logger.error(msg)
                 errors.append(msg)
