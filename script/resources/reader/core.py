@@ -179,7 +179,7 @@ def _read_resources(
             cand_widths = [min(w, span_width)]
             cand_widths += [min(span_width, cw) for cw in (64, 56, 48)]
             cand_widths = list(dict.fromkeys(cand_widths))
-            for cand_w in cand_widths:
+            for idx, cand_w in enumerate(cand_widths):
                 for anchor in ("left", "center", "right"):
                     if anchor == "left":
                         cand_x = span_left
@@ -216,6 +216,37 @@ def _read_resources(
                         break
                 if digits:
                     break
+                if idx == 0 and not digits:
+                    expanded_w = min(span_width, cand_w + 10)
+                    if expanded_w > cand_w:
+                        cand_x = span_left
+                        cand_x = max(span_left, min(cand_x, span_right - expanded_w))
+                        roi_retry = frame[y : y + h, cand_x : cand_x + expanded_w]
+                        gray_retry = preprocess_roi(roi_retry)
+                        if top_crop > 0 and gray_retry.shape[0] > top_crop:
+                            gray_retry = gray_retry[top_crop:, :]
+                        digits_retry, data_retry, mask_retry, low_conf = execute_ocr(
+                            gray_retry,
+                            color=roi_retry,
+                            conf_threshold=res_conf_threshold,
+                            allow_fallback=False,
+                            roi=(cand_x, y, expanded_w, h),
+                            resource=name,
+                        )
+                        if data_retry.get("zero_conf"):
+                            low_conf = True
+                        logger.info(
+                            "OCR %s: digits=%s conf=%s low_conf=%s",
+                            name,
+                            digits_retry,
+                            parse_confidences(data_retry),
+                            low_conf,
+                        )
+                        if digits_retry:
+                            digits, data, mask = digits_retry, data_retry, mask_retry
+                            roi, gray = roi_retry, gray_retry
+                            x, w = cand_x, expanded_w
+                            break
         debug_images[name] = (gray, mask)
         if CFG.get("ocr_debug"):
             debug_dir = ROOT / "debug"
