@@ -50,6 +50,11 @@ Configuration options in `config.json` allow adjusting how resource numbers are 
 * `ocr_conf_max_attempts` – number of full OCR retries performed while lowering
   the confidence threshold. After this cap is reached the threshold continues
   to decay toward `ocr_conf_min` without additional OCR passes.
+* `ocr_roi_expand_base` – minimum pixel margin to immediately add around a
+  region of interest after an OCR miss. `population_ocr_roi_expand_base` applies
+  the same logic to the population panel. Combine with
+  `*_ocr_roi_expand_step` and `*_ocr_roi_expand_growth` to progressively widen
+  stubborn ROIs after repeated failures.
 * `ocr_kernel_size` – size of the square kernel used for morphological dilation
   before running OCR (default `2`).
 * `ocr_contrast_stretch` – rescale grayscale intensities before thresholding;

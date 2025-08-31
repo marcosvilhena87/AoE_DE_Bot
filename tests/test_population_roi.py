@@ -201,7 +201,7 @@ class TestPopulationROI(TestCase):
         with patch.dict(
             common.CFG,
             {
-                "population_ocr_roi_expand_px": 3,
+                "population_ocr_roi_expand_base": 3,
                 "population_ocr_roi_expand_step": 0,
                 "population_ocr_roi_expand_growth": 1.0,
             },

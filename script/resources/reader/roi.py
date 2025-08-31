@@ -57,7 +57,7 @@ def expand_roi_after_failure(
     failure_count: int,
     res_conf_threshold: int,
 ):
-    base_expand = CFG.get("ocr_roi_expand_px", 0)
+    base_expand = CFG.get("ocr_roi_expand_base", CFG.get("ocr_roi_expand_px", 1))
     step = CFG.get("ocr_roi_expand_step", 0)
     growth = CFG.get("ocr_roi_expand_growth", 1.0)
     expand_px = int(round(base_expand + step * ((failure_count + 1) ** growth - 1)))
@@ -114,7 +114,10 @@ def expand_population_roi_after_failure(
     failure_count: int,
     res_conf_threshold: int | None,
 ):
-    base_expand = CFG.get("population_ocr_roi_expand_px", 0)
+    base_expand = CFG.get(
+        "population_ocr_roi_expand_base",
+        CFG.get("population_ocr_roi_expand_px", 1),
+    )
     step = CFG.get("population_ocr_roi_expand_step", 0)
     growth = CFG.get("population_ocr_roi_expand_growth", 1.0)
     expand_px = int(round(base_expand + step * ((failure_count + 1) ** growth - 1)))

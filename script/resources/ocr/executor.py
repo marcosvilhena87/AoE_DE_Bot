@@ -405,10 +405,16 @@ def _read_population_from_roi(roi, conf_threshold=None, roi_bbox=None):
         cap = int("".join(filter(str.isdigit, parts[1])) or 0)
         return cur, cap
 
-    if "/" not in raw_text and len(raw_text) == 2 and raw_text.isdigit() and not low_conf:
-        cur = int(raw_text[0])
-        cap = int(raw_text[1])
-        return cur, cap
+    if "/" not in raw_text and raw_text.isdigit() and not low_conf:
+        if len(raw_text) == 2:
+            cur = int(raw_text[0])
+            cap = int(raw_text[1])
+            return cur, cap
+        if len(raw_text) == 4:
+            half = len(raw_text) // 2
+            cur = int(raw_text[:half])
+            cap = int(raw_text[half:])
+            return cur, cap
 
     text = "/".join(parts)
     debug_dir = ROOT / "debug"
