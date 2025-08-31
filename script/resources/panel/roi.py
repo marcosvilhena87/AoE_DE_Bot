@@ -50,8 +50,8 @@ def compute_resource_rois(
         pad_r = pad_right[idx] if idx < len(pad_right) else pad_right[-1]
 
         if current == "food_stockpile":
-            pad_l = max(pad_l, 2)
-            pad_r = max(pad_r, 2)
+            pad_l = max(pad_l, 3)
+            pad_r = max(pad_r, 3)
 
         cur_x, _cy, cur_w, _ch = cur_bounds
         cur_trim_val = icon_trims[idx] if idx < len(icon_trims) else icon_trims[-1]
@@ -90,7 +90,7 @@ def compute_resource_rois(
         available_width = right - left
         max_w = max_widths[idx] if idx < len(max_widths) else max_widths[-1]
         if current == "food_stockpile":
-            max_w = min(max_w, 50)
+            max_w = min(max_w, 60)
         width = min(max_w, available_width)
 
         min_req = min_requireds[idx] if idx < len(min_requireds) else min_requireds[-1]
