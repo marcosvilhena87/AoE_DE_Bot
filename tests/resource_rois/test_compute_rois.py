@@ -139,6 +139,27 @@ class TestComputeResourceROIs(TestCase):
         self.assertNotIn("food_stockpile", narrow)
         self.assertNotIn("idle_villager", narrow)
 
+    def test_food_roi_width_can_exceed_60_when_configured(self):
+        detected = {
+            "food_stockpile": (0, 0, 10, 10),
+            "gold_stockpile": (200, 0, 10, 10),
+        }
+        with patch.dict(resources.CFG, {"food_stockpile_max_width": 80}, clear=False):
+            regions, _spans, _narrow = resources.compute_resource_rois(
+                0,
+                300,
+                0,
+                20,
+                [0] * 6,
+                [0] * 6,
+                [0] * 6,
+                [999] * 6,
+                [0] * 6,
+                0,
+                detected=detected,
+            )
+        self.assertGreater(regions["food_stockpile"][2], 60)
+
     def test_population_roi_respects_min_width(self):
         detected = {
             "population_limit": (0, 0, 5, 5),

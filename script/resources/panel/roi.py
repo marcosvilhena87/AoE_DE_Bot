@@ -109,7 +109,7 @@ def compute_resource_rois(
         available_width = right - left
         max_w = max_widths[idx] if idx < len(max_widths) else max_widths[-1]
         if current == "food_stockpile":
-            max_w = min(max_w, 60)
+            max_w = min(max_w, CFG.get("food_stockpile_max_width", max_w))
         width = min(max_w, available_width)
 
         min_req = min_requireds[idx] if idx < len(min_requireds) else min_requireds[-1]
