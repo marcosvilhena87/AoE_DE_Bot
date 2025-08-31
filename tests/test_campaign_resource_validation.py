@@ -47,7 +47,9 @@ class TestCampaignResourceValidation(TestCase):
             objective_villagers=5,
         )
 
-    def _run_main(self, res_sequence, bounds=None, spans=None):
+    def _run_main(
+        self, res_sequence, bounds=None, spans=None, low_conf=None, no_digits=None
+    ):
         res_list = list(res_sequence)
 
         if bounds is None:
@@ -57,10 +59,14 @@ class TestCampaignResourceValidation(TestCase):
 
         campaign.resources.core._LAST_LOW_CONFIDENCE.clear()
         campaign.resources.core._LAST_NO_DIGITS.clear()
+        low_conf = set() if low_conf is None else set(low_conf)
+        no_digits = set() if no_digits is None else set(no_digits)
 
         def gh_side_effect(*args, **kwargs):
             campaign.resources._LAST_REGION_BOUNDS = bounds.copy()
             campaign.resources._LAST_REGION_SPANS = spans.copy()
+            campaign.resources.core._LAST_LOW_CONFIDENCE = low_conf.copy()
+            campaign.resources.core._LAST_NO_DIGITS = no_digits.copy()
             return res_list.pop(0), (0, 0)
 
         logger_mock = MagicMock()
@@ -125,7 +131,12 @@ class TestCampaignResourceValidation(TestCase):
             {"wood_stockpile": 50, "gold_stockpile": 100},
             {"wood_stockpile": 100, "gold_stockpile": 100},
         ]
-        self._run_main(res_seq, bounds=bounds, spans=spans)
+        self._run_main(
+            res_seq,
+            bounds=bounds,
+            spans=spans,
+            low_conf={"wood_stockpile"},
+        )
         self.assertEqual(
             campaign.resources._NARROW_ROI_DEFICITS.get("wood_stockpile"),
             2,
