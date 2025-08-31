@@ -1,14 +1,32 @@
 from __future__ import annotations
 
-from typing import Optional, Tuple
+from typing import Dict, Optional, Tuple
+
+import numpy as np
 
 from .. import CFG, logger, common
 from ..ocr.preprocess import preprocess_roi
 from ..ocr.executor import execute_ocr, _read_population_from_roi
-from .cache_utils import get_narrow_roi_deficit, get_failure_count
+from .cache_utils import (
+    get_narrow_roi_deficit,
+    get_failure_count,
+    ResourceCache,
+)
 
 
-def prepare_roi(frame, regions, name: str, required_set, cache_obj):
+def prepare_roi(
+    frame: np.ndarray,
+    regions: Dict[str, Tuple[int, int, int, int]],
+    name: str,
+    required_set: set[str],
+    cache_obj: ResourceCache,
+) -> tuple[int, int, int, int, np.ndarray, np.ndarray, int, int] | None:
+    """Prepare the region of interest for OCR.
+
+    Returns the ROI coordinates, the color and grayscale crops, the amount of
+    top cropping applied, and the current failure count. ``None`` is returned
+    when the region has invalid dimensions and is not required.
+    """
     x, y, w, h = regions[name]
     deficit = get_narrow_roi_deficit(name)
     if deficit:
@@ -45,18 +63,19 @@ def prepare_roi(frame, regions, name: str, required_set, cache_obj):
 
 
 def expand_roi_after_failure(
-    frame,
+    frame: np.ndarray,
     name: str,
     x: int,
     y: int,
     w: int,
     h: int,
-    roi,
-    gray,
+    roi: np.ndarray,
+    gray: np.ndarray,
     top_crop: int,
     failure_count: int,
     res_conf_threshold: int,
-):
+) -> tuple[str, dict, np.ndarray | None, np.ndarray, np.ndarray, int, int, int, int, bool] | None:
+    """Expand a resource ROI after a failed OCR attempt."""
     base_expand = CFG.get("ocr_roi_expand_base", CFG.get("ocr_roi_expand_px", 1))
     step = CFG.get("ocr_roi_expand_step", 0)
     growth = CFG.get("ocr_roi_expand_growth", 1.0)

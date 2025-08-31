@@ -50,6 +50,384 @@ class ResourceValidationError(ValueError):
         self.failing_keys = failing_keys
 
 
+def _ocr_resource(
+    name: str,
+    roi: np.ndarray,
+    gray: np.ndarray,
+    res_conf_threshold: int,
+    roi_bbox: tuple[int, int, int, int],
+    cache_obj: ResourceCache,
+) -> tuple[str | None, dict, np.ndarray | None, bool]:
+    """Run OCR for a single resource ROI.
+
+    Parameters
+    ----------
+    name:
+        Name of the resource being read.
+    roi:
+        Color ROI extracted from the HUD.
+    gray:
+        Grayscale and preprocessed version of ``roi``.
+    res_conf_threshold:
+        Minimum confidence required for OCR digits.
+    roi_bbox:
+        Bounding box of the ROI as ``(x, y, w, h)``.
+    cache_obj:
+        Resource cache used for lookups and statistics.
+
+    Returns
+    -------
+    tuple[str | None, dict, np.ndarray | None, bool]
+        Detected digits, raw Tesseract data, threshold mask and a flag
+        indicating low-confidence detection.
+    """
+
+    x, y, w, h = roi_bbox
+    if name == "idle_villager":
+        data = pytesseract.image_to_data(
+            gray,
+            config="--psm 7 -c tessedit_char_whitelist=0123456789",
+            output_type=pytesseract.Output.DICT,
+        )
+        texts = [t for t in data.get("text", []) if t.strip()]
+        raw_digits = "".join(filter(str.isdigit, "".join(texts))) if texts else None
+        confidences = parse_confidences(data)
+        digits = None
+        low_conf = False
+        if raw_digits:
+            if confidences and any(c >= res_conf_threshold for c in confidences):
+                digits = raw_digits
+            elif confidences and any(c > 0 for c in confidences):
+                digits = None
+            else:
+                digits = raw_digits
+                low_conf = True
+        mask = gray
+        return digits, data, mask, low_conf
+
+    digits, data, mask, low_conf = execute_ocr(
+        gray,
+        color=roi,
+        conf_threshold=res_conf_threshold,
+        roi=roi_bbox,
+        resource=name,
+    )
+    if data.get("zero_conf"):
+        low_conf = True
+    logger.info(
+        "OCR %s: digits=%s conf=%s low_conf=%s",
+        name,
+        digits,
+        parse_confidences(data),
+        low_conf,
+    )
+    if (
+        name == "wood_stockpile"
+        and low_conf
+        and digits
+        and name not in cache_obj.last_resource_values
+    ):
+        min_conf = CFG.get("ocr_conf_min", 0)
+        if res_conf_threshold > min_conf:
+            digits_retry, data_retry, mask_retry, low_conf = execute_ocr(
+                gray,
+                color=roi,
+                conf_threshold=min_conf,
+                roi=roi_bbox,
+                resource=name,
+            )
+            if data_retry.get("zero_conf"):
+                low_conf = True
+            logger.info(
+                "Retry OCR %s: digits=%s conf=%s low_conf=%s",
+                name,
+                digits_retry,
+                parse_confidences(data_retry),
+                low_conf,
+            )
+            if digits_retry:
+                digits, data, mask = digits_retry, data_retry, mask_retry
+    return digits, data, mask, low_conf
+
+
+def _retry_ocr(
+    frame: np.ndarray,
+    name: str,
+    digits: str | None,
+    data: dict,
+    mask: np.ndarray | None,
+    roi: np.ndarray,
+    gray: np.ndarray,
+    x: int,
+    y: int,
+    w: int,
+    h: int,
+    top_crop: int,
+    failure_count: int,
+    res_conf_threshold: int,
+    low_conf: bool,
+) -> tuple[str | None, dict, np.ndarray | None, np.ndarray, np.ndarray, int, int, int, int, bool]:
+    """Retry OCR with ROI expansion and alternative widths.
+
+    Returns updated OCR results and ROI information.
+    """
+
+    if not digits:
+        expansion = expand_roi_after_failure(
+            frame,
+            name,
+            x,
+            y,
+            w,
+            h,
+            roi,
+            gray,
+            top_crop,
+            failure_count,
+            res_conf_threshold,
+        )
+        if expansion:
+            (
+                digits,
+                data,
+                mask,
+                roi,
+                gray,
+                x,
+                y,
+                w,
+                h,
+                low_conf,
+            ) = expansion
+            if data.get("zero_conf"):
+                low_conf = True
+    if not digits:
+        span_left, span_right = cache._LAST_REGION_SPANS.get(name, (x, x + w))
+        span_width = span_right - span_left
+        cand_widths = [min(w, span_width)]
+        cand_widths += [min(span_width, cw) for cw in (64, 56, 48)]
+        cand_widths = list(dict.fromkeys(cand_widths))
+        for idx, cand_w in enumerate(cand_widths):
+            for anchor in ("left", "center", "right"):
+                if anchor == "left":
+                    cand_x = span_left
+                elif anchor == "center":
+                    cand_x = span_left + (span_width - cand_w) // 2
+                else:
+                    cand_x = span_right - cand_w
+                cand_x = max(span_left, min(cand_x, span_right - cand_w))
+                roi_retry = frame[y : y + h, cand_x : cand_x + cand_w]
+                gray_retry = preprocess_roi(roi_retry)
+                if top_crop > 0 and gray_retry.shape[0] > top_crop:
+                    gray_retry = gray_retry[top_crop:, :]
+                digits_retry, data_retry, mask_retry, low_conf = execute_ocr(
+                    gray_retry,
+                    color=roi_retry,
+                    conf_threshold=res_conf_threshold,
+                    allow_fallback=False,
+                    roi=(cand_x, y, cand_w, h),
+                    resource=name,
+                )
+                if data_retry.get("zero_conf"):
+                    low_conf = True
+                logger.info(
+                    "OCR %s: digits=%s conf=%s low_conf=%s",
+                    name,
+                    digits_retry,
+                    parse_confidences(data_retry),
+                    low_conf,
+                )
+                if digits_retry:
+                    digits, data, mask = digits_retry, data_retry, mask_retry
+                    roi, gray = roi_retry, gray_retry
+                    x, w = cand_x, cand_w
+                    break
+            if digits:
+                break
+            if idx == 0 and not digits:
+                expanded_w = min(span_width, cand_w + 10)
+                if expanded_w > cand_w:
+                    cand_x = span_left
+                    cand_x = max(span_left, min(cand_x, span_right - expanded_w))
+                    roi_retry = frame[y : y + h, cand_x : cand_x + expanded_w]
+                    gray_retry = preprocess_roi(roi_retry)
+                    if top_crop > 0 and gray_retry.shape[0] > top_crop:
+                        gray_retry = gray_retry[top_crop:, :]
+                    digits_retry, data_retry, mask_retry, low_conf = execute_ocr(
+                        gray_retry,
+                        color=roi_retry,
+                        conf_threshold=res_conf_threshold,
+                        allow_fallback=False,
+                        roi=(cand_x, y, expanded_w, h),
+                        resource=name,
+                    )
+                    if data_retry.get("zero_conf"):
+                        low_conf = True
+                    logger.info(
+                        "OCR %s: digits=%s conf=%s low_conf=%s",
+                        name,
+                        digits_retry,
+                        parse_confidences(data_retry),
+                        low_conf,
+                    )
+                    if digits_retry:
+                        digits, data, mask = digits_retry, data_retry, mask_retry
+                        roi, gray = roi_retry, gray_retry
+                        x, w = cand_x, expanded_w
+                        break
+    return digits, data, mask, roi, gray, x, y, w, h, low_conf
+
+
+def _handle_cache_and_fallback(
+    name: str,
+    digits: str | None,
+    low_conf: bool,
+    data: dict,
+    roi: np.ndarray,
+    mask: np.ndarray | None,
+    failure_count: int,
+    *,
+    cache_obj: ResourceCache,
+    max_cache_age: float | None,
+    low_conf_counts: dict[str, int],
+) -> tuple[int | None, bool, bool, bool]:
+    """Resolve OCR output using cache and fallback strategies.
+
+    Returns the final value, whether a cache hit occurred and flags for
+    low-confidence or missing digits.
+    """
+
+    cache_hit = False
+    low_conf_flag = False
+    no_digit_flag = False
+
+    if not digits:
+        logger.warning(
+            "OCR failed for %s; raw boxes=%s", name, data.get("text")
+        )
+        debug_dir = ROOT / "debug"
+        debug_dir.mkdir(exist_ok=True)
+        ts = int(time.time() * 1000)
+        roi_path = debug_dir / f"resource_{name}_roi_{ts}.png"
+        cv2.imwrite(str(roi_path), roi)
+        logger.warning("Saved ROI image to %s", roi_path)
+        if mask is not None:
+            thresh_path = debug_dir / f"resource_{name}_thresh_{ts}.png"
+            cv2.imwrite(str(thresh_path), mask)
+            logger.warning("Saved threshold image to %s", thresh_path)
+        ts_cache = cache_obj.last_resource_ts.get(name)
+        use_cache = False
+        if name in cache_obj.last_resource_values and ts_cache is not None:
+            age = time.time() - ts_cache
+            if age < cache._RESOURCE_CACHE_TTL:
+                logger.warning(
+                    "Using cached value for %s after OCR failure", name
+                )
+                use_cache = True
+            elif failure_count >= 1 and (
+                max_cache_age is None or age <= max_cache_age
+            ):
+                logger.warning(
+                    "Using cached value for %s despite expired TTL (%.2fs)",
+                    name,
+                    age,
+                )
+                use_cache = True
+        if use_cache:
+            value = cache_obj.last_resource_values[name]
+            cache_hit = True
+        else:
+            value = None
+            if low_conf:
+                low_conf_flag = True
+            else:
+                no_digit_flag = True
+        cache_obj.resource_failure_counts[name] = failure_count + 1
+        return value, cache_hit, low_conf_flag, no_digit_flag
+
+    value = int(digits)
+    count = low_conf_counts.get(name, 0)
+    if low_conf and name != "idle_villager":
+        threshold = CFG.get(
+            f"{name}_low_conf_streak",
+            CFG.get("resource_low_conf_streak", 3),
+        )
+        if count >= threshold and name in cache_obj.last_resource_values:
+            cache_hit = True
+            logger.warning(
+                "Using cached value for %s due to %d consecutive low-confidence OCR results",
+                name,
+                count,
+            )
+            low_conf_flag = True
+            return (
+                cache_obj.last_resource_values[name],
+                cache_hit,
+                low_conf_flag,
+                False,
+            )
+
+    if name == "idle_villager":
+        if low_conf:
+            threshold = CFG.get("idle_villager_low_conf_streak", 5)
+            if count >= threshold and name in cache_obj.last_resource_values:
+                cache_hit = True
+                logger.warning(
+                    "Using cached value for %s due to %d consecutive low-confidence OCR results",
+                    name,
+                    count,
+                )
+                return (
+                    cache_obj.last_resource_values[name],
+                    cache_hit,
+                    True,
+                    False,
+                )
+            cache_obj.last_resource_values[name] = value
+            cache_obj.last_resource_ts[name] = time.time()
+            low_conf_flag = True
+        else:
+            cache_obj.last_resource_values[name] = value
+            cache_obj.last_resource_ts[name] = time.time()
+            cache_obj.resource_failure_counts[name] = 0
+        return value, cache_hit, low_conf_flag, no_digit_flag
+
+    treat_low_conf_as_failure = (
+        CFG.get("treat_low_conf_as_failure", True)
+        and not CFG.get("allow_low_conf_digits", False)
+    )
+    if (
+        low_conf
+        and treat_low_conf_as_failure
+        and (name != "wood_stockpile" or name in cache_obj.last_resource_values)
+    ):
+        fallback_key = f"{name}_low_conf_fallback"
+        if CFG.get(fallback_key, False) and name in cache_obj.last_resource_values:
+            cache_hit = True
+            value = cache_obj.last_resource_values[name]
+            logger.warning(
+                "Using cached value for %s due to low-confidence OCR", name
+            )
+        else:
+            logger.warning(
+                "Discarding %s=%d due to low-confidence OCR",
+                name,
+                value,
+            )
+            value = None
+            no_digit_flag = False
+        low_conf_flag = True
+        return value, cache_hit, low_conf_flag, no_digit_flag
+
+    if not low_conf:
+        cache_obj.last_resource_values[name] = value
+        cache_obj.last_resource_ts[name] = time.time()
+        cache_obj.resource_failure_counts[name] = 0
+    else:
+        low_conf_flag = True
+    return value, cache_hit, low_conf_flag, no_digit_flag
+
+
 def _read_resources(
     frame,
     required_icons,
@@ -91,176 +469,26 @@ def _read_resources(
         if roi_info is None:
             continue
         x, y, w, h, roi, gray, top_crop, failure_count = roi_info
-        if name == "idle_villager":
-            data = pytesseract.image_to_data(
-                gray,
-                config="--psm 7 -c tessedit_char_whitelist=0123456789",
-                output_type=pytesseract.Output.DICT,
-            )
-            texts = [t for t in data.get("text", []) if t.strip()]
-            raw_digits = "".join(filter(str.isdigit, "".join(texts))) if texts else None
-            confidences = parse_confidences(data)
-            digits = None
-            low_conf = False
-            if raw_digits:
-                if confidences and any(c >= res_conf_threshold for c in confidences):
-                    digits = raw_digits
-                elif confidences and any(c > 0 for c in confidences):
-                    digits = None
-                else:
-                    digits = raw_digits
-                    low_conf = True
-            mask = gray
-            if digits and low_conf:
-                low_conf_counts[name] = low_conf_counts.get(name, 0) + 1
-            else:
-                low_conf_counts[name] = 0
-        else:
-            digits, data, mask, low_conf = execute_ocr(
-                gray,
-                color=roi,
-                conf_threshold=res_conf_threshold,
-                roi=(x, y, w, h),
-                resource=name,
-            )
-            if data.get("zero_conf"):
-                low_conf = True
-            logger.info(
-                "OCR %s: digits=%s conf=%s low_conf=%s",
-                name,
-                digits,
-                parse_confidences(data),
-                low_conf,
-            )
-            if (
-                name == "wood_stockpile"
-                and low_conf
-                and digits
-                and name not in cache_obj.last_resource_values
-            ):
-                min_conf = CFG.get("ocr_conf_min", 0)
-                if res_conf_threshold > min_conf:
-                    digits_retry, data_retry, mask_retry, low_conf = execute_ocr(
-                        gray,
-                        color=roi,
-                        conf_threshold=min_conf,
-                        roi=(x, y, w, h),
-                        resource=name,
-                    )
-                    if data_retry.get("zero_conf"):
-                        low_conf = True
-                    logger.info(
-                        "Retry OCR %s: digits=%s conf=%s low_conf=%s",
-                        name,
-                        digits_retry,
-                        parse_confidences(data_retry),
-                        low_conf,
-                    )
-                    if digits_retry:
-                        digits, data, mask = digits_retry, data_retry, mask_retry
-        if not digits:
-            expansion = expand_roi_after_failure(
-                frame,
-                name,
-                x,
-                y,
-                w,
-                h,
-                roi,
-                gray,
-                top_crop,
-                failure_count,
-                res_conf_threshold,
-            )
-            if expansion:
-                (
-                    digits,
-                    data,
-                    mask,
-                    roi,
-                    gray,
-                    x,
-                    y,
-                    w,
-                    h,
-                    low_conf,
-                ) = expansion
-                if data.get("zero_conf"):
-                    low_conf = True
-        if not digits:
-            span_left, span_right = cache._LAST_REGION_SPANS.get(name, (x, x + w))
-            span_width = span_right - span_left
-            cand_widths = [min(w, span_width)]
-            cand_widths += [min(span_width, cw) for cw in (64, 56, 48)]
-            cand_widths = list(dict.fromkeys(cand_widths))
-            for idx, cand_w in enumerate(cand_widths):
-                for anchor in ("left", "center", "right"):
-                    if anchor == "left":
-                        cand_x = span_left
-                    elif anchor == "center":
-                        cand_x = span_left + (span_width - cand_w) // 2
-                    else:
-                        cand_x = span_right - cand_w
-                    cand_x = max(span_left, min(cand_x, span_right - cand_w))
-                    roi_retry = frame[y : y + h, cand_x : cand_x + cand_w]
-                    gray_retry = preprocess_roi(roi_retry)
-                    if top_crop > 0 and gray_retry.shape[0] > top_crop:
-                        gray_retry = gray_retry[top_crop:, :]
-                    digits_retry, data_retry, mask_retry, low_conf = execute_ocr(
-                        gray_retry,
-                        color=roi_retry,
-                        conf_threshold=res_conf_threshold,
-                        allow_fallback=False,
-                        roi=(cand_x, y, cand_w, h),
-                        resource=name,
-                    )
-                    if data_retry.get("zero_conf"):
-                        low_conf = True
-                    logger.info(
-                        "OCR %s: digits=%s conf=%s low_conf=%s",
-                        name,
-                        digits_retry,
-                        parse_confidences(data_retry),
-                        low_conf,
-                    )
-                    if digits_retry:
-                        digits, data, mask = digits_retry, data_retry, mask_retry
-                        roi, gray = roi_retry, gray_retry
-                        x, w = cand_x, cand_w
-                        break
-                if digits:
-                    break
-                if idx == 0 and not digits:
-                    expanded_w = min(span_width, cand_w + 10)
-                    if expanded_w > cand_w:
-                        cand_x = span_left
-                        cand_x = max(span_left, min(cand_x, span_right - expanded_w))
-                        roi_retry = frame[y : y + h, cand_x : cand_x + expanded_w]
-                        gray_retry = preprocess_roi(roi_retry)
-                        if top_crop > 0 and gray_retry.shape[0] > top_crop:
-                            gray_retry = gray_retry[top_crop:, :]
-                        digits_retry, data_retry, mask_retry, low_conf = execute_ocr(
-                            gray_retry,
-                            color=roi_retry,
-                            conf_threshold=res_conf_threshold,
-                            allow_fallback=False,
-                            roi=(cand_x, y, expanded_w, h),
-                            resource=name,
-                        )
-                        if data_retry.get("zero_conf"):
-                            low_conf = True
-                        logger.info(
-                            "OCR %s: digits=%s conf=%s low_conf=%s",
-                            name,
-                            digits_retry,
-                            parse_confidences(data_retry),
-                            low_conf,
-                        )
-                        if digits_retry:
-                            digits, data, mask = digits_retry, data_retry, mask_retry
-                            roi, gray = roi_retry, gray_retry
-                            x, w = cand_x, expanded_w
-                            break
+        digits, data, mask, low_conf = _ocr_resource(
+            name, roi, gray, res_conf_threshold, (x, y, w, h), cache_obj
+        )
+        digits, data, mask, roi, gray, x, y, w, h, low_conf = _retry_ocr(
+            frame,
+            name,
+            digits,
+            data,
+            mask,
+            roi,
+            gray,
+            x,
+            y,
+            w,
+            h,
+            top_crop,
+            failure_count,
+            res_conf_threshold,
+            low_conf,
+        )
         if digits and low_conf:
             low_conf_counts[name] = low_conf_counts.get(name, 0) + 1
         else:
@@ -273,124 +501,27 @@ def _read_resources(
             cv2.imwrite(str(debug_dir / f"resource_{name}_roi_{ts}.png"), roi)
             if mask is not None:
                 cv2.imwrite(str(debug_dir / f"resource_{name}_thresh_{ts}.png"), mask)
-        if not digits:
-            logger.warning(
-                "OCR failed for %s; raw boxes=%s", name, data.get("text")
-            )
-            debug_dir = ROOT / "debug"
-            debug_dir.mkdir(exist_ok=True)
-            ts = int(time.time() * 1000)
-            roi_path = debug_dir / f"resource_{name}_roi_{ts}.png"
-            cv2.imwrite(str(roi_path), roi)
-            logger.warning("Saved ROI image to %s", roi_path)
-            if mask is not None:
-                thresh_path = debug_dir / f"resource_{name}_thresh_{ts}.png"
-                cv2.imwrite(str(thresh_path), mask)
-                logger.warning("Saved threshold image to %s", thresh_path)
-            ts_cache = cache_obj.last_resource_ts.get(name)
-            use_cache = False
-            if name in cache_obj.last_resource_values and ts_cache is not None:
-                age = time.time() - ts_cache
-                if age < cache._RESOURCE_CACHE_TTL:
-                    logger.warning(
-                        "Using cached value for %s after OCR failure", name
-                    )
-                    use_cache = True
-                elif failure_count >= 1 and (
-                    max_cache_age is None or age <= max_cache_age
-                ):
-                    logger.warning(
-                        "Using cached value for %s despite expired TTL (%.2fs)",
-                        name,
-                        age,
-                    )
-                    use_cache = True
-            if use_cache:
-                results[name] = cache_obj.last_resource_values[name]
-                cache_hits.add(name)
-            else:
-                results[name] = None
-                if low_conf:
-                    low_confidence.add(name)
-                else:
-                    no_digits.add(name)
-            cache_obj.resource_failure_counts[name] = failure_count + 1
-        else:
-            value = int(digits)
-            count = low_conf_counts.get(name, 0)
-            if low_conf and name != "idle_villager":
-                threshold = CFG.get(
-                    f"{name}_low_conf_streak",
-                    CFG.get("resource_low_conf_streak", 3),
-                )
-                if count >= threshold and name in cache_obj.last_resource_values:
-                    results[name] = cache_obj.last_resource_values[name]
-                    cache_hits.add(name)
-                    logger.warning(
-                        "Using cached value for %s due to %d consecutive low-confidence OCR results",
-                        name,
-                        count,
-                    )
-                    low_confidence.add(name)
-                    continue
-            if name == "idle_villager":
-                if low_conf:
-                    threshold = CFG.get("idle_villager_low_conf_streak", 5)
-                    if count >= threshold and name in cache_obj.last_resource_values:
-                        results[name] = cache_obj.last_resource_values[name]
-                        cache_hits.add(name)
-                        logger.warning(
-                            "Using cached value for %s due to %d consecutive low-confidence OCR results",
-                            name,
-                            count,
-                        )
-                    else:
-                        results[name] = value
-                        cache_obj.last_resource_values[name] = value
-                        cache_obj.last_resource_ts[name] = time.time()
-                    low_confidence.add(name)
-                else:
-                    results[name] = value
-                    cache_obj.last_resource_values[name] = value
-                    cache_obj.last_resource_ts[name] = time.time()
-                    cache_obj.resource_failure_counts[name] = 0
-                if results.get(name) is not None:
-                    logger.info("Detected %s=%d", name, results[name])
-                continue
-            treat_low_conf_as_failure = (
-                CFG.get("treat_low_conf_as_failure", True)
-                and not CFG.get("allow_low_conf_digits", False)
-            )
-            if (
-                low_conf
-                and treat_low_conf_as_failure
-                and (name != "wood_stockpile" or name in cache_obj.last_resource_values)
-            ):
-                fallback_key = f"{name}_low_conf_fallback"
-                if CFG.get(fallback_key, False) and name in cache_obj.last_resource_values:
-                    results[name] = cache_obj.last_resource_values[name]
-                    cache_hits.add(name)
-                    logger.warning(
-                        "Using cached value for %s due to low-confidence OCR", name
-                    )
-                else:
-                    results[name] = None
-                    logger.warning(
-                        "Discarding %s=%d due to low-confidence OCR",
-                        name,
-                        value,
-                    )
-                low_confidence.add(name)
-            else:
-                results[name] = value
-                if not low_conf:
-                    cache_obj.last_resource_values[name] = value
-                    cache_obj.last_resource_ts[name] = time.time()
-                    cache_obj.resource_failure_counts[name] = 0
-                else:
-                    low_confidence.add(name)
-            if results.get(name) is not None:
-                logger.info("Detected %s=%d", name, value)
+        value, cache_hit, low_conf_flag, no_digit_flag = _handle_cache_and_fallback(
+            name,
+            digits,
+            low_conf,
+            data,
+            roi,
+            mask,
+            failure_count,
+            cache_obj=cache_obj,
+            max_cache_age=max_cache_age,
+            low_conf_counts=low_conf_counts,
+        )
+        results[name] = value
+        if cache_hit:
+            cache_hits.add(name)
+        if low_conf_flag:
+            low_confidence.add(name)
+        if no_digit_flag:
+            no_digits.add(name)
+        if value is not None:
+            logger.info("Detected %s=%d", name, value)
 
     filtered_regions = {n: regions[n] for n in resource_icons if n in regions}
     required_for_ocr = [n for n in required_icons if n != "population_limit"]
