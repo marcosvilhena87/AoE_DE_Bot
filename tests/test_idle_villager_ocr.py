@@ -46,13 +46,15 @@ class TestIdleVillagerOCR(TestCase):
             return {"idle_villager": (0, 0, 50, 50)}
 
         frame = np.zeros((100, 100, 3), dtype=np.uint8)
-        with patch("script.resources.reader.detect_resource_regions", side_effect=fake_detect), \
-             patch("script.screen_utils._grab_frame", return_value=frame), \
-             patch(
-                 "script.resources.reader.pytesseract.image_to_data",
-                 return_value={"text": ["1", "2"], "conf": ["90", "90"]},
-             ) as img2data, \
-             patch("script.resources.reader.execute_ocr") as exec_mock:
+        with patch(
+            "script.resources.reader.core.detect_resource_regions",
+            side_effect=fake_detect,
+        ), patch("script.screen_utils._grab_frame", return_value=frame), patch(
+            "script.resources.reader.pytesseract.image_to_data",
+            return_value={"text": ["1", "2"], "conf": ["90", "90"]},
+        ) as img2data, patch(
+            "script.resources.reader.core.execute_ocr"
+        ) as exec_mock:
             result, _ = resources.read_resources_from_hud(["idle_villager"])
 
         self.assertEqual(result["idle_villager"], 12)
@@ -68,21 +70,21 @@ class TestIdleVillagerOCR(TestCase):
             return {"idle_villager": (0, 0, 50, 50)}
 
         frame = np.zeros((100, 100, 3), dtype=np.uint8)
-        with patch("script.resources.reader.detect_resource_regions", side_effect=fake_detect), \
-             patch("script.screen_utils._grab_frame", return_value=frame), \
-             patch(
-                 "script.resources.reader.pytesseract.image_to_data",
-                 return_value={"text": ["1", "2"], "conf": [-1, "0", "95"]},
-             ) as img2data, \
-             patch(
-                 "script.resources.reader.execute_ocr",
-                 return_value=("12", {"text": ["12"], "conf": ["-1", "0", "95"]}, None, True),
-             ), \
-             patch(
-                 "script.resources.reader.roi.execute_ocr",
-                 return_value=("12", {"text": ["12"], "conf": ["-1", "0", "95"]}, None, True),
-             ), \
-             patch.dict(resources.CFG, {"treat_low_conf_as_failure": False}, clear=False):
+        with patch(
+            "script.resources.reader.core.detect_resource_regions",
+            side_effect=fake_detect,
+        ), patch("script.screen_utils._grab_frame", return_value=frame), patch(
+            "script.resources.reader.pytesseract.image_to_data",
+            return_value={"text": ["1", "2"], "conf": [-1, "0", "95"]},
+        ) as img2data, patch(
+            "script.resources.reader.core.execute_ocr",
+            return_value=("12", {"text": ["12"], "conf": ["-1", "0", "95"]}, None, True),
+        ), patch(
+            "script.resources.reader.roi.execute_ocr",
+            return_value=("12", {"text": ["12"], "conf": ["-1", "0", "95"]}, None, True),
+        ), patch.dict(
+            resources.CFG, {"treat_low_conf_as_failure": False}, clear=False
+        ):
             result, _ = resources.read_resources_from_hud(["idle_villager"])
 
         self.assertEqual(result["idle_villager"], 12)
@@ -92,23 +94,50 @@ class TestIdleVillagerOCR(TestCase):
             output_type=resources.pytesseract.Output.DICT,
         )
 
-    def test_idle_villager_low_confidence_returns_none(self):
+    def test_idle_villager_low_confidence_returns_zero(self):
         def fake_detect(frame, required_icons, cache=None):
             return {"idle_villager": (0, 0, 50, 50)}
 
         frame = np.zeros((100, 100, 3), dtype=np.uint8)
-        with patch("script.resources.reader.detect_resource_regions", side_effect=fake_detect), \
-             patch("script.screen_utils._grab_frame", return_value=frame), \
-             patch(
-                 "script.resources.reader.pytesseract.image_to_data",
-                 return_value={"text": ["1"], "conf": ["30"]},
-             ), \
-             patch(
-                 "script.resources.reader.execute_ocr",
-                 return_value=("", {"text": [""], "conf": []}, None, True),
-             ):
+        with patch(
+            "script.resources.reader.core.detect_resource_regions",
+            side_effect=fake_detect,
+        ), patch("script.screen_utils._grab_frame", return_value=frame), patch(
+            "script.resources.reader.pytesseract.image_to_data",
+            return_value={"text": ["1"], "conf": ["30"]},
+        ), patch(
+            "script.resources.reader.core.execute_ocr",
+            return_value=("", {"text": [""], "conf": []}, None, True),
+        ), patch(
+            "script.resources.reader.core.handle_ocr_failure",
+            lambda *a, **k: None,
+        ):
             result, _ = resources.read_resources_from_hud(
                 required_icons=[], icons_to_read=["idle_villager"]
             )
 
-        self.assertIsNone(result.get("idle_villager"))
+        self.assertEqual(result.get("idle_villager"), 0)
+
+    def test_idle_villager_zero_confidence_ignored(self):
+        def fake_detect(frame, required_icons, cache=None):
+            return {"idle_villager": (0, 0, 50, 50)}
+
+        frame = np.zeros((100, 100, 3), dtype=np.uint8)
+        with patch(
+            "script.resources.reader.core.detect_resource_regions",
+            side_effect=fake_detect,
+        ), patch("script.screen_utils._grab_frame", return_value=frame), patch(
+            "script.resources.reader.pytesseract.image_to_data",
+            return_value={"text": ["1", "2"], "conf": ["0", "95"]},
+        ) as img2data, patch(
+            "script.resources.reader.core.execute_ocr"
+        ) as exec_mock:
+            result, _ = resources.read_resources_from_hud(["idle_villager"])
+
+        self.assertEqual(result["idle_villager"], 12)
+        img2data.assert_called_once_with(
+            ANY,
+            config="--psm 7 -c tessedit_char_whitelist=0123456789",
+            output_type=resources.pytesseract.Output.DICT,
+        )
+        exec_mock.assert_not_called()
