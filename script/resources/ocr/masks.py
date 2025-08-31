@@ -10,6 +10,7 @@ import pytesseract
 
 from .. import CFG, ROOT
 from .colors import color_mask_sets
+from .confidence import parse_confidences
 
 
 def _run_masks(masks, psms, debug, debug_dir, ts, start_idx=0, whitelist="0123456789"):
@@ -29,8 +30,20 @@ def _run_masks(masks, psms, debug, debug_dir, ts, start_idx=0, whitelist="012345
             results.append((digits, data, mask))
     if not results:
         return "", {"text": [], "conf": []}, None
-    results.sort(key=lambda r: len(r[0]), reverse=True)
-    return results[0]
+
+    scored = []
+    for digits, data, mask in results:
+        confs = parse_confidences(data)
+        metric = float(np.median(confs)) if confs else 0.0
+        if digits:
+            scored.append((digits, data, mask, metric))
+
+    if not scored:
+        return results[0]
+
+    scored.sort(key=lambda r: (len(r[0]), -r[3]))
+    best = scored[0]
+    return best[0], best[1], best[2]
 
 
 def _is_nearly_empty(mask, tol=0.01):
