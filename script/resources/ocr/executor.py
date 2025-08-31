@@ -364,6 +364,17 @@ def handle_ocr_failure(
 
 
 def _read_population_from_roi(roi, conf_threshold=None, roi_bbox=None):
+    """Return the population (current, cap) from a HUD region.
+
+    The OCR normally expects a string in the form ``"cur/cap"``. If no slash
+    is detected and the OCR output is exactly two digits (e.g. ``"34"``), the
+    digits are interpreted as single-digit values for the current and maximum
+    population respectively.
+
+    Raises:
+        common.PopulationReadError: If the population cannot be parsed.
+    """
+
     if conf_threshold is None:
         conf_threshold = CFG.get(
             "population_limit_ocr_conf_threshold",
@@ -392,6 +403,11 @@ def _read_population_from_roi(roi, conf_threshold=None, roi_bbox=None):
     if len(parts) >= 2 and not low_conf:
         cur = int("".join(filter(str.isdigit, parts[0])) or 0)
         cap = int("".join(filter(str.isdigit, parts[1])) or 0)
+        return cur, cap
+
+    if "/" not in raw_text and len(raw_text) == 2 and raw_text.isdigit() and not low_conf:
+        cur = int(raw_text[0])
+        cap = int(raw_text[1])
         return cur, cap
 
     text = "/".join(parts)
