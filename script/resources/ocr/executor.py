@@ -218,7 +218,10 @@ def handle_ocr_failure(
     for name in list(low_confidence):
         count = cache_obj.resource_failure_counts.get(name, 0) + 1
         cache_obj.resource_failure_counts[name] = count
-        if count >= retry_limit:
+        limit = retry_limit
+        if name == "idle_villager":
+            limit = CFG.get("idle_villager_low_conf_streak", 5)
+        if count >= limit:
             fallback = cache_obj.last_resource_values.get(name, 0)
             results[name] = fallback
             logger.warning(
