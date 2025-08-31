@@ -109,6 +109,8 @@ def _read_resources(
                 roi=(x, y, w, h),
                 resource=name,
             )
+            if data.get("zero_conf"):
+                low_conf = True
             logger.info(
                 "OCR %s: digits=%s conf=%s low_conf=%s",
                 name,
@@ -131,6 +133,8 @@ def _read_resources(
                         roi=(x, y, w, h),
                         resource=name,
                     )
+                    if data_retry.get("zero_conf"):
+                        low_conf = True
                     logger.info(
                         "Retry OCR %s: digits=%s conf=%s low_conf=%s",
                         name,
@@ -167,6 +171,8 @@ def _read_resources(
                     h,
                     low_conf,
                 ) = expansion
+                if data.get("zero_conf"):
+                    low_conf = True
         if not digits:
             span_left, span_right = cache._LAST_REGION_SPANS.get(name, (x, x + w))
             span_width = span_right - span_left
@@ -194,6 +200,8 @@ def _read_resources(
                         roi=(cand_x, y, cand_w, h),
                         resource=name,
                     )
+                    if data_retry.get("zero_conf"):
+                        low_conf = True
                     logger.info(
                         "OCR %s: digits=%s conf=%s low_conf=%s",
                         name,
