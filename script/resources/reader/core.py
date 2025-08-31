@@ -82,8 +82,8 @@ def _read_resources(
                 output_type=pytesseract.Output.DICT,
             )
             texts = [t for t in data.get("text", []) if t.strip()]
-            confidences = parse_confidences(data)
-            if texts and confidences and all(
+            confidences = [c for c in parse_confidences(data) if c > 0]
+            if texts and confidences and any(
                 c >= res_conf_threshold for c in confidences
             ):
                 digits = "".join(filter(str.isdigit, "".join(texts)))
