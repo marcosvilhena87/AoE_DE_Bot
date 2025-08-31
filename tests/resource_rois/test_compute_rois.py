@@ -28,14 +28,14 @@ class TestComputeResourceROIs(TestCase):
             detected=detected,
         )
         roi = regions["wood_stockpile"]
-        span_left = 7  # icon_right + pad_left
-        span_right = 13  # next_icon_left - pad_right
+        span_left = 6  # icon_right + pad_left after adjustment
+        span_right = 15  # next_icon_left - pad_right after adjustment
         pad_extra = int(round(detected["wood_stockpile"][2] * 0.25))
         self.assertEqual(roi[0], span_left - pad_extra)
         self.assertEqual(roi[0] + roi[2], span_right + pad_extra)
         self.assertEqual(roi[2], span_right - span_left + 2 * pad_extra)
         self.assertIn("wood_stockpile", narrow)
-        self.assertEqual(narrow["wood_stockpile"], 14)
+        self.assertEqual(narrow["wood_stockpile"], 11)
 
     def test_ignores_non_positive_span(self):
         detected = {
