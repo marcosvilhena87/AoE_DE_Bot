@@ -65,7 +65,7 @@ class TestHuntingScenario(TestCase):
 
         with patch("script.hud.wait_hud", return_value=((0, 0, 0, 0), "asset")) as wait_mock, \
              patch("script.config_utils.parse_scenario_info", return_value=info) as parse_mock, \
-             patch.object(resources, "RESOURCE_CACHE", resources.ResourceCache()):
+             patch.object(resources.reader, "RESOURCE_CACHE", resources.ResourceCache()):
             runpy.run_path(
                 os.path.join("campaigns", "Ascent_of_Egypt", "Egypt_1_Hunting.py"),
                 run_name="__main__",
@@ -74,11 +74,46 @@ class TestHuntingScenario(TestCase):
             self.assertEqual(common.CURRENT_POP, info.starting_villagers)
             self.assertEqual(common.POP_CAP, 4)
             self.assertEqual(common.TARGET_POP, info.objective_villagers)
+            expected_cache = dict(info.starting_resources)
+            expected_cache["idle_villager"] = info.starting_villagers
             self.assertEqual(
-                resources.RESOURCE_CACHE.last_resource_values, info.starting_resources
+                resources.reader.RESOURCE_CACHE.last_resource_values, expected_cache
             )
-            for name in info.starting_resources:
-                self.assertIn(name, resources.RESOURCE_CACHE.last_resource_ts)
+            for name in expected_cache:
+                self.assertIn(name, resources.reader.RESOURCE_CACHE.last_resource_ts)
+
+            wait_mock.assert_called_once()
+            parse_mock.assert_called_once()
+
+    def test_idle_villager_cache_seeded(self):
+        info = config_utils.ScenarioInfo(
+            starting_villagers=4,
+            population_limit=50,
+            starting_resources=None,
+            objective_villagers=8,
+        )
+
+        with patch(
+            "script.hud.wait_hud", return_value=((0, 0, 0, 0), "asset")
+        ) as wait_mock, patch(
+            "script.config_utils.parse_scenario_info", return_value=info
+        ) as parse_mock, patch.object(
+            resources.reader, "RESOURCE_CACHE", resources.ResourceCache()
+        ):
+            runpy.run_path(
+                os.path.join("campaigns", "Ascent_of_Egypt", "Egypt_1_Hunting.py"),
+                run_name="__main__",
+            )
+
+            self.assertEqual(
+                resources.reader.RESOURCE_CACHE.last_resource_values.get(
+                    "idle_villager"
+                ),
+                info.starting_villagers,
+            )
+            self.assertIn(
+                "idle_villager", resources.reader.RESOURCE_CACHE.last_resource_ts
+            )
 
             wait_mock.assert_called_once()
             parse_mock.assert_called_once()
