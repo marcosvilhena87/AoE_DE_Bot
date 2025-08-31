@@ -47,13 +47,20 @@ class TestCampaignResourceValidation(TestCase):
             objective_villagers=5,
         )
 
-    def _run_main(self, res_sequence):
+    def _run_main(self, res_sequence, bounds=None, spans=None):
         res_list = list(res_sequence)
 
+        if bounds is None:
+            bounds = {"wood_stockpile": (0, 0, 5, 5)}
+        if spans is None:
+            spans = {k: (v[0], v[0] + v[2]) for k, v in bounds.items()}
+
+        campaign.resources.core._LAST_LOW_CONFIDENCE.clear()
+        campaign.resources.core._LAST_NO_DIGITS.clear()
+
         def gh_side_effect(*args, **kwargs):
-            campaign.resources._LAST_REGION_BOUNDS = {
-                "wood_stockpile": (0, 0, 5, 5)
-            }
+            campaign.resources._LAST_REGION_BOUNDS = bounds.copy()
+            campaign.resources._LAST_REGION_SPANS = spans.copy()
             return res_list.pop(0), (0, 0)
 
         logger_mock = MagicMock()
@@ -100,6 +107,36 @@ class TestCampaignResourceValidation(TestCase):
         ]
         with self.assertRaises(SystemExit):
             self._run_main(res_seq)
+
+    def test_only_failing_resources_are_narrowed(self):
+        self.info.starting_resources = {
+            "wood_stockpile": 100,
+            "gold_stockpile": 100,
+        }
+        bounds = {
+            "wood_stockpile": (0, 0, 5, 5),
+            "gold_stockpile": (10, 0, 5, 5),
+        }
+        spans = {
+            "wood_stockpile": (0, 5),
+            "gold_stockpile": (10, 15),
+        }
+        res_seq = [
+            {"wood_stockpile": 50, "gold_stockpile": 100},
+            {"wood_stockpile": 100, "gold_stockpile": 100},
+        ]
+        self._run_main(res_seq, bounds=bounds, spans=spans)
+        self.assertEqual(
+            campaign.resources._NARROW_ROI_DEFICITS.get("wood_stockpile"),
+            2,
+        )
+        self.assertIsNone(
+            campaign.resources._NARROW_ROI_DEFICITS.get("gold_stockpile")
+        )
+        self.assertEqual(
+            campaign.resources._LAST_REGION_SPANS.get("gold_stockpile"),
+            (10, 15),
+        )
 
     def test_cached_value_used_after_low_conf_streak(self):
         cache = campaign.resources.ResourceCache()
