@@ -371,6 +371,10 @@ def _read_population_from_roi(roi, conf_threshold=None, roi_bbox=None):
     digits are interpreted as single-digit values for the current and maximum
     population respectively.
 
+    When ``CFG['allow_low_conf_population']`` is true, low-confidence OCR
+    results are returned after logging a warning instead of raising
+    ``PopulationReadError`` immediately.
+
     Raises:
         common.PopulationReadError: If the population cannot be parsed.
     """
@@ -400,20 +404,37 @@ def _read_population_from_roi(roi, conf_threshold=None, roi_bbox=None):
     raw_text = "".join(filter(None, data.get("text", [])))
     parts = [p for p in raw_text.split("/") if p]
     confidences = parse_confidences(data)
-    if len(parts) >= 2 and not low_conf:
+    allow_low_conf = CFG.get("allow_low_conf_population", False)
+    if len(parts) >= 2 and (not low_conf or allow_low_conf):
         cur = int("".join(filter(str.isdigit, parts[0])) or 0)
         cap = int("".join(filter(str.isdigit, parts[1])) or 0)
+        if low_conf:
+            logger.warning(
+                "Returning low-confidence population %d/%d; conf=%s",
+                cur,
+                cap,
+                confidences,
+            )
         return cur, cap
 
-    if "/" not in raw_text and raw_text.isdigit() and not low_conf:
+    if "/" not in raw_text and raw_text.isdigit() and (not low_conf or allow_low_conf):
         if len(raw_text) == 2:
             cur = int(raw_text[0])
             cap = int(raw_text[1])
-            return cur, cap
-        if len(raw_text) == 4:
+        elif len(raw_text) == 4:
             half = len(raw_text) // 2
             cur = int(raw_text[:half])
             cap = int(raw_text[half:])
+        else:
+            cur = cap = None
+        if cur is not None:
+            if low_conf:
+                logger.warning(
+                    "Returning low-confidence population %d/%d; conf=%s",
+                    cur,
+                    cap,
+                    confidences,
+                )
             return cur, cap
 
     text = "/".join(parts)

@@ -82,6 +82,10 @@ def validate_config(cfg: dict[str, Any]) -> None:
     if allow_low_conf is not None and not isinstance(allow_low_conf, bool):
         raise RuntimeError("'allow_low_conf_digits' must be a boolean")
 
+    allow_low_conf_pop = cfg.get("allow_low_conf_population")
+    if allow_low_conf_pop is not None and not isinstance(allow_low_conf_pop, bool):
+        raise RuntimeError("'allow_low_conf_population' must be a boolean")
+
 
 def load_config(path: str | Path | None = None) -> dict[str, Any]:
     """Load ``config.json`` and validate its contents.

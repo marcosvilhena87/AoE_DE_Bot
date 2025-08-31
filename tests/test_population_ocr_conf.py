@@ -66,3 +66,20 @@ class TestPopulationOcrConfidence(TestCase):
                 resources._read_population_from_roi(
                     roi, conf_threshold=60
                 )
+
+    def test_low_confidence_allowed(self):
+        roi = np.zeros((10, 10, 3), dtype=np.uint8)
+        with patch.dict(resources.common.CFG, {"allow_low_conf_population": True}, clear=False), \
+            patch(
+                "script.resources.ocr.executor.execute_ocr",
+                return_value=(
+                    "12/34",
+                    {"text": ["12/34"], "conf": ["40", "40"]},
+                    None,
+                    True,
+                ),
+            ):
+            cur, cap = resources._read_population_from_roi(
+                roi, conf_threshold=60
+            )
+            self.assertEqual((cur, cap), (12, 34))

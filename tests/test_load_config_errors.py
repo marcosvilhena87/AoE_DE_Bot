@@ -74,3 +74,27 @@ class TestLoadConfigErrors(TestCase):
                 config_utils.load_config(tmp_path)
         finally:
             os.remove(tmp_path)
+
+    def test_allow_low_conf_population_enabled(self):
+        tmp_path = self._write_config({"allow_low_conf_population": True})
+        try:
+            cfg = config_utils.load_config(tmp_path)
+            self.assertTrue(cfg["allow_low_conf_population"])
+        finally:
+            os.remove(tmp_path)
+
+    def test_allow_low_conf_population_disabled(self):
+        tmp_path = self._write_config({"allow_low_conf_population": False})
+        try:
+            cfg = config_utils.load_config(tmp_path)
+            self.assertFalse(cfg["allow_low_conf_population"])
+        finally:
+            os.remove(tmp_path)
+
+    def test_allow_low_conf_population_type_validation(self):
+        tmp_path = self._write_config({"allow_low_conf_population": "yes"})
+        try:
+            with self.assertRaises(RuntimeError):
+                config_utils.load_config(tmp_path)
+        finally:
+            os.remove(tmp_path)
