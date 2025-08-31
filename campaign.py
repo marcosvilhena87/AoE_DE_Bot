@@ -148,10 +148,29 @@ def main():
                                 raise
                         attempt += 1
                         tolerance = min(max_tolerance, tolerance + 5)
+                        low_conf = getattr(
+                            resources,
+                            "_LAST_LOW_CONFIDENCE",
+                            getattr(
+                                getattr(resources, "core", None),
+                                "_LAST_LOW_CONFIDENCE",
+                                set(),
+                            ),
+                        )
+                        no_digits = getattr(
+                            resources,
+                            "_LAST_NO_DIGITS",
+                            getattr(
+                                getattr(resources, "core", None),
+                                "_LAST_NO_DIGITS",
+                                set(),
+                            ),
+                        )
                         for k in e.failing_keys:
-                            resources._NARROW_ROI_DEFICITS[k] = (
-                                resources._NARROW_ROI_DEFICITS.get(k, 0) + 2
-                            )
+                            if k in low_conf or k in no_digits:
+                                resources._NARROW_ROI_DEFICITS[k] = (
+                                    resources._NARROW_ROI_DEFICITS.get(k, 0) + 2
+                                )
                         res, (cur_pop, pop_cap) = resources.gather_hud_stats(
                             force_delay=0.1 * attempt,
                             required_icons=required,
