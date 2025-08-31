@@ -116,8 +116,9 @@ def _ocr_digits_better(gray, color=None, resource=None, whitelist="0123456789"):
     if digits and (resource != "wood_stockpile" or len(digits) > 1):
         return digits, data, mask
 
+    block_size = 21 if resource == "population_limit" else 11
     adaptive = cv2.adaptiveThreshold(
-        gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 11, 2
+        gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, block_size, 2
     )
     if resource == "population_limit":
         _otsu_ret, otsu = cv2.threshold(
