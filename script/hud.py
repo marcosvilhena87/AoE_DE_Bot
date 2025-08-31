@@ -29,11 +29,13 @@ def wait_hud(timeout=60):
     t0 = time.time()
     tmpl = screen_utils.HUD_TEMPLATE
     asset = "assets/resources.png"
+    if tmpl is None:
+        raise RuntimeError(
+            f"HUD template '{asset}' not loaded; ensure {asset} exists"
+        )
     last_score = -1.0
     while time.time() - t0 < timeout:
         frame = screen_utils._grab_frame()
-        if tmpl is None:
-            break
         box, score, heat = find_template(
             frame, tmpl, threshold=CFG["threshold"], scales=CFG["scales"]
         )
