@@ -47,7 +47,7 @@ os.environ.setdefault("TESSERACT_CMD", "/usr/bin/true")
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import campaign
-import tools.campaign_bot as cb
+import tools.campaign as cb
 
 
 class TestGatherHudStats(TestCase):
@@ -79,11 +79,11 @@ class TestGatherHudStats(TestCase):
             pop_shapes.append(roi.shape[:2])
             return 123, 200
 
-        with patch("tools.campaign_bot.locate_resource_panel", return_value={}), \
-             patch("tools.campaign_bot._grab_frame", side_effect=fake_grab_frame), \
-             patch("tools.campaign_bot._ocr_digits_better", side_effect=fake_ocr), \
-             patch("tools.campaign_bot._read_population_from_roi", side_effect=fake_pop), \
-             patch("tools.campaign_bot.resources.detect_resource_regions", return_value={
+        with patch("tools.campaign.locate_resource_panel", return_value={}), \
+             patch("tools.campaign._grab_frame", side_effect=fake_grab_frame), \
+             patch("tools.campaign._ocr_digits_better", side_effect=fake_ocr), \
+             patch("tools.campaign._read_population_from_roi", side_effect=fake_pop), \
+             patch("tools.campaign.resources.detect_resource_regions", return_value={
                  "wood_stockpile": (0, 0, 90, 52),
                  "food_stockpile": (90, 0, 90, 52),
                  "gold_stockpile": (180, 0, 90, 52),
@@ -92,7 +92,7 @@ class TestGatherHudStats(TestCase):
                  "idle_villager": (450, 0, 98, 52),
              }), \
              patch(
-                 "tools.campaign_bot.resources.pytesseract.image_to_data",
+                 "tools.campaign.resources.pytesseract.image_to_data",
                  return_value={"text": ["600"], "conf": ["90"]},
              ):
             res, pop = cb.gather_hud_stats()
@@ -136,11 +136,11 @@ class TestGatherHudStats(TestCase):
         def fake_pop(roi, conf_threshold=None, roi_bbox=None):
             return 123, 200
 
-        with patch("tools.campaign_bot.locate_resource_panel", return_value={}), \
-             patch("tools.campaign_bot._grab_frame", side_effect=fake_grab_frame), \
-             patch("tools.campaign_bot._ocr_digits_better", side_effect=fake_ocr), \
-             patch("tools.campaign_bot._read_population_from_roi", side_effect=fake_pop), \
-             patch("tools.campaign_bot.resources.detect_resource_regions", return_value={
+        with patch("tools.campaign.locate_resource_panel", return_value={}), \
+             patch("tools.campaign._grab_frame", side_effect=fake_grab_frame), \
+             patch("tools.campaign._ocr_digits_better", side_effect=fake_ocr), \
+             patch("tools.campaign._read_population_from_roi", side_effect=fake_pop), \
+             patch("tools.campaign.resources.detect_resource_regions", return_value={
                  "wood_stockpile": (0, 0, 90, 52),
                  "food_stockpile": (90, 0, 90, 52),
                  "gold_stockpile": (180, 0, 90, 52),
@@ -149,7 +149,7 @@ class TestGatherHudStats(TestCase):
                  "idle_villager": (450, 0, 98, 52),
              }), \
              patch(
-                 "tools.campaign_bot.resources.pytesseract.image_to_data",
+                 "tools.campaign.resources.pytesseract.image_to_data",
                  return_value={"text": ["600"], "conf": ["90"]},
              ):
             res, pop = cb.gather_hud_stats()
@@ -178,11 +178,11 @@ class TestGatherHudStats(TestCase):
             d = next(digits_iter)
             return d, {"text": [d]}
 
-        with patch("tools.campaign_bot.locate_resource_panel", return_value={}), \
-             patch("tools.campaign_bot._grab_frame", side_effect=fake_grab_frame), \
-             patch("tools.campaign_bot._ocr_digits_better", side_effect=fake_ocr), \
+        with patch("tools.campaign.locate_resource_panel", return_value={}), \
+             patch("tools.campaign._grab_frame", side_effect=fake_grab_frame), \
+             patch("tools.campaign._ocr_digits_better", side_effect=fake_ocr), \
              patch(
-                 "tools.campaign_bot.resources.detect_resource_regions",
+                 "tools.campaign.resources.detect_resource_regions",
                  return_value={
                      "wood_stockpile": (0, 0, 50, 50),
                      "food_stockpile": (50, 0, 50, 50),
@@ -203,11 +203,11 @@ class TestGatherHudStats(TestCase):
         def fake_ocr(gray):
             return "100", {"text": ["100"]}
 
-        with patch("tools.campaign_bot.locate_resource_panel", return_value={}), \
-             patch("tools.campaign_bot._grab_frame", side_effect=fake_grab_frame), \
-             patch("tools.campaign_bot._ocr_digits_better", side_effect=fake_ocr), \
+        with patch("tools.campaign.locate_resource_panel", return_value={}), \
+             patch("tools.campaign._grab_frame", side_effect=fake_grab_frame), \
+             patch("tools.campaign._ocr_digits_better", side_effect=fake_ocr), \
              patch(
-                 "tools.campaign_bot.resources.detect_resource_regions",
+                 "tools.campaign.resources.detect_resource_regions",
                  return_value={"wood_stockpile": (0, 0, 50, 50)},
              ):
             res, pop = cb.gather_hud_stats(

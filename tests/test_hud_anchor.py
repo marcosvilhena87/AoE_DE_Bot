@@ -35,7 +35,7 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import script.common as common
 import script.hud as hud
 import script.resources.reader as resources
-import tools.campaign_bot as cb
+import tools.campaign as cb
 
 ASSET = "assets/resources.png"
 
@@ -118,8 +118,8 @@ class TestHudAnchorTools(TestCase):
     def test_wait_hud_sets_asset(self):
         cb.HUD_ANCHOR = None
         fake_frame = np.zeros((100, 100, 3), dtype=np.uint8)
-        with patch("tools.campaign_bot._grab_frame", return_value=fake_frame), \
-             patch("tools.campaign_bot.find_template", return_value=((10, 20, 30, 40), 0.9, None)):
+        with patch("tools.campaign._grab_frame", return_value=fake_frame), \
+             patch("tools.campaign.find_template", return_value=((10, 20, 30, 40), 0.9, None)):
             anchor, asset = cb.wait_hud(timeout=1)
         self.assertEqual(asset, ASSET)
         self.assertEqual(anchor["asset"], ASSET)
@@ -142,9 +142,9 @@ class TestHudAnchorTools(TestCase):
             d = next(digits_iter)
             return d, {"text": [d]}
 
-        with patch("tools.campaign_bot.locate_resource_panel", return_value={}), \
-             patch("tools.campaign_bot._grab_frame", side_effect=fake_grab_frame), \
-             patch("tools.campaign_bot._ocr_digits_better", side_effect=fake_ocr), \
+        with patch("tools.campaign.locate_resource_panel", return_value={}), \
+             patch("tools.campaign._grab_frame", side_effect=fake_grab_frame), \
+             patch("tools.campaign._ocr_digits_better", side_effect=fake_ocr), \
              patch("script.resources.reader._ocr_digits_better", side_effect=fake_ocr), \
              patch("script.resources.reader.preprocess_roi", side_effect=lambda roi: np.zeros((52, 90), dtype=np.uint8)), \
              patch(

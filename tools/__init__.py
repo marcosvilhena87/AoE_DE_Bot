@@ -1,1 +1,3 @@
-# Package for testing utilities.
+"""Package for testing utilities."""
+
+__all__ = ["campaign"]
