@@ -363,7 +363,7 @@ def handle_ocr_failure(
             )
 
 
-def _read_population_from_roi(roi, conf_threshold=None, roi_bbox=None):
+def _read_population_from_roi(roi, conf_threshold=None, roi_bbox=None, failure_count=0):
     """Return the population (current, cap) from a HUD region.
 
     The OCR normally expects a string in the form ``"cur/cap"``. If no slash
@@ -405,19 +405,30 @@ def _read_population_from_roi(roi, conf_threshold=None, roi_bbox=None):
     parts = [p for p in raw_text.split("/") if p]
     confidences = parse_confidences(data)
     allow_low_conf = CFG.get("allow_low_conf_population", False)
-    if len(parts) >= 2 and (not low_conf or allow_low_conf):
+    retry_limit = CFG.get("ocr_retry_limit", 3)
+    low_conf_fallback = CFG.get("population_limit_low_conf_fallback", False)
+    if len(parts) >= 2:
         cur = int("".join(filter(str.isdigit, parts[0])) or 0)
         cap = int("".join(filter(str.isdigit, parts[1])) or 0)
-        if low_conf:
+        if not low_conf:
+            return cur, cap
+        if allow_low_conf or (low_conf_fallback and failure_count >= retry_limit - 1):
             logger.warning(
-                "Returning low-confidence population %d/%d; conf=%s",
+                "Returning low-confidence population %d/%d%s; conf=%s",
                 cur,
                 cap,
+                " after %d attempts" % (failure_count + 1)
+                if low_conf_fallback and not allow_low_conf
+                else "",
                 confidences,
             )
-        return cur, cap
+            return cur, cap
+        err = common.PopulationReadError("Low-confidence population OCR")
+        err.low_conf = True
+        err.low_conf_digits = (cur, cap)
+        raise err
 
-    if "/" not in raw_text and raw_text.isdigit() and (not low_conf or allow_low_conf):
+    if "/" not in raw_text and raw_text.isdigit():
         if len(raw_text) == 2:
             cur = int(raw_text[0])
             cap = int(raw_text[1])
@@ -428,14 +439,23 @@ def _read_population_from_roi(roi, conf_threshold=None, roi_bbox=None):
         else:
             cur = cap = None
         if cur is not None:
-            if low_conf:
+            if not low_conf:
+                return cur, cap
+            if allow_low_conf or (low_conf_fallback and failure_count >= retry_limit - 1):
                 logger.warning(
-                    "Returning low-confidence population %d/%d; conf=%s",
+                    "Returning low-confidence population %d/%d%s; conf=%s",
                     cur,
                     cap,
+                    " after %d attempts" % (failure_count + 1)
+                    if low_conf_fallback and not allow_low_conf
+                    else "",
                     confidences,
                 )
-            return cur, cap
+                return cur, cap
+            err = common.PopulationReadError("Low-confidence population OCR")
+            err.low_conf = True
+            err.low_conf_digits = (cur, cap)
+            raise err
 
     text = "/".join(parts)
     debug_dir = ROOT / "debug"
@@ -505,7 +525,11 @@ def _read_population_from_roi(roi, conf_threshold=None, roi_bbox=None):
                 f"Failed to read population from HUD: text='{text}', confs={confidences}; "
                 f"ROI saved to {roi_path}"
             )
-    raise common.PopulationReadError(msg)
+    err = common.PopulationReadError(msg)
+    if low_conf:
+        err.low_conf = True
+        err.low_conf_digits = None
+    raise err
 
 
 def read_population_from_roi(
@@ -577,14 +601,24 @@ def _extract_population(
         x, y, w, h = regions["population_limit"]
         roi = frame[y : y + h, x : x + w]
         failure_count = cache_obj.resource_failure_counts.get("population_limit", 0)
+        low_conf_counts = getattr(cache_obj, "resource_low_conf_counts", {})
+        cache_obj.resource_low_conf_counts = low_conf_counts
+        low_conf_count = low_conf_counts.get("population_limit", 0)
         try:
             cur_pop, pop_cap = _read_population_from_roi(
-                roi, conf_threshold=conf_threshold, roi_bbox=(x, y, w, h)
+                roi,
+                conf_threshold=conf_threshold,
+                roi_bbox=(x, y, w, h),
+                failure_count=low_conf_count,
             )
             if results is not None:
                 results["population_limit"] = cur_pop
             cache_obj.resource_failure_counts["population_limit"] = 0
-        except common.PopulationReadError:
+            low_conf_counts["population_limit"] = 0
+            cache_obj.last_resource_values["population_limit"] = (cur_pop, pop_cap)
+        except common.PopulationReadError as exc:
+            low_conf = getattr(exc, "low_conf", False)
+            low_conf_digits = getattr(exc, "low_conf_digits", None)
             expansion = expand_population_roi_after_failure(
                 frame,
                 x,
@@ -600,12 +634,49 @@ def _extract_population(
                 if results is not None:
                     results["population_limit"] = cur_pop
                 cache_obj.resource_failure_counts["population_limit"] = 0
+                low_conf_counts["population_limit"] = 0
+                cache_obj.last_resource_values["population_limit"] = (cur_pop, pop_cap)
             else:
                 if results is not None:
                     results["population_limit"] = None
                 cache_obj.resource_failure_counts["population_limit"] = (
                     failure_count + 1
                 )
+                if low_conf:
+                    low_conf_counts["population_limit"] = low_conf_count + 1
+                else:
+                    low_conf_counts["population_limit"] = 0
+                if (
+                    low_conf
+                    and CFG.get("population_limit_low_conf_fallback", False)
+                    and low_conf_counts["population_limit"]
+                    >= CFG.get("ocr_retry_limit", 3)
+                ):
+                    if low_conf_digits is not None:
+                        cur_pop, pop_cap = low_conf_digits
+                        source = "low-confidence"
+                    else:
+                        cur_pop, pop_cap = cache_obj.last_resource_values.get(
+                            "population_limit", (None, None)
+                        )
+                        source = "cached"
+                    if cur_pop is not None:
+                        if results is not None:
+                            results["population_limit"] = cur_pop
+                        logger.warning(
+                            "Using %s population %d/%d after %d low-confidence attempts",
+                            source,
+                            cur_pop,
+                            pop_cap,
+                            low_conf_counts["population_limit"],
+                        )
+                        cache_obj.last_resource_values["population_limit"] = (
+                            cur_pop,
+                            pop_cap,
+                        )
+                        cache_obj.resource_failure_counts["population_limit"] = 0
+                        low_conf_counts["population_limit"] = 0
+                        return cur_pop, pop_cap
                 if pop_required:
                     raise
     else:
