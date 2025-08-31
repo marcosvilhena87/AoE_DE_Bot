@@ -18,7 +18,7 @@ CFG = load_config()
 logger = logging.getLogger(__name__)
 
 tesseract_cmd = os.environ.get("TESSERACT_CMD") or CFG.get("tesseract_path")
-path_lookup = shutil.which("tesseract") if not tesseract_cmd else None
+path_lookup = shutil.which("tesseract")
 if tesseract_cmd:
     tesseract_path = Path(tesseract_cmd)
     if tesseract_path.is_file() and os.access(tesseract_path, os.X_OK):
