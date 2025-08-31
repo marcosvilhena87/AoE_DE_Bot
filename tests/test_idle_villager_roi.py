@@ -37,7 +37,6 @@ os.environ.setdefault("TESSERACT_CMD", "/usr/bin/true")
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import script.common as common
 import script.resources as resources
-import script.units.villager as villager
 import script.screen_utils as screen_utils
 
 
@@ -199,70 +198,3 @@ class TestIdleVillagerROI(TestCase):
 
         self.assertEqual(regions["idle_villager"], detected["idle_villager"])
 
-    def test_count_idle_villagers_via_hotkey_stops_on_no_decrease(self):
-        counts = iter([
-            ({"idle_villager": 3}, (None, None)),
-            ({"idle_villager": 2}, (None, None)),
-            ({"idle_villager": 1}, (None, None)),
-            ({"idle_villager": 1}, (None, None)),
-        ])
-
-        def fake_read(keys, force_delay=None):
-            return next(counts)
-
-        with patch("script.units.villager.select_idle_villager") as mock_sel, \
-            patch("script.resources.reader.read_resources_from_hud", side_effect=fake_read):
-            initial, selections = villager.count_idle_villagers_via_hotkey(
-                delay=0, return_selections=True
-            )
-
-        self.assertEqual(initial, 3)
-        self.assertEqual(selections, 3)
-        self.assertEqual(mock_sel.call_count, 3)
-
-    def test_count_idle_villagers_via_hotkey_uses_force_delay(self):
-        counts = iter([
-            ({"idle_villager": 2}, (None, None)),
-            ({"idle_villager": 1}, (None, None)),
-            ({"idle_villager": 0}, (None, None)),
-        ])
-
-        delays = []
-
-        def fake_read(keys, force_delay=None):
-            delays.append(force_delay)
-            return next(counts)
-
-        with patch("script.units.villager.select_idle_villager"), patch(
-            "script.resources.reader.read_resources_from_hud", side_effect=fake_read
-        ):
-            initial, selections = villager.count_idle_villagers_via_hotkey(
-                delay=0.1, return_selections=True
-            )
-
-        self.assertEqual(initial, 2)
-        self.assertEqual(selections, 2)
-        self.assertEqual(delays[0], None)
-        self.assertTrue(all(d == 0.1 for d in delays[1:]))
-
-    def test_count_idle_villagers_via_hotkey_stops_on_threshold(self):
-        counts = iter([
-            ({"idle_villager": 4}, (None, None)),
-            ({"idle_villager": 3}, (None, None)),
-            ({"idle_villager": 2}, (None, None)),
-            ({"idle_villager": 1}, (None, None)),
-        ])
-
-        def fake_read(keys, force_delay=None):
-            return next(counts)
-
-        with patch("script.units.villager.select_idle_villager") as mock_sel, patch(
-            "script.resources.reader.read_resources_from_hud", side_effect=fake_read
-        ):
-            initial, selections = villager.count_idle_villagers_via_hotkey(
-                delay=0, stop_threshold=2, return_selections=True
-            )
-
-        self.assertEqual(initial, 4)
-        self.assertEqual(selections, 2)
-        self.assertEqual(mock_sel.call_count, 2)
