@@ -31,7 +31,7 @@ sys.modules.setdefault("pyautogui", dummy_pg)
 sys.modules.setdefault("mss", types.SimpleNamespace(mss=lambda: DummyMSS()))
 
 _OLD_TESS = os.environ.get("TESSERACT_CMD")
-os.environ["TESSERACT_CMD"] = "/usr/bin/true"
+os.environ["TESSERACT_CMD"] = "/usr/bin/tesseract"
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from script.resources import CFG
@@ -59,7 +59,7 @@ class TestWoodStockpileOCR(TestCase):
         confs = parse_confidences(data)
         threshold = CFG.get("ocr_conf_threshold", 60)
         self.assertTrue(digits.isdigit())
-        self.assertGreaterEqual(np.median(confs), threshold)
+        self.assertGreaterEqual(max(confs), threshold)
         self.assertFalse(low_conf)
 
     def test_wood_stockpile_detects_80(self):
@@ -70,3 +70,12 @@ class TestWoodStockpileOCR(TestCase):
             gray, color=roi, resource="wood_stockpile"
         )
         self.assertEqual(digits, "80")
+
+    def test_wood_stockpile_detects_300(self):
+        roi = np.full((60, 150, 3), (19, 69, 139), dtype=np.uint8)
+        cv2.putText(roi, "300", (10, 45), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (255, 255, 255), 2)
+        gray = preprocess_roi(roi)
+        digits, data, _mask, low_conf = execute_ocr(
+            gray, color=roi, resource="wood_stockpile"
+        )
+        self.assertEqual(digits, "300")

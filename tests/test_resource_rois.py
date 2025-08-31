@@ -168,14 +168,15 @@ class TestResourceROIs(TestCase):
             next_trim_px = int(round(next_trim_val))
         next_icon_left_trimmed = next_icon_left - next_trim_px
 
+        pad_extra = int(round(icon_width * 0.25)) if name == "wood_stockpile" else 0
         self.assertGreaterEqual(
             left,
-            icon_right_trimmed + self.pad_left,
+            icon_right_trimmed + self.pad_left - pad_extra,
             f"{name} left not ≥ icon_right + padding",
         )
         self.assertLessEqual(
             right,
-            next_icon_left_trimmed - self.pad_right,
+            next_icon_left_trimmed - self.pad_right + pad_extra,
             f"{name} right not ≤ next_icon_left - padding",
         )
 
@@ -282,12 +283,13 @@ class TestResourceROIs(TestCase):
         right = left + width
         icon_right = positions[0] + icon_width
         next_icon_left = positions[1]
+        pad_extra = int(round(icon_width * 0.25))
         available_left = icon_right + pad_left
         available_right = next_icon_left - pad_right
-        expected_width = available_right - available_left
+        expected_width = available_right - available_left + 2 * pad_extra
         self.assertEqual(width, expected_width)
-        self.assertGreaterEqual(left, available_left)
-        self.assertLessEqual(right, available_right)
+        self.assertEqual(left, available_left - pad_extra)
+        self.assertEqual(right, available_right + pad_extra)
 
     def test_rois_clamp_with_min_width(self):
         frame = np.zeros((50, 100, 3), dtype=np.uint8)
@@ -335,8 +337,9 @@ class TestResourceROIs(TestCase):
         icon_right = positions[0] + icon_width
         next_icon_left = positions[1]
 
-        self.assertGreaterEqual(left, icon_right + pad_left)
-        self.assertLessEqual(right, next_icon_left - pad_right)
+        pad_extra = int(round(icon_width * 0.25))
+        self.assertGreaterEqual(left, icon_right + pad_left - pad_extra)
+        self.assertLessEqual(right, next_icon_left - pad_right + pad_extra)
 
     def test_roi_limited_by_max_width(self):
         frame = np.zeros((50, 200, 3), dtype=np.uint8)
@@ -383,15 +386,17 @@ class TestResourceROIs(TestCase):
         right1 = left1 + width1
         icon_right1 = positions[0] + icon_width
         next_icon_left1 = positions[1]
+        pad_extra = int(round(icon_width * 0.25))
         avail_left1 = icon_right1 + pad_left
         avail_right1 = next_icon_left1 - pad_right
         avail_width1 = avail_right1 - avail_left1
-        expected_width1 = min(avail_width1, max_widths[0])
-        expected_left1 = avail_left1
+        width_before = min(avail_width1, max_widths[0])
+        expected_width1 = width_before + 2 * pad_extra
+        expected_left1 = avail_left1 - pad_extra
         expected_right1 = expected_left1 + expected_width1
-        if expected_right1 > avail_right1:
-            expected_left1 = avail_right1 - expected_width1
-            expected_right1 = avail_right1
+        if expected_right1 > avail_right1 + pad_extra:
+            expected_left1 = avail_right1 + pad_extra - expected_width1
+            expected_right1 = avail_right1 + pad_extra
 
         self.assertEqual(width1, expected_width1, "width not limited by max_width[0]")
         self.assertEqual(left1, expected_left1, "ROI not anchored within bounds")

@@ -100,7 +100,7 @@ def compute_resource_rois(
 
         right = left + width
         if current == "wood_stockpile":
-            pad = 5
+            pad = max(1, int(round(cur_w * 0.25)))
             left = max(panel_left, left - pad)
             right = min(panel_right, right + pad)
             width = right - left
