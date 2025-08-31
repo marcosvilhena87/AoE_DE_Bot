@@ -118,7 +118,7 @@ def compute_resource_rois(
             width = right - left
         else:
             right = left + width
-        if current == "wood_stockpile":
+        if current in ("wood_stockpile", "food_stockpile"):
             pad = max(1, int(round(cur_w * 0.25)))
             left = max(panel_left, left - pad)
             right = min(panel_right, right + pad)

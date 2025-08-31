@@ -41,8 +41,13 @@ def color_mask_sets(hsv, resource, kernel):
             closed_masks.extend([closed, cv2.bitwise_not(closed)])
         return base_masks, closed_masks
     else:
-        white_mask = cv2.inRange(hsv, np.array([0, 0, 200]), np.array([180, 30, 255]))
-        yellow_mask = cv2.inRange(hsv, np.array([20, 100, 180]), np.array([40, 255, 255]))
+        # Broaden white/yellow ranges to capture greyed or anti-aliased digits
+        white_mask = cv2.inRange(
+            hsv, np.array([0, 0, 170]), np.array([180, 80, 255])
+        )
+        yellow_mask = cv2.inRange(
+            hsv, np.array([20, 70, 170]), np.array([40, 255, 255])
+        )
         gray_mask = cv2.inRange(hsv, np.array([0, 0, 160]), np.array([180, 50, 220]))
         digit_mask = cv2.bitwise_or(white_mask, yellow_mask)
         digit_mask = cv2.bitwise_or(digit_mask, gray_mask)
