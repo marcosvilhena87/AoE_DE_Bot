@@ -47,6 +47,7 @@ def execute_ocr(
         else:
             digits, data, mask = masks._ocr_digits_better(gray, whitelist=whitelist)
     low_conf = False
+    zero_conf = False
     best_digits = digits
     best_data = data
     best_mask = mask
@@ -54,6 +55,10 @@ def execute_ocr(
     max_attempts = CFG.get("ocr_conf_max_attempts", 10)
     while digits and data.get("conf"):
         confs = parse_confidences(data)
+        if digits and confs and all(c == 0 for c in confs):
+            zero_conf = True
+            low_conf = False
+            break
         non_zero = [c for c in confs if c > 0]
         metric = np.median(non_zero) if non_zero else 0
         if non_zero and metric >= conf_threshold:
@@ -104,9 +109,13 @@ def execute_ocr(
     # Re-evaluate confidence using the chosen metric after any decay loop
     if digits and data.get("conf"):
         confs = parse_confidences(data)
-        non_zero = [c for c in confs if c > 0]
-        metric = np.median(non_zero) if non_zero else 0
-        low_conf = not (non_zero and metric >= conf_threshold)
+        if digits and confs and all(c == 0 for c in confs):
+            zero_conf = True
+            low_conf = False
+        else:
+            non_zero = [c for c in confs if c > 0]
+            metric = np.median(non_zero) if non_zero else 0
+            low_conf = not (non_zero and metric >= conf_threshold)
 
     if not digits and allow_fallback:
         text = pytesseract.image_to_string(
@@ -121,6 +130,8 @@ def execute_ocr(
             low_conf = True
     if not digits and best_digits:
         best_digits = _sanitize_digits(best_digits)
+        if zero_conf:
+            best_data["zero_conf"] = True
         return best_digits, best_data, best_mask, True
     if not digits:
         debug_dir = ROOT / "debug"
@@ -174,9 +185,13 @@ def execute_ocr(
                     text_path,
                 )
         digits = _sanitize_digits(digits)
+        if zero_conf:
+            data["zero_conf"] = True
         return digits, data, mask, True
     if digits:
         digits = _sanitize_digits(digits)
+        if zero_conf:
+            data["zero_conf"] = True
     return digits, data, mask, low_conf
 
 
