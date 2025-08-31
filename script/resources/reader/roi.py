@@ -81,20 +81,13 @@ def expand_roi_after_failure(
     gray_expanded = preprocess_roi(roi_expanded)
     if top_crop > 0 and gray_expanded.shape[0] > top_crop:
         gray_expanded = gray_expanded[top_crop:, :]
-    try:
-        digits_exp, data_exp, mask_exp, low_conf = execute_ocr(
-            gray_expanded,
-            color=roi_expanded,
-            conf_threshold=res_conf_threshold,
-            roi=(x0, y0, x1 - x0, y1 - y0),
-            resource=name,
-        )
-    except TypeError:
-        digits_exp, data_exp, mask_exp, low_conf = execute_ocr(
-            gray_expanded,
-            conf_threshold=res_conf_threshold,
-            resource=name,
-        )
+    digits_exp, data_exp, mask_exp, low_conf = execute_ocr(
+        gray_expanded,
+        color=roi_expanded,
+        conf_threshold=res_conf_threshold,
+        roi=(x0, y0, x1 - x0, y1 - y0),
+        resource=name,
+    )
     if digits_exp:
         return (
             digits_exp,

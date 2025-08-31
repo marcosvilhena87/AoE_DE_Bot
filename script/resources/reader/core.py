@@ -92,34 +92,20 @@ def _read_resources(
             mask = gray
             low_conf = False
         else:
-            try:
-                digits, data, mask, low_conf = execute_ocr(
-                    gray,
-                    color=roi,
-                    conf_threshold=res_conf_threshold,
-                    roi=(x, y, w, h),
-                    resource=name,
-                )
-                logger.info(
-                    "OCR %s: digits=%s conf=%s low_conf=%s",
-                    name,
-                    digits,
-                    parse_confidences(data),
-                    low_conf,
-                )
-            except TypeError:
-                digits, data, mask, low_conf = execute_ocr(
-                    gray,
-                    conf_threshold=res_conf_threshold,
-                    resource=name,
-                )
-                logger.info(
-                    "OCR %s: digits=%s conf=%s low_conf=%s",
-                    name,
-                    digits,
-                    parse_confidences(data),
-                    low_conf,
-                )
+            digits, data, mask, low_conf = execute_ocr(
+                gray,
+                color=roi,
+                conf_threshold=res_conf_threshold,
+                roi=(x, y, w, h),
+                resource=name,
+            )
+            logger.info(
+                "OCR %s: digits=%s conf=%s low_conf=%s",
+                name,
+                digits,
+                parse_confidences(data),
+                low_conf,
+            )
             if (
                 name == "wood_stockpile"
                 and low_conf
@@ -128,34 +114,20 @@ def _read_resources(
             ):
                 min_conf = CFG.get("ocr_conf_min", 0)
                 if res_conf_threshold > min_conf:
-                    try:
-                        digits_retry, data_retry, mask_retry, low_conf = execute_ocr(
-                            gray,
-                            color=roi,
-                            conf_threshold=min_conf,
-                            roi=(x, y, w, h),
-                            resource=name,
-                        )
-                        logger.info(
-                            "Retry OCR %s: digits=%s conf=%s low_conf=%s",
-                            name,
-                            digits_retry,
-                            parse_confidences(data_retry),
-                            low_conf,
-                        )
-                    except TypeError:
-                        digits_retry, data_retry, mask_retry, low_conf = execute_ocr(
-                            gray,
-                            conf_threshold=min_conf,
-                            resource=name,
-                        )
-                        logger.info(
-                            "Retry OCR %s: digits=%s conf=%s low_conf=%s",
-                            name,
-                            digits_retry,
-                            parse_confidences(data_retry),
-                            low_conf,
-                        )
+                    digits_retry, data_retry, mask_retry, low_conf = execute_ocr(
+                        gray,
+                        color=roi,
+                        conf_threshold=min_conf,
+                        roi=(x, y, w, h),
+                        resource=name,
+                    )
+                    logger.info(
+                        "Retry OCR %s: digits=%s conf=%s low_conf=%s",
+                        name,
+                        digits_retry,
+                        parse_confidences(data_retry),
+                        low_conf,
+                    )
                     if digits_retry:
                         digits, data, mask = digits_retry, data_retry, mask_retry
         if not digits:
@@ -204,36 +176,21 @@ def _read_resources(
                     gray_retry = preprocess_roi(roi_retry)
                     if top_crop > 0 and gray_retry.shape[0] > top_crop:
                         gray_retry = gray_retry[top_crop:, :]
-                    try:
-                        digits_retry, data_retry, mask_retry, low_conf = execute_ocr(
-                            gray_retry,
-                            color=roi_retry,
-                            conf_threshold=res_conf_threshold,
-                            allow_fallback=False,
-                            roi=(cand_x, y, cand_w, h),
-                            resource=name,
-                        )
-                        logger.info(
-                            "OCR %s: digits=%s conf=%s low_conf=%s",
-                            name,
-                            digits_retry,
-                            parse_confidences(data_retry),
-                            low_conf,
-                        )
-                    except TypeError:
-                        digits_retry, data_retry, mask_retry, low_conf = execute_ocr(
-                            gray_retry,
-                            conf_threshold=res_conf_threshold,
-                            allow_fallback=False,
-                            resource=name,
-                        )
-                        logger.info(
-                            "OCR %s: digits=%s conf=%s low_conf=%s",
-                            name,
-                            digits_retry,
-                            parse_confidences(data_retry),
-                            low_conf,
-                        )
+                    digits_retry, data_retry, mask_retry, low_conf = execute_ocr(
+                        gray_retry,
+                        color=roi_retry,
+                        conf_threshold=res_conf_threshold,
+                        allow_fallback=False,
+                        roi=(cand_x, y, cand_w, h),
+                        resource=name,
+                    )
+                    logger.info(
+                        "OCR %s: digits=%s conf=%s low_conf=%s",
+                        name,
+                        digits_retry,
+                        parse_confidences(data_retry),
+                        low_conf,
+                    )
                     if digits_retry:
                         digits, data, mask = digits_retry, data_retry, mask_retry
                         roi, gray = roi_retry, gray_retry
