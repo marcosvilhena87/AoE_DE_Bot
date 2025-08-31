@@ -88,6 +88,7 @@ def main():
             skip_validation = common.CFG.get(
                 "skip_starting_resource_validation", False
             )
+            res_tolerances = common.CFG.get("resource_validation_tolerances", {})
             if non_zero and not skip_validation:
                 retry_limit = common.CFG.get("resource_validation_retries", 3)
                 tolerance = 10
@@ -108,6 +109,7 @@ def main():
                             res,
                             non_zero,
                             tolerance=tolerance,
+                            tolerances=res_tolerances,
                             raise_on_error=True,
                             frame=frame,
                             rois=rois,
@@ -136,6 +138,7 @@ def main():
                                     res,
                                     non_zero,
                                     tolerance=tolerance,
+                                    tolerances=res_tolerances,
                                     raise_on_error=False,
                                     frame=frame,
                                     rois=rois,

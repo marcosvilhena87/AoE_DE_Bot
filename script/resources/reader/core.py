@@ -407,6 +407,7 @@ def validate_starting_resources(
     expected: dict[str, int] | None,
     *,
     tolerance: int = 10,
+    tolerances: dict[str, int] | None = None,
     raise_on_error: bool = False,
     frame: np.ndarray | None = None,
     rois: dict[str, tuple[int, int, int, int]] | None = None,
@@ -428,7 +429,8 @@ def validate_starting_resources(
                 logger.warning(msg)
             continue
 
-        if abs(actual - exp) > tolerance:
+        tol = tolerance if tolerances is None else tolerances.get(name, tolerance)
+        if abs(actual - exp) > tol:
             roi_path = None
             if frame is not None and rois and name in rois:
                 x, y, w, h = rois[name]
@@ -441,7 +443,7 @@ def validate_starting_resources(
 
             msg = (
                 f"{name} reading {actual} deviates from expected {exp} "
-                f"(±{tolerance})"
+                f"(±{tol})"
             )
             if roi_path is not None:
                 msg += f"; ROI saved to {roi_path}"

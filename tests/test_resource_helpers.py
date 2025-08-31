@@ -399,3 +399,16 @@ class TestValidateStartingResources(TestCase):
         self.assertIn("wood_stockpile reading 50", msg)
         self.assertIn("food_stockpile reading 30", msg)
         self.assertIn("Missing OCR reading for 'stone_stockpile'", msg)
+
+    def test_per_resource_tolerance_overrides_default(self):
+        with patch("script.resources.reader.logger.warning") as warn_mock:
+            resources.validate_starting_resources(
+                {"wood_stockpile": 50, "food_stockpile": 70},
+                {"wood_stockpile": 80, "food_stockpile": 90},
+                tolerance=10,
+                tolerances={"wood_stockpile": 40},
+                raise_on_error=False,
+            )
+            warn_mock.assert_called_once_with(
+                "food_stockpile reading 70 deviates from expected 90 (±10)"
+            )
