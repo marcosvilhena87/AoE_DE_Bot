@@ -481,61 +481,51 @@ def _read_population_from_roi(roi, conf_threshold=None, roi_bbox=None, failure_c
 
     if roi_bbox is not None:
         x, y, w, h = roi_bbox
-        if mask_path is not None:
-            logger.warning(
-                "OCR failed for population at ROI (%d, %d, %d, %d); text='%s', conf=%s; ROI saved to %s; threshold saved to %s",
-                x,
-                y,
-                w,
-                h,
-                text,
-                confidences,
-                roi_path,
-                mask_path,
-            )
-            msg = (
-                f"Failed to read population from HUD at ROI ({x}, {y}, {w}, {h}): "
-                f"text='{text}', confs={confidences}; ROI saved to {roi_path}; threshold saved to {mask_path}"
-            )
-        else:
-            logger.warning(
-                "OCR failed for population at ROI (%d, %d, %d, %d); text='%s', conf=%s; ROI saved to %s",
-                x,
-                y,
-                w,
-                h,
-                text,
-                confidences,
-                roi_path,
-            )
-            msg = (
-                f"Failed to read population from HUD at ROI ({x}, {y}, {w}, {h}): "
-                f"text='{text}', confs={confidences}; ROI saved to {roi_path}"
-            )
     else:
-        if mask_path is not None:
-            logger.warning(
-                "OCR failed for population; text='%s', conf=%s; ROI saved to %s; threshold saved to %s",
-                text,
-                confidences,
-                roi_path,
-                mask_path,
-            )
-            msg = (
-                f"Failed to read population from HUD: text='{text}', confs={confidences}; "
-                f"ROI saved to {roi_path}; threshold saved to {mask_path}"
-            )
-        else:
-            logger.warning(
-                "OCR failed for population; text='%s', conf=%s; ROI saved to %s",
-                text,
-                confidences,
-                roi_path,
-            )
-            msg = (
-                f"Failed to read population from HUD: text='{text}', confs={confidences}; "
-                f"ROI saved to {roi_path}"
-            )
+        h, w = roi.shape[:2]
+        x = y = 0
+
+    base_warning = (
+        "OCR failed for population at ROI (%d, %d, %d, %d); attempt=%d; "
+        "conf_threshold=%s; text='%s', conf=%s; ROI saved to %s"
+    )
+    if mask_path is not None:
+        logger.warning(
+            base_warning + "; mask saved to %s",
+            x,
+            y,
+            w,
+            h,
+            failure_count,
+            conf_threshold,
+            text,
+            confidences,
+            roi_path,
+            mask_path,
+        )
+        msg = (
+            f"Failed to read population from HUD at ROI ({x}, {y}, {w}, {h}): "
+            f"text='{text}', confs={confidences}; conf_threshold={conf_threshold}; "
+            f"attempt={failure_count}; ROI saved to {roi_path}; mask saved to {mask_path}"
+        )
+    else:
+        logger.warning(
+            base_warning,
+            x,
+            y,
+            w,
+            h,
+            failure_count,
+            conf_threshold,
+            text,
+            confidences,
+            roi_path,
+        )
+        msg = (
+            f"Failed to read population from HUD at ROI ({x}, {y}, {w}, {h}): "
+            f"text='{text}', confs={confidences}; conf_threshold={conf_threshold}; "
+            f"attempt={failure_count}; ROI saved to {roi_path}"
+        )
     err = common.PopulationReadError(msg)
     if low_conf:
         err.low_conf = True
@@ -564,6 +554,7 @@ def read_population_from_roi(
                 roi,
                 conf_threshold=conf_threshold,
                 roi_bbox=(x, y, w, h),
+                failure_count=attempt,
             )
             cache_obj.resource_failure_counts["population_limit"] = 0
             return cur_pop, pop_cap
