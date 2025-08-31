@@ -104,7 +104,7 @@ def _read_resources(
                     "OCR %s: digits=%s conf=%s low_conf=%s",
                     name,
                     digits,
-                    data.get("conf"),
+                    parse_confidences(data),
                     low_conf,
                 )
             except TypeError:
@@ -117,7 +117,7 @@ def _read_resources(
                     "OCR %s: digits=%s conf=%s low_conf=%s",
                     name,
                     digits,
-                    data.get("conf"),
+                    parse_confidences(data),
                     low_conf,
                 )
             if (
@@ -140,7 +140,7 @@ def _read_resources(
                             "Retry OCR %s: digits=%s conf=%s low_conf=%s",
                             name,
                             digits_retry,
-                            data_retry.get("conf"),
+                            parse_confidences(data_retry),
                             low_conf,
                         )
                     except TypeError:
@@ -153,7 +153,7 @@ def _read_resources(
                             "Retry OCR %s: digits=%s conf=%s low_conf=%s",
                             name,
                             digits_retry,
-                            data_retry.get("conf"),
+                            parse_confidences(data_retry),
                             low_conf,
                         )
                     if digits_retry:
@@ -217,7 +217,7 @@ def _read_resources(
                             "OCR %s: digits=%s conf=%s low_conf=%s",
                             name,
                             digits_retry,
-                            data_retry.get("conf"),
+                            parse_confidences(data_retry),
                             low_conf,
                         )
                     except TypeError:
@@ -231,7 +231,7 @@ def _read_resources(
                             "OCR %s: digits=%s conf=%s low_conf=%s",
                             name,
                             digits_retry,
-                            data_retry.get("conf"),
+                            parse_confidences(data_retry),
                             low_conf,
                         )
                     if digits_retry:
