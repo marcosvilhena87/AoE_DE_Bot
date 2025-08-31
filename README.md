@@ -110,6 +110,10 @@ between two icons. Three configuration options define the valid horizontal
   from the HUD anchor.
 * `idle_roi_extra_width` – extra pixels appended to the idle villager span to
   capture digits.
+* `min_pop_width` – minimum width reserved for the population readout when
+  the icon cannot be detected.
+* `pop_roi_extra_width` – extra pixels appended to the right of the population
+  span to include the `/` separator and large numbers.
 
 Adjust individual entries in the padding arrays when a specific resource needs
 more or less space. Increasing `roi_padding_left` or decreasing
