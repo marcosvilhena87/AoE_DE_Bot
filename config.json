@@ -110,25 +110,25 @@
   "food_stockpile_roi": {
     "top_pct": 0.111,       
     "height_pct": 0.027,    
-    "left_pct": 0.235,      
+    "left_pct": 0.236,      
     "width_pct": 0.03       
   },
   "gold_stockpile_roi": {
     "top_pct": 0.111,
     "height_pct": 0.027,
-    "left_pct": 0.280,
+    "left_pct": 0.282,
     "width_pct": 0.03
   },
   "stone_stockpile_roi": {
     "top_pct": 0.111,
     "height_pct": 0.027,
-    "left_pct": 0.325,
+    "left_pct": 0.328,
     "width_pct": 0.03
   },
   "population_limit_roi": {
     "top_pct": 0.111,
     "height_pct": 0.027,
-    "left_pct": 0.37,
+    "left_pct": 0.374,
     "width_pct": 0.03
   },
   "idle_villager_roi": {
