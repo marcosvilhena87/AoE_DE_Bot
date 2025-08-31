@@ -96,7 +96,7 @@ class TestIdleVillagerOCR(TestCase):
             output_type=resources.pytesseract.Output.DICT,
         )
 
-    def test_idle_villager_low_confidence_returns_zero(self):
+    def test_idle_villager_low_confidence_returns_none(self):
         def fake_detect(frame, required_icons, cache=None):
             return {"idle_villager": (0, 0, 50, 50)}
 
@@ -111,14 +111,14 @@ class TestIdleVillagerOCR(TestCase):
             "script.resources.reader.core.execute_ocr",
             return_value=("", {"text": [""], "conf": []}, None, True),
         ), patch(
-            "script.resources.reader.core.handle_ocr_failure",
-            lambda *a, **k: None,
+            "script.resources.reader.roi.execute_ocr",
+            return_value=("", {"text": [""], "conf": []}, None, True),
         ):
             result, _ = resources.read_resources_from_hud(
                 required_icons=[], icons_to_read=["idle_villager"]
             )
 
-        self.assertEqual(result.get("idle_villager"), 0)
+        self.assertIsNone(result.get("idle_villager"))
 
     def test_idle_villager_zero_confidence_ignored(self):
         def fake_detect(frame, required_icons, cache=None):
@@ -144,7 +144,7 @@ class TestIdleVillagerOCR(TestCase):
         )
         exec_mock.assert_not_called()
 
-    def test_idle_villager_zero_confidence_falls_back_after_streak(self):
+    def test_idle_villager_zero_confidence_streak_uses_latest_value(self):
         def fake_detect(frame, required_icons, cache=None):
             return {"idle_villager": (0, 0, 50, 50)}
 
@@ -169,5 +169,31 @@ class TestIdleVillagerOCR(TestCase):
         self.assertEqual(second["idle_villager"], 12)
         self.assertEqual(third["idle_villager"], 12)
         self.assertEqual(fourth["idle_villager"], 12)
-        self.assertEqual(fifth["idle_villager"], 7)
-        self.assertEqual(resources.RESOURCE_CACHE.last_resource_values["idle_villager"], 7)
+        self.assertEqual(fifth["idle_villager"], 12)
+        self.assertEqual(resources.RESOURCE_CACHE.last_resource_values["idle_villager"], 12)
+
+    def test_idle_villager_low_confidence_streak_preserves_value(self):
+        def fake_detect(frame, required_icons, cache=None):
+            return {"idle_villager": (0, 0, 50, 50)}
+
+        frame = np.zeros((100, 100, 3), dtype=np.uint8)
+        low_conf = {"text": ["3"], "conf": ["-1"]}
+        with patch(
+            "script.resources.reader.core.detect_resource_regions",
+            side_effect=fake_detect,
+        ), patch("script.screen_utils._grab_frame", return_value=frame), patch(
+            "script.resources.reader.pytesseract.image_to_data",
+            return_value=low_conf,
+        ):
+            first, _ = resources.read_resources_from_hud(["idle_villager"])
+            second, _ = resources.read_resources_from_hud(["idle_villager"])
+            third, _ = resources.read_resources_from_hud(["idle_villager"])
+            fourth, _ = resources.read_resources_from_hud(["idle_villager"])
+            fifth, _ = resources.read_resources_from_hud(["idle_villager"])
+
+        self.assertEqual(first["idle_villager"], 3)
+        self.assertEqual(second["idle_villager"], 3)
+        self.assertEqual(third["idle_villager"], 3)
+        self.assertEqual(fourth["idle_villager"], 3)
+        self.assertEqual(fifth["idle_villager"], 3)
+        self.assertEqual(resources.RESOURCE_CACHE.last_resource_values["idle_villager"], 3)
