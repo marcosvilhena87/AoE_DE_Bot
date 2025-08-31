@@ -41,7 +41,7 @@ def _run_masks(masks, psms, debug, debug_dir, ts, start_idx=0, whitelist="012345
     if not scored:
         return results[0]
 
-    scored.sort(key=lambda r: (len(r[0]), -r[3]))
+    scored.sort(key=lambda r: (-len(r[0]), -r[3]))
     best = scored[0]
     return best[0], best[1], best[2]
 

@@ -2,6 +2,7 @@ import os
 import sys
 import types
 from unittest import TestCase
+from unittest.mock import patch
 
 import cv2
 import numpy as np
@@ -29,14 +30,18 @@ class DummyMSS:
 sys.modules.setdefault("pyautogui", dummy_pg)
 sys.modules.setdefault("mss", types.SimpleNamespace(mss=lambda: DummyMSS()))
 
+import pytesseract
+
 _OLD_TESS = os.environ.get("TESSERACT_CMD")
 os.environ["TESSERACT_CMD"] = "/usr/bin/tesseract"
+pytesseract.pytesseract.tesseract_cmd = "/usr/bin/tesseract"
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from script.resources import CFG
 from script.resources.ocr.preprocess import preprocess_roi
 from script.resources.ocr.executor import execute_ocr
 from script.resources.ocr.confidence import parse_confidences
+from script.resources.ocr.masks import _run_masks
 
 
 class TestFoodStockpileOCR(TestCase):
@@ -73,3 +78,14 @@ class TestFoodStockpileOCR(TestCase):
         self.assertEqual(digits, "140")
         self.assertGreaterEqual(max(confs), threshold)
         self.assertFalse(low_conf)
+
+    def test_full_match_preferred_over_shorter_when_confidences_close(self):
+        masks = [np.zeros((1, 1), dtype=np.uint8), np.zeros((1, 1), dtype=np.uint8)]
+        psms = [6]
+        outputs = [
+            {"text": ["0"], "conf": ["91"]},
+            {"text": ["140"], "conf": ["90", "90", "90"]},
+        ]
+        with patch("script.resources.ocr.masks.pytesseract.image_to_data", side_effect=outputs):
+            digits, data, mask = _run_masks(masks, psms, False, None, 0)
+        self.assertEqual(digits, "140")

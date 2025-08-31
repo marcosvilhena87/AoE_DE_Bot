@@ -34,13 +34,13 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from script.resources.ocr.masks import _run_masks
 
 
-def test_high_confidence_shorter_digits_win():
+def test_longer_digits_preferred_over_shorter_even_if_confidence_lower():
     masks = [np.zeros((1, 1), dtype=np.uint8), np.zeros((1, 1), dtype=np.uint8)]
     psms = [6]
     outputs = [
-        {"text": ["1234"], "conf": ["10", "10", "10", "10"]},
-        {"text": ["99"], "conf": ["90", "90"]},
+        {"text": ["0"], "conf": ["91"]},
+        {"text": ["140"], "conf": ["90", "90", "90"]},
     ]
     with patch("script.resources.ocr.masks.pytesseract.image_to_data", side_effect=outputs):
         digits, data, mask = _run_masks(masks, psms, False, None, 0)
-    assert digits == "99"
+    assert digits == "140"
