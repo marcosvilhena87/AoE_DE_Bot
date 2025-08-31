@@ -131,6 +131,9 @@ def locate_resource_panel(frame, cache_obj: cache.ResourceCache = cache.RESOURCE
         extra = cfg.idle_roi_extra_width
         left = x + xi
         width = wi + extra
+        pop_span = spans.get("population_limit")
+        if pop_span and pop_span[0] > left:
+            width = min(width, pop_span[0] - left)
         right = left + width
         if right > x + w:
             width = (x + w) - left
