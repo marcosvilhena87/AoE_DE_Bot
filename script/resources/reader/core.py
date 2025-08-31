@@ -283,9 +283,13 @@ def _read_resources(
                 if results.get(name) is not None:
                     logger.info("Detected %s=%d", name, results[name])
                 continue
+            treat_low_conf_as_failure = (
+                CFG.get("treat_low_conf_as_failure", True)
+                and not CFG.get("allow_low_conf_digits", False)
+            )
             if (
                 low_conf
-                and CFG.get("treat_low_conf_as_failure", True)
+                and treat_low_conf_as_failure
                 and (name != "wood_stockpile" or name in cache_obj.last_resource_values)
             ):
                 fallback_key = f"{name}_low_conf_fallback"
