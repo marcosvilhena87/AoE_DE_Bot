@@ -1,3 +1,5 @@
+Este arquivo não deve ser modificado.
+
 Starting Age:  Stone Age
 Starting resources: 80 wood, 140 food, 0 gold, 0 stone
 Population limit: 50
