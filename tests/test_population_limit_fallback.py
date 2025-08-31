@@ -1,8 +1,7 @@
-from unittest.mock import patch
-
 import os
 import sys
 import types
+from unittest.mock import patch
 import numpy as np
 
 sys.modules.setdefault(
@@ -10,13 +9,14 @@ sys.modules.setdefault(
     types.SimpleNamespace(
         cvtColor=lambda src, code: src,
         resize=lambda img, *a, **k: img,
-        matchTemplate=lambda *a, **k: np.zeros((1, 1), dtype=np.float32),
-        minMaxLoc=lambda res: (0.0, 0.0, (0, 0), (0, 0)),
+        threshold=lambda src, *a, **k: (None, src),
         imread=lambda *a, **k: np.zeros((1, 1), dtype=np.uint8),
-        NORM_MINMAX=0,
-        TM_CCOEFF_NORMED=0,
+        imwrite=lambda *a, **k: True,
         IMREAD_GRAYSCALE=0,
         COLOR_BGR2GRAY=0,
+        INTER_LINEAR=0,
+        THRESH_BINARY=0,
+        THRESH_OTSU=0,
     ),
 )
 
@@ -73,8 +73,9 @@ def test_population_limit_fallback_estimates_width_with_padding():
         patch.dict(resources.screen_utils.ICON_TEMPLATES, {"idle_villager": np.zeros((hi, wi), dtype=np.uint8)}, clear=True), \
         patch.object(resources.cv2, "cvtColor", lambda src, code: np.zeros(src.shape[:2], dtype=np.uint8)), \
         patch.object(resources.cv2, "resize", lambda img, *a, **k: img), \
-        patch.object(resources.cv2, "matchTemplate", lambda *a, **k: np.zeros((1, 1), dtype=np.float32)), \
-        patch.object(resources.cv2, "minMaxLoc", lambda res: (0.0, 0.95, (0, 0), (xi, yi))), \
+        patch.object(resources.cv2, "matchTemplate", lambda *a, **k: np.zeros((1, 1), dtype=np.float32), create=True), \
+        patch.object(resources.cv2, "minMaxLoc", lambda res: (0.0, 0.95, (0, 0), (xi, yi)), create=True), \
+        patch.object(resources.cv2, "TM_CCOEFF_NORMED", 0, create=True), \
         patch.object(detection, "_get_resource_panel_cfg", return_value=cfg):
         detection.locate_resource_panel(frame, cache)
         detection.locate_resource_panel(frame, cache)
@@ -85,3 +86,42 @@ def test_population_limit_fallback_estimates_width_with_padding():
     assert pl[2] == base + cfg.pop_roi_extra_width
     assert pl[0] == max(0, iv[0] - base)
     assert pl[0] + pl[2] == iv[0] + cfg.pop_roi_extra_width
+
+
+def test_population_low_conf_cache_fallback():
+    frame = np.zeros((10, 10, 3), dtype=np.uint8)
+    regions = {"population_limit": (0, 0, 5, 5)}
+    results = {}
+    cache = resources.cache.ResourceCache()
+    cache.last_resource_values["population_limit"] = (80, 200)
+    cache.resource_failure_counts["population_limit"] = 2
+    cache.resource_low_conf_counts = {"population_limit": 2}
+
+    def low_conf_error(roi, conf_threshold=None, roi_bbox=None, failure_count=0):
+        err = resources.common.PopulationReadError("low")
+        err.low_conf = True
+        err.low_conf_digits = None
+        raise err
+
+    with patch.dict(
+        resources.common.CFG,
+        {"population_limit_low_conf_fallback": True, "ocr_retry_limit": 3},
+        clear=False,
+    ), patch(
+        "script.resources.ocr.executor._read_population_from_roi",
+        side_effect=low_conf_error,
+    ), patch(
+        "script.resources.reader.roi.expand_population_roi_after_failure",
+        return_value=None,
+    ):
+        cur, cap = resources._extract_population(
+            frame,
+            regions,
+            results,
+            True,
+            conf_threshold=60,
+            cache_obj=cache,
+        )
+
+    assert (cur, cap) == (80, 200)
+    assert results["population_limit"] == 80
