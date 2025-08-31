@@ -73,7 +73,7 @@ def build_house():
         try:
             hud.wait_hud()
             res_vals, _ = resources.read_resources_from_hud(["wood_stockpile"])
-        except Exception as exc:
+        except common.ResourceReadError as exc:
             logger.error(
                 "Failed to refresh HUD or read resources while building house: %s",
                 exc,
@@ -116,7 +116,7 @@ def build_house():
 
         try:
             cur, limit = hud.read_population_from_hud()
-        except Exception as exc:  # pragma: no cover - falha de OCR
+        except (common.ResourceReadError, common.PopulationReadError) as exc:  # pragma: no cover - falha de OCR
             logger.warning("Failed to read population: %s", exc)
             limit = common.POP_CAP
 

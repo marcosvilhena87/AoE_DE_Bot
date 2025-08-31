@@ -61,7 +61,7 @@ def main():
                 )
                 raise SystemExit(
                     "HUD not detected after two attempts; exiting script."
-                )
+                ) from e2
 
         info = parse_scenario_info(args.scenario)
         common.CURRENT_POP = info.starting_villagers
@@ -172,9 +172,9 @@ def main():
             logger.info(
                 "Detected idle villagers: %s", res.get("idle_villager")
             )
-        except Exception as e:
+        except (common.ResourceReadError, common.PopulationReadError) as e:
             logger.error("Failed to detect resources or population: %s", e)
-            raise SystemExit("Failed to detect resources or population")
+            raise SystemExit("Failed to detect resources or population") from e
 
         logger.info("Setup complete.")
         module_name = _scenario_to_module(args.scenario)
@@ -182,7 +182,7 @@ def main():
             mission = importlib.import_module(module_name)
         except ModuleNotFoundError as e:
             logger.error("Failed to import mission module '%s': %s", module_name, e)
-            raise SystemExit(f"Mission module '{module_name}' not found")
+            raise SystemExit(f"Mission module '{module_name}' not found") from e
         func = getattr(mission, "run_mission", None) or getattr(mission, "main", None)
         if func is None:
             logger.error(
