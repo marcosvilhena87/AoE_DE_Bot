@@ -12,33 +12,20 @@ logger = logging.getLogger(__name__)
 def select_idle_villager(delay: float = 0.1) -> bool:
     """Tenta selecionar um aldeão ocioso usando a tecla configurada.
 
-    Lê o valor de ``idle_villager`` antes e depois de pressionar o hotkey.
-    O parâmetro ``delay`` é repassado para ``force_delay`` na segunda leitura
-    para dar tempo da interface atualizar. Retorna ``True`` se a contagem
-    diminuir (um aldeão foi selecionado) ou ``False`` caso contrário.
+    Lê o valor de ``idle_villager`` apenas uma vez. Se o valor for um inteiro
+    maior que zero, pressiona a hotkey configurada e retorna ``True``.
+    Caso contrário, retorna ``False``.
     """
 
-    before = None
     try:
-        res_before, _ = resources.read_resources_from_hud(["idle_villager"])
+        res_vals, _ = resources.read_resources_from_hud(["idle_villager"])
     except common.ResourceReadError as exc:  # pragma: no cover - falha de OCR
         logger.error("Failed to read idle_villager: %s", exc)
-    else:
-        before = res_before.get("idle_villager")
+        return False
 
-    input_utils._press_key_safe(common.CFG["keys"]["idle_vill"], 0.10)
-
-    after = None
-    try:
-        res_after, _ = resources.read_resources_from_hud(
-            ["idle_villager"], force_delay=delay
-        )
-    except common.ResourceReadError as exc:  # pragma: no cover - falha de OCR
-        logger.error("Failed to read idle_villager: %s", exc)
-    else:
-        after = res_after.get("idle_villager")
-
-    if isinstance(before, int) and isinstance(after, int) and after < before:
+    idle_vill = res_vals.get("idle_villager")
+    if isinstance(idle_vill, int) and idle_vill > 0:
+        input_utils._press_key_safe(common.CFG["keys"]["idle_vill"], delay)
         return True
     return False
 
