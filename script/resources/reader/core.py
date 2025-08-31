@@ -36,6 +36,20 @@ _LAST_LOW_CONFIDENCE: set[str] = set()
 _LAST_NO_DIGITS: set[str] = set()
 
 
+class ResourceValidationError(ValueError):
+    """Exception raised when resource validation fails.
+
+    Attributes
+    ----------
+    failing_keys:
+        Set of resource names that did not meet the expected values.
+    """
+
+    def __init__(self, errors: list[str], failing_keys: set[str]):
+        super().__init__("; ".join(errors))
+        self.failing_keys = failing_keys
+
+
 def _read_resources(
     frame,
     required_icons,
@@ -508,10 +522,11 @@ def validate_starting_resources(
     raise_on_error: bool = False,
     frame: np.ndarray | None = None,
     rois: dict[str, tuple[int, int, int, int]] | None = None,
-) -> None:
+) -> set[str]:
     if not expected:
-        return
+        return set()
     errors: list[str] = []
+    failing: set[str] = set()
 
     def _save_debug(name: str):
         if frame is None or rois is None or name not in rois:
@@ -550,8 +565,10 @@ def validate_starting_resources(
             if raise_on_error:
                 logger.error(msg)
                 errors.append(msg)
+                failing.add(name)
             else:
                 logger.warning(msg)
+                failing.add(name)
             continue
 
         tol = tolerance if tolerances is None else tolerances.get(name, tolerance)
@@ -575,18 +592,24 @@ def validate_starting_resources(
             if raise_on_error:
                 logger.error(msg)
                 errors.append(msg)
+                failing.add(name)
             else:
                 logger.warning(msg)
+                failing.add(name)
         elif name in _LAST_LOW_CONFIDENCE:
             msg = f"Low-confidence OCR for '{name}'{debug_info}"
             if raise_on_error:
                 logger.error(msg)
                 errors.append(msg)
+                failing.add(name)
             else:
                 logger.warning(msg)
+                failing.add(name)
 
     if errors and raise_on_error:
-        raise ValueError("; ".join(errors))
+        raise ResourceValidationError(errors, failing)
+
+    return failing
 
 
 __all__ = [
@@ -594,4 +617,5 @@ __all__ = [
     "read_resources_from_hud",
     "gather_hud_stats",
     "validate_starting_resources",
+    "ResourceValidationError",
 ]

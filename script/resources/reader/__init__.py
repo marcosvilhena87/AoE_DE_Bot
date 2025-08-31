@@ -40,6 +40,7 @@ from .core import (
     read_resources_from_hud,
     gather_hud_stats,
     validate_starting_resources,
+    ResourceValidationError,
 )
 
 __all__ = [
@@ -62,4 +63,5 @@ __all__ = [
     "read_resources_from_hud",
     "gather_hud_stats",
     "validate_starting_resources",
+    "ResourceValidationError",
 ]

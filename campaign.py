@@ -115,7 +115,7 @@ def main():
                             rois=rois,
                         )
                         break
-                    except ValueError as e:
+                    except resources.ResourceValidationError as e:
                         logger.warning(
                             "Starting resource validation attempt %d failed: %s",
                             attempt,
@@ -148,7 +148,7 @@ def main():
                                 raise
                         attempt += 1
                         tolerance = min(max_tolerance, tolerance + 5)
-                        for k in non_zero:
+                        for k in e.failing_keys:
                             resources._NARROW_ROI_DEFICITS[k] = (
                                 resources._NARROW_ROI_DEFICITS.get(k, 0) + 2
                             )
