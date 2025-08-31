@@ -21,6 +21,16 @@ def compute_resource_rois(
     detected=None,
 ):
     """Compute resource ROIs from detected icon bounds."""
+    if not pad_left:
+        raise ValueError("pad_left must contain at least one element")
+    if not pad_right:
+        raise ValueError("pad_right must contain at least one element")
+    if not icon_trims:
+        raise ValueError("icon_trims must contain at least one element")
+    if not max_widths:
+        raise ValueError("max_widths must contain at least one element")
+    if not min_widths:
+        raise ValueError("min_widths must contain at least one element")
 
     if min_requireds is None:
         min_requireds = [0] * len(RESOURCE_ICON_ORDER)
