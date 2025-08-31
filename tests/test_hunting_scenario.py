@@ -87,7 +87,7 @@ class TestHuntingScenario(TestCase):
 
     def test_idle_villager_cache_seeded(self):
         info = config_utils.ScenarioInfo(
-            starting_villagers=4,
+            starting_villagers=3,
             population_limit=50,
             starting_resources=None,
             objective_villagers=8,
