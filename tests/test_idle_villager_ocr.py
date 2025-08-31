@@ -162,8 +162,12 @@ class TestIdleVillagerOCR(TestCase):
             first, _ = resources.read_resources_from_hud(["idle_villager"])
             second, _ = resources.read_resources_from_hud(["idle_villager"])
             third, _ = resources.read_resources_from_hud(["idle_villager"])
+            fourth, _ = resources.read_resources_from_hud(["idle_villager"])
+            fifth, _ = resources.read_resources_from_hud(["idle_villager"])
 
         self.assertEqual(first["idle_villager"], 12)
         self.assertEqual(second["idle_villager"], 12)
-        self.assertEqual(third["idle_villager"], 7)
+        self.assertEqual(third["idle_villager"], 12)
+        self.assertEqual(fourth["idle_villager"], 12)
+        self.assertEqual(fifth["idle_villager"], 7)
         self.assertEqual(resources.RESOURCE_CACHE.last_resource_values["idle_villager"], 7)

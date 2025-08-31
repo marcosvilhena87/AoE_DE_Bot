@@ -263,7 +263,7 @@ def _read_resources(
             if name == "idle_villager":
                 count = low_conf_counts.get(name, 0)
                 if low_conf:
-                    threshold = CFG.get("idle_villager_low_conf_streak", 3)
+                    threshold = CFG.get("idle_villager_low_conf_streak", 5)
                     if count >= threshold and name in cache_obj.last_resource_values:
                         results[name] = cache_obj.last_resource_values[name]
                         cache_hits.add(name)
