@@ -85,7 +85,10 @@ def main():
                 required_icons=required,
                 optional_icons=optional,
             )
-            if non_zero:
+            skip_validation = common.CFG.get(
+                "skip_starting_resource_validation", False
+            )
+            if non_zero and not skip_validation:
                 retry_limit = common.CFG.get("resource_validation_retries", 3)
                 tolerance = 10
                 max_tolerance = 15
@@ -151,6 +154,10 @@ def main():
                             required_icons=required,
                             optional_icons=optional,
                         )
+            elif non_zero and skip_validation:
+                logger.info(
+                    "Skipping starting resource validation; initial readings will be logged."
+                )
             logger.info(
                 "Detected resources: wood=%s, food=%s, gold=%s, stone=%s",
                 res.get("wood_stockpile"),
