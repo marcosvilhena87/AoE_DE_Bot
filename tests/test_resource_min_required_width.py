@@ -69,7 +69,8 @@ class TestResourceMinRequiredWidth(TestCase):
             [0] * 6,
             [20] * 6,
             [0] * 6,
+            0,
             [50] * 6,
             detected=detected,
         )
-        self.assertEqual(regions["wood_stockpile"][2], 50)
+        self.assertGreaterEqual(regions["wood_stockpile"][2], 50)

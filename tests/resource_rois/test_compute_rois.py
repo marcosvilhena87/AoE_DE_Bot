@@ -24,6 +24,7 @@ class TestComputeResourceROIs(TestCase):
             [0] * 6,
             [999] * 6,
             [20] * 6,
+            0,
             detected=detected,
         )
         roi = regions["wood_stockpile"]
@@ -51,6 +52,7 @@ class TestComputeResourceROIs(TestCase):
             [0] * 6,
             [999] * 6,
             [0] * 6,
+            0,
             detected=detected,
         )
         self.assertNotIn("wood_stockpile", regions)
@@ -129,12 +131,35 @@ class TestComputeResourceROIs(TestCase):
             [0] * 6,
             [999] * 6,
             [30] * 6,
+            0,
             detected=detected,
         )
         self.assertGreaterEqual(regions["food_stockpile"][2], 30)
         self.assertGreaterEqual(regions["idle_villager"][2], 30)
         self.assertNotIn("food_stockpile", narrow)
         self.assertNotIn("idle_villager", narrow)
+
+    def test_population_roi_respects_min_width(self):
+        detected = {
+            "population_limit": (0, 0, 5, 5),
+            "idle_villager": (20, 0, 5, 5),
+        }
+        min_pop_width = 50
+        regions, _spans, _narrow = resources.compute_resource_rois(
+            0,
+            200,
+            0,
+            10,
+            [2] * 6,
+            [2] * 6,
+            [0] * 6,
+            [999] * 6,
+            [0] * 6,
+            min_pop_width,
+            [0] * 6,
+            detected=detected,
+        )
+        self.assertGreaterEqual(regions["population_limit"][2], min_pop_width)
 
 
 class TestNarrowROIExpansion(TestCase):
