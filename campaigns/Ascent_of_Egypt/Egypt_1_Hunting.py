@@ -62,11 +62,16 @@ def main() -> None:
     common.TARGET_POP = info.objective_villagers
 
     # Inicialização de recursos com base no cenário
+    now = time.time()
     if info.starting_resources:
-        now = time.time()
         resources.RESOURCE_CACHE.last_resource_values.update(info.starting_resources)
         for name in info.starting_resources:
             resources.RESOURCE_CACHE.last_resource_ts[name] = now
+
+    resources.RESOURCE_CACHE.last_resource_values["idle_villager"] = (
+        info.starting_villagers
+    )
+    resources.RESOURCE_CACHE.last_resource_ts["idle_villager"] = now
 
     logger.info("Setup complete.")
     if "PYTEST_CURRENT_TEST" in os.environ:
