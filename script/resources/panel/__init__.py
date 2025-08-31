@@ -21,6 +21,8 @@ class ResourcePanelCfg:
     top_pct: float
     height_pct: float
     idle_roi_extra_width: int
+    min_pop_width: int
+    pop_roi_extra_width: int
 
 
 def _get_resource_panel_cfg():
@@ -74,6 +76,8 @@ def _get_resource_panel_cfg():
     height_pct = profile_res.get("height_pct", res_cfg.get("height_pct", 0.84))
 
     idle_extra = res_cfg.get("idle_roi_extra_width", 0)
+    min_pop_width = res_cfg.get("min_pop_width", 0)
+    pop_extra = res_cfg.get("pop_roi_extra_width", 0)
 
     return ResourcePanelCfg(
         match_threshold,
@@ -87,6 +91,8 @@ def _get_resource_panel_cfg():
         top_pct,
         height_pct,
         idle_extra,
+        min_pop_width,
+        pop_extra,
     )
 
 

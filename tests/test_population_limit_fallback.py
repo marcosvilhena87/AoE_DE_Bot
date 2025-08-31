@@ -52,10 +52,12 @@ def _make_cfg():
         top_pct=0.0,
         height_pct=1.0,
         idle_roi_extra_width=0,
+        min_pop_width=30,
+        pop_roi_extra_width=5,
     )
 
 
-def test_population_limit_fallback_clamped_left_of_idle_villager():
+def test_population_limit_fallback_estimates_width_with_padding():
     frame = np.zeros((20, 200, 3), dtype=np.uint8)
     cache = resources.cache.ResourceCache()
     cache.last_icon_bounds["population_limit"] = (0, 0, 1000, 10)
@@ -79,5 +81,7 @@ def test_population_limit_fallback_clamped_left_of_idle_villager():
 
     pl = cache.last_icon_bounds["population_limit"]
     iv = cache.last_icon_bounds["idle_villager"]
-    assert pl[0] + pl[2] <= iv[0]
-    assert pl[2] <= int(wi * 1.5)
+    base = max(2 * wi, cfg.min_pop_width)
+    assert pl[2] == base + cfg.pop_roi_extra_width
+    assert pl[0] == max(0, iv[0] - base)
+    assert pl[0] + pl[2] == iv[0] + cfg.pop_roi_extra_width

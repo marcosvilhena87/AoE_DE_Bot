@@ -93,6 +93,8 @@
         "min_width": [5, 30, 5, 5, 5, 30],
         "min_required_width": 12,
         "idle_roi_extra_width": 24,
+        "min_pop_width": 60,
+        "pop_roi_extra_width": 12,
         "top_pct": 0.06,
         "height_pct": 0.88,
         "icon_trim_pct": [0.28, 0.30, 0.30, 0.30, 0.30, 0.00],

@@ -95,13 +95,12 @@ def locate_resource_panel(frame, cache_obj: cache.ResourceCache = cache.RESOURCE
     if "population_limit" not in detected and "idle_villager" in detected:
         xi, yi, wi, hi = detected["idle_villager"]
         prev = cache_obj.last_icon_bounds.get("population_limit")
-        if prev:
-            pw, ph = prev[2], prev[3]
-        else:
-            pw, ph = wi, hi
-        max_pw = int(wi * 1.5)
-        pw = min(pw, max_pw)
-        px = max(0, xi - pw)
+        ph = prev[3] if prev else hi
+
+        base_w = max(2 * wi, cfg.min_pop_width)
+        px = max(0, xi - base_w)
+        pw = base_w + cfg.pop_roi_extra_width
+
         detected["population_limit"] = (px, yi, pw, ph)
         cache_obj.last_icon_bounds["population_limit"] = (px, yi, pw, ph)
 

@@ -45,6 +45,8 @@ class TestGetResourcePanelCfg(TestCase):
                 "top_pct": 0.1,
                 "height_pct": 0.9,
                 "idle_roi_extra_width": 5,
+                "min_pop_width": 30,
+                "pop_roi_extra_width": 7,
                 "match_threshold": 0.95,
             },
             "scales": [1.0, 1.5],
@@ -64,3 +66,5 @@ class TestGetResourcePanelCfg(TestCase):
         self.assertEqual(cfg.top_pct, 0.1)
         self.assertEqual(cfg.height_pct, 0.9)
         self.assertEqual(cfg.idle_roi_extra_width, 5)
+        self.assertEqual(cfg.min_pop_width, 30)
+        self.assertEqual(cfg.pop_roi_extra_width, 7)
