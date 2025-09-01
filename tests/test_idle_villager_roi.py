@@ -41,7 +41,7 @@ import script.screen_utils as screen_utils
 
 
 class TestIdleVillagerROI(TestCase):
-    def test_idle_villager_roi_expands_for_digits(self):
+    def test_idle_villager_roi_uses_digit_span(self):
         frame = np.zeros((50, 100, 3), dtype=np.uint8)
         panel_box = (10, 15, 80, 20)  # x, y, w, h
         xi, yi = 5, 4
@@ -69,12 +69,18 @@ class TestIdleVillagerROI(TestCase):
         def fake_cvtColor(src, code):
             return np.zeros(src.shape[:2], dtype=np.uint8)
 
+        def fake_compute(pl, pr, top, height, *args, **kwargs):
+            left = pl + xi + icon_w
+            span = (left, left + 10)
+            return {}, {"idle_villager": span}, {}
+
         with patch("script.resources.find_template", return_value=(panel_box, 0.9, None)), \
             patch("script.resources.cv2.cvtColor", side_effect=fake_cvtColor), \
             patch("script.resources.cv2.resize", side_effect=lambda img, *a, **k: img), \
             patch("script.resources.cv2.matchTemplate", side_effect=fake_match), \
             patch("script.resources.cv2.minMaxLoc", side_effect=fake_minmax), \
             patch("script.resources.cv2.imread", side_effect=fake_imread), \
+            patch("script.resources.panel.detection.compute_resource_rois", side_effect=fake_compute), \
             patch.dict(screen_utils.ICON_TEMPLATES, {}, clear=True), \
             patch.dict(
                 common.CFG["resource_panel"],
@@ -95,10 +101,9 @@ class TestIdleVillagerROI(TestCase):
 
         self.assertIn("idle_villager", regions)
         roi = regions["idle_villager"]
-        extra = common.CFG["resource_panel"].get("idle_roi_extra_width", 0)
-        expected = (panel_box[0] + xi, panel_box[1] + yi, icon_w + extra, icon_h)
+        expected = (panel_box[0] + xi + icon_w, panel_box[1] + yi, 10, icon_h)
         self.assertEqual(roi, expected)
-        self.assertEqual(roi[2], icon_w + extra)
+        self.assertEqual(roi[2], 10)
         self.assertGreater(roi[3], 0)
 
     def test_idle_villager_roi_clamped_before_population(self):
@@ -131,8 +136,11 @@ class TestIdleVillagerROI(TestCase):
 
         def fake_compute(pl, pr, top, height, *args, **kwargs):
             offset = 20
+            pop_span = (pl + offset, pl + offset + 20)
+            idle_left = pl + xi + icon_w
+            idle_span = (idle_left, pop_span[0] + 10)
             regions = {"population_limit": (pl + offset, top, 10, height)}
-            spans = {"population_limit": (pl + offset, pl + offset + 20)}
+            spans = {"population_limit": pop_span, "idle_villager": idle_span}
             return regions, spans, {}
 
         with patch("script.resources.find_template", return_value=(panel_box, 0.9, None)), \
@@ -195,8 +203,11 @@ class TestIdleVillagerROI(TestCase):
 
         def fake_compute(pl, pr, top, height, *args, **kwargs):
             offset = 25
+            pop_span = (pl + offset, pl + offset + 20)
+            idle_left = pl + xi + icon_w
+            idle_span = (idle_left, pop_span[0] + 10)
             regions = {"population_limit": (pl + offset, top, 10, height)}
-            spans = {"population_limit": (pl + offset, pl + offset + 20)}
+            spans = {"population_limit": pop_span, "idle_villager": idle_span}
             return regions, spans, {}
 
         with patch("script.resources.find_template", return_value=(panel_box, 0.9, None)), \
@@ -217,7 +228,6 @@ class TestIdleVillagerROI(TestCase):
                     "match_threshold": 0.5,
                     "max_width": 999,
                     "min_width": 0,
-                    "idle_roi_extra_width": 20,
                 },
             ), patch.dict(
                 common.CFG["profiles"]["aoe1de"]["resource_panel"],
@@ -229,7 +239,7 @@ class TestIdleVillagerROI(TestCase):
         roi = regions["idle_villager"]
         pop_left = panel_box[0] + 25
         self.assertLessEqual(roi[0] + roi[2], pop_left)
-        expected_width = pop_left - (panel_box[0] + xi)
+        expected_width = pop_left - (panel_box[0] + xi + icon_w)
         self.assertEqual(roi[2], expected_width)
 
     def test_detect_resource_regions_uses_configured_idle_roi_when_missing(self):

@@ -128,15 +128,18 @@ def locate_resource_panel(frame, cache_obj: cache.ResourceCache = cache.RESOURCE
 
     if "idle_villager" in detected:
         xi, yi, wi, hi = detected["idle_villager"]
-        extra = cfg.idle_roi_extra_width
-        left = x + xi
-        width = wi + extra
+        span = spans.get("idle_villager")
+        if span:
+            left, right = span
+        else:
+            left = x + xi + wi
+            right = left
         pop_span = spans.get("population_limit")
-        if pop_span and pop_span[0] > left and left + width > pop_span[0]:
-            width = max(0, min(width, pop_span[0] - left))
-        right = left + width
+        if pop_span and pop_span[0] > left and right > pop_span[0]:
+            right = pop_span[0]
         if right > x + w:
-            width = (x + w) - left
+            right = x + w
+        width = max(0, right - left)
         regions["idle_villager"] = (left, y + yi, width, hi)
         logger.debug(
             "ROI for 'idle_villager': icon=(%d,%d) width=%d", left, y + yi, width
