@@ -114,6 +114,8 @@ class TestIdleVillagerOCR(TestCase):
         ), patch(
             "script.resources.reader.roi.execute_ocr",
             return_value=("", {"text": [""], "conf": []}, None, True),
+        ), patch.dict(
+            resources.CFG, {"idle_villager_low_conf_fallback": False}, clear=False
         ):
             result, _ = resources.read_resources_from_hud(
                 required_icons=[], icons_to_read=["idle_villager"]
