@@ -101,12 +101,13 @@ class TestIdleVillagerOCR(TestCase):
             return {"idle_villager": (0, 0, 50, 50)}
 
         frame = np.zeros((100, 100, 3), dtype=np.uint8)
+        low_conf = str(resources.CFG["idle_villager_ocr_conf_threshold"] - 1)
         with patch(
             "script.resources.reader.core.detect_resource_regions",
             side_effect=fake_detect,
         ), patch("script.screen_utils._grab_frame", return_value=frame), patch(
             "script.resources.reader.pytesseract.image_to_data",
-            return_value={"text": ["1"], "conf": ["30"]},
+            return_value={"text": ["1"], "conf": [low_conf]},
         ), patch(
             "script.resources.reader.core.execute_ocr",
             return_value=("", {"text": [""], "conf": []}, None, True),

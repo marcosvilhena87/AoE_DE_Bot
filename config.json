@@ -33,7 +33,7 @@
     "gold_stockpile_ocr_conf_threshold": 45,
     "stone_stockpile_ocr_conf_threshold": 45,
     "population_limit_ocr_conf_threshold": 40,
-    "idle_villager_ocr_conf_threshold": 40,
+    "idle_villager_ocr_conf_threshold": 55,
     "//*_ocr_conf_threshold": "Optional per-resource OCR confidence overrides.",
     "food_stockpile_max_width": 60,
     "//food_stockpile_max_width": "Maximum width of the food stockpile ROI.",
