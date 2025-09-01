@@ -170,7 +170,7 @@ class TestIdleVillagerROI(TestCase):
         cfg = {
             "left_pct": 0.5,
             "top_pct": 0.25,
-            "width_pct": 0.05,
+            "width_pct": 0.04,
             "height_pct": 0.05,
         }
         expected = (100, 50, 40, 20)
@@ -188,7 +188,7 @@ class TestIdleVillagerROI(TestCase):
         cfg = {
             "left_pct": 0.5,
             "top_pct": 0.25,
-            "width_pct": 0.05,
+            "width_pct": 0.04,
             "height_pct": 0.05,
         }
         with patch("script.resources.panel.locate_resource_panel", return_value=detected), \
