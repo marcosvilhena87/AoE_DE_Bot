@@ -101,7 +101,10 @@ class TestIdleVillagerROI(TestCase):
 
         self.assertIn("idle_villager", regions)
         roi = regions["idle_villager"]
-        expected = (panel_box[0] + xi + icon_w, panel_box[1] + yi, 10, icon_h)
+        cfg_obj = resources.panel._get_resource_panel_cfg()
+        top = panel_box[1] + int(cfg_obj.top_pct * panel_box[3])
+        height = int(cfg_obj.height_pct * panel_box[3])
+        expected = (panel_box[0] + xi + icon_w, top, 10, height)
         self.assertEqual(roi, expected)
         self.assertEqual(roi[2], 10)
         self.assertGreater(roi[3], 0)
