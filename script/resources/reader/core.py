@@ -465,6 +465,8 @@ def _read_resources(
     no_digits = set()
     low_conf_counts = getattr(cache_obj, "resource_low_conf_counts", {})
     cache_obj.resource_low_conf_counts = low_conf_counts
+    prev_idle_val = cache_obj.last_resource_values.get("idle_villager")
+    prev_idle_ts = cache_obj.last_resource_ts.get("idle_villager")
     for name in resource_icons:
         res_conf_threshold = CFG.get(f"{name}_ocr_conf_threshold", conf_threshold)
         if name not in regions:
@@ -556,6 +558,35 @@ def _read_resources(
             conf_threshold=pop_conf_threshold,
             cache_obj=cache_obj,
         )
+
+    idle_val = results.get("idle_villager")
+    if idle_val is not None and cur_pop is not None:
+        if idle_val > cur_pop or idle_val < 0:
+            logger.warning(
+                "Idle villager count %d is invalid for population %d; falling back",
+                idle_val,
+                cur_pop,
+            )
+            low_confidence.add("idle_villager")
+            low_conf_counts["idle_villager"] = low_conf_counts.get("idle_villager", 0) + 1
+            ts_cache = prev_idle_ts
+            use_cache = False
+            if prev_idle_val is not None and ts_cache is not None:
+                age = time.time() - ts_cache
+                if age < cache._RESOURCE_CACHE_TTL:
+                    use_cache = True
+                elif max_cache_age is None or age <= max_cache_age:
+                    use_cache = True
+            if use_cache:
+                results["idle_villager"] = prev_idle_val
+                cache_obj.last_resource_values["idle_villager"] = prev_idle_val
+                if ts_cache is not None:
+                    cache_obj.last_resource_ts["idle_villager"] = ts_cache
+                cache_hits.add("idle_villager")
+            else:
+                results["idle_villager"] = None
+                cache_obj.last_resource_values.pop("idle_villager", None)
+                cache_obj.last_resource_ts.pop("idle_villager", None)
 
     cache._LAST_READ_FROM_CACHE = cache_hits
 
