@@ -29,7 +29,7 @@
     "gold_stockpile_low_conf_fallback": false,
     "stone_stockpile_low_conf_fallback": false,
     "population_limit_low_conf_fallback": false,
-    "//population_limit_low_conf_fallback": "Set true to reuse last population or accept zero-confidence population digits matching cur/cap.",
+    "//population_limit_low_conf_fallback": "Return best OCR digits after ocr_retry_limit attempts even if confidence is low; set true to enable.",
     "idle_villager_low_conf_fallback": false,
     "//idle_villager_low_conf_fallback": "Set true to reuse last value on low-confidence OCR.",
     "idle_villager_low_conf_streak": 5,
