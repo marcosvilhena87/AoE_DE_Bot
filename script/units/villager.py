@@ -8,23 +8,59 @@ import script.input_utils as input_utils
 
 logger = logging.getLogger(__name__)
 
+# Último valor válido de aldeões ociosos lido do HUD
+_last_idle_villager_count = 0
+
 
 def select_idle_villager(delay: float = 0.1) -> bool:
     """Tenta selecionar um aldeão ocioso usando a tecla configurada.
 
-    Lê o valor de ``idle_villager`` apenas uma vez. Se o valor for um inteiro
-    maior que zero, pressiona a hotkey configurada e retorna ``True``.
-    Caso contrário, retorna ``False``.
+    Lê o valor de ``idle_villager`` e o compara com a população atual. Se o
+    valor de ``idle_villager`` exceder a população detectada, considera a
+    leitura inválida e tenta novamente ou recorre ao último valor conhecido.
     """
 
-    try:
-        res_vals, _ = resources.read_resources_from_hud(["idle_villager"])
-    except common.ResourceReadError as exc:  # pragma: no cover - falha de OCR
-        logger.error("Failed to read idle_villager: %s", exc)
+    global _last_idle_villager_count
+
+    for attempt in range(2):
+        try:
+            res_vals, _ = resources.read_resources_from_hud(["idle_villager"])
+        except common.ResourceReadError as exc:  # pragma: no cover - falha de OCR
+            logger.error("Failed to read idle_villager: %s", exc)
+            return False
+
+        idle_vill = res_vals.get("idle_villager")
+        if not isinstance(idle_vill, int):
+            return False
+
+        cur_pop = common.CURRENT_POP
+        try:
+            cur_pop, _ = hud.read_population_from_hud()
+            common.CURRENT_POP = cur_pop
+        except (common.ResourceReadError, common.PopulationReadError) as exc:
+            logger.debug("Population read failed: %s", exc)
+            cur_pop = common.CURRENT_POP
+
+        if (
+            (cur_pop and idle_vill > cur_pop)
+            or (common.CURRENT_POP and idle_vill > common.CURRENT_POP)
+        ):
+            logger.warning(
+                "Idle villager count %s exceeds population %s; retrying",
+                idle_vill,
+                cur_pop,
+            )
+            time.sleep(0.05)
+            continue
+
+        _last_idle_villager_count = idle_vill
+        if idle_vill > 0:
+            input_utils._press_key_safe(common.CFG["keys"]["idle_vill"], delay)
+            return True
         return False
 
-    idle_vill = res_vals.get("idle_villager")
-    if isinstance(idle_vill, int) and idle_vill > 0:
+    # Após tentativas sem leitura válida, usa o último valor conhecido
+    if _last_idle_villager_count > 0:
         input_utils._press_key_safe(common.CFG["keys"]["idle_vill"], delay)
         return True
     return False
