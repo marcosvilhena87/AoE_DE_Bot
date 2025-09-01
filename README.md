@@ -108,8 +108,6 @@ between two icons. Three configuration options define the valid horizontal
 * `roi_padding_right` – pixels subtracted from the left edge of the next icon.
 * `icon_trim_pct` – fraction of the icon slot to skip when estimating ROIs
   from the HUD anchor.
-* `idle_roi_extra_width` – extra pixels appended to the idle villager span to
-  capture digits.
 * `min_pop_width` – minimum width reserved for the population readout when
   the icon cannot be detected.
 * `pop_roi_extra_width` – extra pixels appended to the right of the population
@@ -136,10 +134,6 @@ With icon positions `0, 30, 60, 90, 120, 150`, icon width `5` and paddings
 | gold           | 65         | 90             | 67              | 88              |
 | stone          | 95         | 120            | 97              | 118             |
 | population     | 125        | 150            | 127            | 148             |
-| idle villager* | –          | –              | (ROI extends past icon by `idle_roi_extra_width`) |            |
-
-`*` Idle villager is the last icon; its ROI extends beyond the icon by
-`idle_roi_extra_width` pixels.
 
 #### Calibrating per-icon offsets
 

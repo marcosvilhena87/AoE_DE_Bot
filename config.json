@@ -89,7 +89,7 @@
         "max_width": [120, 160, 160, 160, 160, 160],
         "min_width": [3, 3, 3, 3, 3, 2],
         "min_required_width": 12,
-        "idle_roi_extra_width": 12,
+          "idle_roi_extra_width": 0,
         "min_pop_width": 60,
         "pop_roi_extra_width": 12,
         "top_pct": 0.06,

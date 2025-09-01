@@ -73,13 +73,19 @@ def _auto_calibrate_from_icons(frame, cache_obj: cache.ResourceCache = cache.RES
 
     if "idle_villager" in detected_rel:
         xi, yi, wi, hi = detected_rel["idle_villager"]
-        extra = cfg.idle_roi_extra_width
-        left = panel_left + xi
-        width = wi + extra
-        right = left + width
+        span = spans.get("idle_villager")
+        if span:
+            left, right = span
+        else:
+            left = panel_left + xi + wi
+            right = left
+        pop_span = spans.get("population_limit")
+        if pop_span and pop_span[0] > left and right > pop_span[0]:
+            right = pop_span[0]
         if right > panel_right:
-            width = panel_right - left
-        regions["idle_villager"] = (panel_left + xi, panel_top + yi, width, hi)
+            right = panel_right
+        width = max(0, right - left)
+        regions["idle_villager"] = (left, panel_top + yi, width, hi)
 
     if cache._LAST_REGION_BOUNDS != regions:
         cache._LAST_REGION_BOUNDS = regions.copy()
