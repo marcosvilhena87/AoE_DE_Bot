@@ -37,21 +37,40 @@ import script.units.villager as villager
 
 class TestSelectIdleVillager(TestCase):
     def test_returns_true_when_count_decreases(self):
+        villager._last_idle_villager_count = 0
         reads = iter([
             ({"idle_villager": 2}, (None, None)),
             ({"idle_villager": 1}, (None, None)),
         ])
 
-        with patch("script.input_utils._press_key_safe"), \
-             patch("script.resources.reader.read_resources_from_hud", side_effect=lambda *a, **k: next(reads)):
+        with patch("script.input_utils._press_key_safe") as press_mock, \
+             patch("script.resources.reader.read_resources_from_hud", side_effect=lambda *a, **k: next(reads)), \
+             patch("script.hud.read_population_from_hud", return_value=(2, 10)):
             self.assertTrue(villager.select_idle_villager())
+            press_mock.assert_called_once()
 
     def test_returns_false_when_no_idle_villagers(self):
+        villager._last_idle_villager_count = 0
         reads = iter([
             ({"idle_villager": 0}, (None, None)),
             ({"idle_villager": 0}, (None, None)),
         ])
 
-        with patch("script.input_utils._press_key_safe"), \
-             patch("script.resources.reader.read_resources_from_hud", side_effect=lambda *a, **k: next(reads)):
+        with patch("script.input_utils._press_key_safe") as press_mock, \
+             patch("script.resources.reader.read_resources_from_hud", side_effect=lambda *a, **k: next(reads)), \
+             patch("script.hud.read_population_from_hud", return_value=(0, 10)):
             self.assertFalse(villager.select_idle_villager())
+            press_mock.assert_not_called()
+
+    def test_ignores_idle_count_exceeding_population(self):
+        villager._last_idle_villager_count = 0
+        reads = iter([
+            ({"idle_villager": 5}, (None, None)),
+            ({"idle_villager": 5}, (None, None)),
+        ])
+
+        with patch("script.input_utils._press_key_safe") as press_mock, \
+             patch("script.resources.reader.read_resources_from_hud", side_effect=lambda *a, **k: next(reads)), \
+             patch("script.hud.read_population_from_hud", return_value=(3, 10)):
+            self.assertFalse(villager.select_idle_villager())
+            press_mock.assert_not_called()
