@@ -110,6 +110,34 @@ class TestPopulationOcrConfidence(TestCase):
             )
             self.assertEqual((cur, cap), (12, 34))
 
+    def test_low_conf_message_and_fallback(self):
+        roi = np.zeros((10, 10, 3), dtype=np.uint8)
+
+        with patch.dict(
+            resources.common.CFG,
+            {"population_limit_low_conf_fallback": True, "ocr_retry_limit": 2},
+            clear=False,
+        ), patch(
+            "script.resources.ocr.executor.execute_ocr",
+            return_value=(
+                "12/34",
+                {"text": ["12/34"], "conf": ["40", "40"]},
+                None,
+                True,
+            ),
+        ):
+            with self.assertRaises(resources.common.PopulationReadError) as ctx:
+                resources._read_population_from_roi(
+                    roi, conf_threshold=60, failure_count=0
+                )
+            msg = str(ctx.exception)
+            self.assertIn("text='12/34'", msg)
+            self.assertIn("confs=[40.0, 40.0]", msg)
+            cur, cap = resources._read_population_from_roi(
+                roi, conf_threshold=60, failure_count=1
+            )
+            self.assertEqual((cur, cap), (12, 34))
+
     def test_zero_confidence_requires_flag(self):
         roi = np.zeros((10, 10, 3), dtype=np.uint8)
         with patch(

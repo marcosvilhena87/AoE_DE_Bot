@@ -452,7 +452,10 @@ def _read_population_from_roi(roi, conf_threshold=None, roi_bbox=None, failure_c
                 confidences,
             )
             return cur, cap
-        err = common.PopulationReadError("Low-confidence population OCR")
+        err_msg = (
+            f"Low-confidence population OCR: text='{raw_text}', confs={confidences}"
+        )
+        err = common.PopulationReadError(err_msg)
         err.low_conf = True
         err.low_conf_digits = (cur, cap)
         raise err
@@ -481,12 +484,14 @@ def _read_population_from_roi(roi, conf_threshold=None, roi_bbox=None, failure_c
                     confidences,
                 )
                 return cur, cap
-            err = common.PopulationReadError("Low-confidence population OCR")
+            err_msg = (
+                f"Low-confidence population OCR: text='{raw_text}', confs={confidences}"
+            )
+            err = common.PopulationReadError(err_msg)
             err.low_conf = True
             err.low_conf_digits = (cur, cap)
             raise err
 
-    text = "/".join(parts)
     debug_dir = ROOT / "debug"
     debug_dir.mkdir(exist_ok=True)
     ts = int(time.time() * 1000)
@@ -516,14 +521,14 @@ def _read_population_from_roi(roi, conf_threshold=None, roi_bbox=None, failure_c
             h,
             failure_count,
             conf_threshold,
-            text,
+            raw_text,
             confidences,
             roi_path,
             mask_path,
         )
         msg = (
             f"Failed to read population from HUD at ROI ({x}, {y}, {w}, {h}): "
-            f"text='{text}', confs={confidences}; conf_threshold={conf_threshold}; "
+            f"text='{raw_text}', confs={confidences}; conf_threshold={conf_threshold}; "
             f"attempt={failure_count}; ROI saved to {roi_path}; mask saved to {mask_path}"
         )
     else:
@@ -535,13 +540,13 @@ def _read_population_from_roi(roi, conf_threshold=None, roi_bbox=None, failure_c
             h,
             failure_count,
             conf_threshold,
-            text,
+            raw_text,
             confidences,
             roi_path,
         )
         msg = (
             f"Failed to read population from HUD at ROI ({x}, {y}, {w}, {h}): "
-            f"text='{text}', confs={confidences}; conf_threshold={conf_threshold}; "
+            f"text='{raw_text}', confs={confidences}; conf_threshold={conf_threshold}; "
             f"attempt={failure_count}; ROI saved to {roi_path}"
         )
     err = common.PopulationReadError(msg)
