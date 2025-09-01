@@ -132,8 +132,8 @@ def locate_resource_panel(frame, cache_obj: cache.ResourceCache = cache.RESOURCE
         left = x + xi
         width = wi + extra
         pop_span = spans.get("population_limit")
-        if pop_span and pop_span[0] > left:
-            width = min(width, pop_span[0] - left)
+        if pop_span and pop_span[0] > left and left + width > pop_span[0]:
+            width = max(0, min(width, pop_span[0] - left))
         right = left + width
         if right > x + w:
             width = (x + w) - left
