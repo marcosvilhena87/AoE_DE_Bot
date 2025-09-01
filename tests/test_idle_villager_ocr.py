@@ -56,7 +56,9 @@ class TestIdleVillagerOCR(TestCase):
             return_value={"text": ["1", "2"], "conf": ["90", "90"]},
         ) as img2data, patch(
             "script.resources.reader.core.execute_ocr"
-        ) as exec_mock:
+        ) as exec_mock, patch(
+            "script.resources.reader.core.logger.info"
+        ) as log_info:
             result, _ = resources.read_resources_from_hud(["idle_villager"])
 
         self.assertEqual(result["idle_villager"], 12)
@@ -66,6 +68,13 @@ class TestIdleVillagerOCR(TestCase):
             output_type=resources.pytesseract.Output.DICT,
         )
         exec_mock.assert_not_called()
+        log_info.assert_any_call(
+            "OCR %s: digits=%s conf=%s low_conf=%s",
+            "idle_villager",
+            "12",
+            [90, 90],
+            False,
+        )
 
     def test_idle_villager_negative_confidence_triggers_fallback(self):
         def fake_detect(frame, required_icons, cache=None):

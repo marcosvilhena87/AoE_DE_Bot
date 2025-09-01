@@ -103,6 +103,13 @@ def _ocr_resource(
                 digits = raw_digits
                 low_conf = True
         mask = gray
+        logger.info(
+            "OCR %s: digits=%s conf=%s low_conf=%s",
+            name,
+            digits,
+            confidences,
+            low_conf,
+        )
         return digits, data, mask, low_conf
 
     digits, data, mask, low_conf = execute_ocr(
