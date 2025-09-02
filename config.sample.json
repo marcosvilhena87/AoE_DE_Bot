@@ -75,6 +75,8 @@
   "//ocr_contrast_stretch": "Rescale intensities before thresholding; true for min-max or object with {alpha,beta}.",
   "ocr_psm_list": [7, 6, 11, 13],
   "ocr_zero_variance": 15,
+  "ocr_ws_dilate_var": 1500,
+  "//ocr_ws_dilate_var": "Variance threshold for wood stockpile dilation; <=0 disables.",
   "tesseract_path": "C:\\Program Files\\Tesseract-OCR\\tesseract.exe",
   "resource_cache_ttl": 1.5,
   "resource_cache_max_age": null,
