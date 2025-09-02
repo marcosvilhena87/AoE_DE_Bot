@@ -93,10 +93,13 @@ def compute_resource_rois(
 
         left = cur_right + pad_l
         right = next_left - pad_r
+        if current == "population_limit" and next_name == "idle_villager":
+            right -= 4  # safety margin to avoid idle villager icon
 
         # Clamp ROI boundaries to the panel limits after applying padding
         left = max(panel_left, left)
         right = min(panel_right, right)
+        orig_right = right
 
         if right <= left:
             logger.warning(
@@ -132,8 +135,7 @@ def compute_resource_rois(
 
         if current == "population_limit" and width < min_pop_width:
             width = min_pop_width
-            right = min(panel_right, left + width)
-            left = max(panel_left, right - width)
+            right = min(orig_right, left + width)
             width = right - left
         else:
             right = left + width
