@@ -4,29 +4,46 @@ from __future__ import annotations
 
 
 def parse_confidences(data):
-    """Return positive OCR confidence values or ``None`` when unavailable.
+    """Return OCR confidences aligned with the ``text`` output.
 
-    Values that cannot be parsed as floats are ignored. Negative confidences
-    are clamped to ``0`` and, along with explicit zeros, are treated as
-    "unknown" and therefore omitted from the returned list. If no positive
-    confidences remain after filtering, ``None`` is returned to signal that the
-    OCR engine did not provide meaningful confidence information.
+    ``pytesseract.image_to_data`` returns separate ``text`` and ``conf`` lists
+    that are expected to have matching lengths.  Earlier implementations of
+    this helper filtered out non-positive or unparsable confidence values which
+    could lead to misalignment between the two lists.  The executor would then
+    zip the shortened confidence list with the full ``text`` list, causing
+    confidences to be associated with the wrong text entries.
+
+    This function now preserves list alignment by returning a list of the same
+    length as ``data['text']`` (when present).  Invalid confidence values are
+    converted to ``0`` and non-positive values are also normalised to ``0`` so
+    callers can easily filter them out while maintaining positional alignment.
+    If the ``conf`` key is missing or empty, ``None`` is returned to signal
+    that no confidence information is available.
     """
 
     raw = data.get("conf")
     if not raw:
         return None
 
+    texts = data.get("text")
     confs = []
     for c in raw:
         try:
             val = float(c)
         except (ValueError, TypeError):
-            continue
+            val = 0.0
         if val <= 0:
-            continue
+            val = 0.0
         confs.append(val)
-    return confs or None
+
+    if texts is not None:
+        text_len = len(texts)
+        if len(confs) < text_len:
+            confs.extend([0.0] * (text_len - len(confs)))
+        elif len(confs) > text_len:
+            confs = confs[:text_len]
+
+    return confs
 
 
 def _sanitize_digits(digits: str) -> str:

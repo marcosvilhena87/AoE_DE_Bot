@@ -111,7 +111,7 @@ class TestExecuteOcr(TestCase):
 
     def test_execute_ocr_warns_low_mean_confidence(self):
         gray = np.zeros((5, 5), dtype=np.uint8)
-        data = {"text": ["12"], "conf": ["80", "20"]}
+        data = {"text": ["1", "2"], "conf": ["80", "20"]}
         with patch("script.resources.ocr.masks._ocr_digits_better", return_value=("12", data, None)), \
              patch("script.resources.reader.pytesseract.image_to_string", return_value="") as img2str_mock, \
              patch.dict(resources.CFG, {"ocr_conf_decay": 1.0}, clear=False):
@@ -202,7 +202,7 @@ class TestExecuteOcr(TestCase):
 
     def test_execute_ocr_ignores_zero_confidences_when_others_high(self):
         gray = np.zeros((5, 5), dtype=np.uint8)
-        data = {"text": ["12"], "conf": [-1, "0", "95"]}
+        data = {"text": ["foo", "", "12"], "conf": [-1, "0", "95"]}
         with patch(
             "script.resources.ocr.masks._ocr_digits_better",
             return_value=("12", data, None),

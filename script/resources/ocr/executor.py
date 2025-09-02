@@ -65,7 +65,11 @@ def execute_ocr(
                     low_conf = True
             break
         texts = data.get("text", [])
-        digit_confs = [c for t, c in zip(texts, confs) if any(ch.isdigit() for ch in t)]
+        digit_confs = [
+            c
+            for t, c in zip(texts, confs)
+            if c > 0 and any(ch.isdigit() for ch in t)
+        ]
         metric = np.median(digit_confs) if digit_confs else 0
         if digit_confs and metric >= conf_threshold:
             low_conf = False
@@ -120,7 +124,11 @@ def execute_ocr(
                     low_conf = True
         else:
             texts = data.get("text", [])
-            digit_confs = [c for t, c in zip(texts, confs) if any(ch.isdigit() for ch in t)]
+            digit_confs = [
+                c
+                for t, c in zip(texts, confs)
+                if c > 0 and any(ch.isdigit() for ch in t)
+            ]
             metric = np.median(digit_confs) if digit_confs else 0
             if digit_confs and metric >= conf_threshold:
                 low_conf = False

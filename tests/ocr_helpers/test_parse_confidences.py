@@ -9,20 +9,24 @@ from script.resources.ocr.confidence import parse_confidences
 from script.resources.reader import core
 
 
-def test_clamps_negative_and_excludes_zero():
-    data = {"conf": ["42.5", "-1", "0", "abc", "77"]}
-    assert parse_confidences(data) == [42.5, 77.0]
+def test_alignment_and_placeholder_values():
+    data = {
+        "text": list("abcde"),
+        "conf": ["42.5", "-1", "0", "abc", "77"],
+    }
+    assert parse_confidences(data) == [42.5, 0.0, 0.0, 0.0, 77.0]
 
 
 def test_handles_missing_conf_key():
     assert parse_confidences({}) is None
-    assert parse_confidences({"conf": ["foo", None]}) is None
+    data = {"text": ["x", "y"], "conf": ["foo", None]}
+    assert parse_confidences(data) == [0.0, 0.0]
 
 
 def test_read_resources_logs_sanitized_confidences(caplog):
     frame = np.zeros((10, 10, 3), dtype=np.uint8)
     gray = np.zeros((10, 10), dtype=np.uint8)
-    data = {"text": ["12"], "conf": ["-5", "50"]}
+    data = {"text": ["foo", "12"], "conf": ["-5", "50"]}
     cache_obj = SimpleNamespace(
         last_resource_values={},
         last_resource_ts={},
@@ -56,5 +60,5 @@ def test_read_resources_logs_sanitized_confidences(caplog):
     assert ocr_msgs, "OCR log message not found"
     msg = ocr_msgs[0]
     assert "digits=12" in msg
-    assert "conf=[50.0]" in msg
+    assert "conf=[0.0, 50.0]" in msg
     assert "low_conf=False" in msg
