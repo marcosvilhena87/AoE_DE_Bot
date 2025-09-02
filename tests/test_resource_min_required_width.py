@@ -70,6 +70,7 @@ class TestResourceMinRequiredWidth(TestCase):
             [20] * 6,
             [0] * 6,
             0,
+            0,
             [50] * 6,
             detected=detected,
         )

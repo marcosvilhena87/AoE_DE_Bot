@@ -118,6 +118,7 @@ def locate_resource_panel(frame, cache_obj: cache.ResourceCache = cache.RESOURCE
         cfg.max_widths,
         cfg.min_widths,
         cfg.min_pop_width,
+        cfg.idle_roi_extra_width,
         cfg.min_requireds,
         detected,
     )
@@ -125,29 +126,6 @@ def locate_resource_panel(frame, cache_obj: cache.ResourceCache = cache.RESOURCE
     cache._NARROW_ROIS = set(narrow.keys())
     cache._NARROW_ROI_DEFICITS = narrow.copy()
     cache._LAST_REGION_SPANS = spans.copy()
-
-    if "idle_villager" in detected:
-        xi, _yi, wi, _hi = detected["idle_villager"]
-        span = spans.get("idle_villager")
-        if span:
-            left, right = span
-        else:
-            left = x + xi + wi
-            right = left + cfg.idle_roi_extra_width
-        pop_span = spans.get("population_limit")
-        if pop_span and pop_span[0] > left and right > pop_span[0]:
-            right = pop_span[0]
-        if right > x + w:
-            right = x + w
-        width = max(0, right - left)
-        regions["idle_villager"] = (left, top, width, height)
-        logger.debug(
-            "ROI for 'idle_villager': left=%d top=%d width=%d height=%d",
-            left,
-            top,
-            width,
-            height,
-        )
 
     if cache._LAST_REGION_BOUNDS != regions:
         cache._LAST_REGION_BOUNDS = regions.copy()

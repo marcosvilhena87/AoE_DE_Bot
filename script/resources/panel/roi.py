@@ -20,6 +20,7 @@ def compute_resource_rois(
     max_widths,
     min_widths,
     min_pop_width,
+    idle_extra_width,
     min_requireds=None,
     detected=None,
 ):
@@ -155,6 +156,22 @@ def compute_resource_rois(
             right,
             width,
         )
+    if (
+        "idle_villager" in detected
+        and "idle_villager" not in regions
+        and idle_extra_width > 0
+    ):
+        xi, _yi, wi, _hi = detected["idle_villager"]
+        left = panel_left + xi + wi
+        right = left + idle_extra_width
+        pop_span = spans.get("population_limit")
+        if pop_span and pop_span[0] > left and right > pop_span[0]:
+            right = pop_span[0]
+        if right > panel_right:
+            right = panel_right
+        width = max(0, right - left)
+        regions["idle_villager"] = (left, top, width, height)
+        spans["idle_villager"] = (left, right)
 
     return regions, spans, narrow
 
@@ -204,6 +221,7 @@ def _fallback_rois_from_slice(
         max_widths,
         min_widths,
         cfg.min_pop_width,
+        cfg.idle_roi_extra_width,
         detected=detected,
     )
 

@@ -25,6 +25,7 @@ class TestComputeResourceROIs(TestCase):
             [999] * 6,
             [20] * 6,
             0,
+            0,
             detected=detected,
         )
         roi = regions["wood_stockpile"]
@@ -52,6 +53,7 @@ class TestComputeResourceROIs(TestCase):
             [0] * 6,
             [999] * 6,
             [0] * 6,
+            0,
             0,
             detected=detected,
         )
@@ -132,6 +134,7 @@ class TestComputeResourceROIs(TestCase):
             [999] * 6,
             [30] * 6,
             0,
+            0,
             detected=detected,
         )
         self.assertGreaterEqual(regions["food_stockpile"][2], 30)
@@ -156,6 +159,7 @@ class TestComputeResourceROIs(TestCase):
                 [999] * 6,
                 [0] * 6,
                 0,
+                0,
                 detected=detected,
             )
         self.assertGreater(regions["food_stockpile"][2], 60)
@@ -177,6 +181,7 @@ class TestComputeResourceROIs(TestCase):
             [999] * 6,
             [0] * 6,
             min_pop_width,
+            0,
             [0] * 6,
             detected=detected,
         )
