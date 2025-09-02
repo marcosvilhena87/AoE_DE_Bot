@@ -82,11 +82,14 @@ class TestHuntingScenario(TestCase):
             starting_buildings={"Town Center": 1},
         )
 
+        gathered = dict(info.starting_resources)
+        gathered["idle_villager"] = info.starting_idle_villagers
+
         with patch("script.hud.wait_hud", return_value=((0, 0, 0, 0), "asset")) as wait_mock, \
              patch("script.config_utils.parse_scenario_info", return_value=info) as parse_mock, \
              patch(
                  "script.resources.reader.gather_hud_stats",
-                 return_value=(info.starting_resources, (info.starting_villagers, 4)),
+                 return_value=(gathered, (info.starting_villagers, 4)),
              ) as gather_mock, \
              patch.object(resources.reader, "RESOURCE_CACHE", resources.ResourceCache()):
             runpy.run_path(
@@ -97,12 +100,10 @@ class TestHuntingScenario(TestCase):
             self.assertEqual(common.CURRENT_POP, info.starting_villagers)
             self.assertEqual(common.POP_CAP, 4)
             self.assertEqual(common.TARGET_POP, info.objective_villagers)
-            expected_cache = dict(info.starting_resources)
-            expected_cache["idle_villager"] = info.starting_idle_villagers
             self.assertEqual(
-                resources.reader.RESOURCE_CACHE.last_resource_values, expected_cache
+                resources.reader.RESOURCE_CACHE.last_resource_values, gathered
             )
-            for name in expected_cache:
+            for name in gathered:
                 self.assertIn(name, resources.reader.RESOURCE_CACHE.last_resource_ts)
 
             wait_mock.assert_called_once()
@@ -152,7 +153,10 @@ class TestHuntingScenario(TestCase):
             "script.config_utils.parse_scenario_info", return_value=info
         ) as parse_mock, patch(
             "script.resources.reader.gather_hud_stats",
-            return_value=({}, (info.starting_villagers, 4)),
+            return_value=(
+                {"idle_villager": info.starting_idle_villagers},
+                (info.starting_villagers, 4),
+            ),
         ) as gather_mock, patch.object(
             resources.reader, "RESOURCE_CACHE", resources.ResourceCache()
         ):
@@ -174,3 +178,42 @@ class TestHuntingScenario(TestCase):
             wait_mock.assert_called_once()
             parse_mock.assert_called_once()
             gather_mock.assert_called_once()
+
+    def test_aborts_on_idle_villager_mismatch(self):
+        info = config_utils.ScenarioInfo(
+            starting_villagers=3,
+            starting_idle_villagers=3,
+            population_limit=50,
+            starting_resources={
+                "wood_stockpile": 80,
+                "food_stockpile": 140,
+                "gold_stockpile": 0,
+                "stone_stockpile": 0,
+            },
+            objective_villagers=7,
+            starting_buildings={"Town Center": 1},
+        )
+
+        gathered = dict(info.starting_resources)
+        gathered["idle_villager"] = info.starting_idle_villagers - 1
+
+        import importlib
+
+        module = importlib.import_module(
+            "campaigns.Ascent_of_Egypt.Egypt_1_Hunting"
+        )
+
+        with patch.object(module.hud, "wait_hud", return_value=((0, 0, 0, 0), "asset")), \
+            patch.object(module, "parse_scenario_info", return_value=info), \
+            patch.object(module.resources, "gather_hud_stats", return_value=(gathered, (info.starting_villagers, 4))) as gather_mock, \
+            patch.object(module, "run_mission") as run_mock, \
+            patch.object(module.resources, "RESOURCE_CACHE", resources.ResourceCache()), \
+            self.assertLogs(module.logger, level="ERROR") as log_ctx:
+            module.main()
+
+        run_mock.assert_not_called()
+        gather_mock.assert_called_once()
+        self.assertEqual(module.resources.RESOURCE_CACHE.last_resource_values, {})
+        self.assertTrue(
+            any("idle villager" in m.lower() for m in log_ctx.output)
+        )
