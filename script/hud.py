@@ -134,6 +134,13 @@ def read_population_from_hud(retries=1, conf_threshold=None, save_failed_roi=Fal
             )
         roi_bbox = {"left": abs_left, "top": abs_top, "width": pw, "height": ph}
 
+    logger.info(
+        "Population limit ROI for OCR: left=%d top=%d width=%d height=%d",
+        roi_bbox["left"],
+        roi_bbox["top"],
+        roi_bbox["width"],
+        roi_bbox["height"],
+    )
     try:
         return resources.read_population_from_roi(
             roi_bbox,
