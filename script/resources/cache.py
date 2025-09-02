@@ -21,6 +21,9 @@ class ResourceCache:
     # Track the last failure set and timestamp for throttling debug output
     last_debug_failure_set: set = field(default_factory=set)
     last_debug_failure_ts: float | None = None
+    # Track resources flagged in the most recent read
+    last_low_confidence: set = field(default_factory=set)
+    last_no_digits: set = field(default_factory=set)
 
 
 # Shared cache instance used by default

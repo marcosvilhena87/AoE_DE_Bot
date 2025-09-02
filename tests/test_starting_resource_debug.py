@@ -31,7 +31,10 @@ sys.modules.setdefault("mss", types.SimpleNamespace(mss=lambda: DummyMSS()))
 os.environ.setdefault("TESSERACT_CMD", "/usr/bin/true")
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-from script.resources.reader.core import validate_starting_resources, _LAST_LOW_CONFIDENCE
+from script.resources.reader.core import (
+    validate_starting_resources,
+    RESOURCE_CACHE,
+)
 
 
 def test_debug_files_written_on_deviation(tmp_path):
@@ -40,7 +43,7 @@ def test_debug_files_written_on_deviation(tmp_path):
     current = {"wood_stockpile": 0}
     expected = {"wood_stockpile": 50}
 
-    _LAST_LOW_CONFIDENCE.clear()
+    RESOURCE_CACHE.last_low_confidence.clear()
 
     with patch("script.resources.reader.core.ROOT", Path(tmp_path)):
         validate_starting_resources(current, expected, frame=frame, rois=rois)

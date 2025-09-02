@@ -32,9 +32,6 @@ from .cache_utils import (
 )
 from .roi import prepare_roi, expand_roi_after_failure
 
-_LAST_LOW_CONFIDENCE: set[str] = set()
-_LAST_NO_DIGITS: set[str] = set()
-
 
 class ResourceValidationError(ValueError):
     """Exception raised when resource validation fails.
@@ -621,9 +618,8 @@ def _read_resources(
 
     cache._LAST_READ_FROM_CACHE = cache_hits
 
-    global _LAST_LOW_CONFIDENCE, _LAST_NO_DIGITS
-    _LAST_LOW_CONFIDENCE = set(low_confidence)
-    _LAST_NO_DIGITS = set(no_digits)
+    cache_obj.last_low_confidence = set(low_confidence)
+    cache_obj.last_no_digits = set(no_digits)
 
     logger.info("Resumo de recursos detectados: %s", results)
 
@@ -745,6 +741,7 @@ def validate_starting_resources(
     raise_on_error: bool = False,
     frame: np.ndarray | None = None,
     rois: dict[str, tuple[int, int, int, int]] | None = None,
+    cache: ResourceCache = RESOURCE_CACHE,
 ) -> set[str]:
     if not expected:
         return set()
@@ -807,7 +804,7 @@ def validate_starting_resources(
         actual = current.get(name)
 
         if actual is None:
-            if name in _LAST_LOW_CONFIDENCE:
+            if name in cache.last_low_confidence:
                 debug = _save_debug(name)
                 if debug is not None:
                     x, y, w, h, roi_path, gray_path, thresh_path = debug
@@ -833,7 +830,7 @@ def validate_starting_resources(
         debug = None
         if deviation > tol:
             debug = _save_debug(name)
-        elif name in _LAST_LOW_CONFIDENCE:
+        elif name in cache.last_low_confidence:
             debug = _save_debug(name)
 
         debug_info = ""
@@ -856,7 +853,7 @@ def validate_starting_resources(
             else:
                 logger.warning(msg)
                 failing.add(name)
-        elif name in _LAST_LOW_CONFIDENCE:
+        elif name in cache.last_low_confidence:
             msg = f"Low-confidence OCR for '{name}'{debug_info}"
             if raise_on_error:
                 logger.error(msg)

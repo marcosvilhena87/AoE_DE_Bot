@@ -151,24 +151,8 @@ def main():
                                 raise
                         attempt += 1
                         tolerance = min(max_tolerance, tolerance + 5)
-                        low_conf = getattr(
-                            resources,
-                            "_LAST_LOW_CONFIDENCE",
-                            getattr(
-                                getattr(resources, "core", None),
-                                "_LAST_LOW_CONFIDENCE",
-                                set(),
-                            ),
-                        )
-                        no_digits = getattr(
-                            resources,
-                            "_LAST_NO_DIGITS",
-                            getattr(
-                                getattr(resources, "core", None),
-                                "_LAST_NO_DIGITS",
-                                set(),
-                            ),
-                        )
+                        low_conf = resources.RESOURCE_CACHE.last_low_confidence
+                        no_digits = resources.RESOURCE_CACHE.last_no_digits
                         for k in e.failing_keys:
                             if k in low_conf or k in no_digits:
                                 resources._NARROW_ROI_DEFICITS[k] = (

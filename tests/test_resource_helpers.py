@@ -378,8 +378,8 @@ class TestValidateStartingResources(TestCase):
 
     def test_logs_low_confidence_warning(self):
         with patch("script.resources.reader.logger.warning") as warn_mock:
-            resources.core._LAST_LOW_CONFIDENCE = {"wood_stockpile"}
-            resources.core._LAST_NO_DIGITS = set()
+            resources.RESOURCE_CACHE.last_low_confidence = {"wood_stockpile"}
+            resources.RESOURCE_CACHE.last_no_digits = set()
             resources.validate_starting_resources(
                 {"wood_stockpile": None},
                 {"wood_stockpile": 80},
@@ -389,13 +389,13 @@ class TestValidateStartingResources(TestCase):
             warn_mock.assert_called_once_with(
                 "Low-confidence OCR for 'wood_stockpile'"
             )
-        resources.core._LAST_LOW_CONFIDENCE = set()
-        resources.core._LAST_NO_DIGITS = set()
+        resources.RESOURCE_CACHE.last_low_confidence = set()
+        resources.RESOURCE_CACHE.last_no_digits = set()
 
     def test_logs_missing_reading_warning(self):
         with patch("script.resources.reader.logger.warning") as warn_mock:
-            resources.core._LAST_LOW_CONFIDENCE = set()
-            resources.core._LAST_NO_DIGITS = {"wood_stockpile"}
+            resources.RESOURCE_CACHE.last_low_confidence = set()
+            resources.RESOURCE_CACHE.last_no_digits = {"wood_stockpile"}
             resources.validate_starting_resources(
                 {"wood_stockpile": None},
                 {"wood_stockpile": 80},
@@ -405,8 +405,8 @@ class TestValidateStartingResources(TestCase):
             warn_mock.assert_called_once_with(
                 "Missing OCR reading for 'wood_stockpile'"
             )
-        resources.core._LAST_LOW_CONFIDENCE = set()
-        resources.core._LAST_NO_DIGITS = set()
+        resources.RESOURCE_CACHE.last_low_confidence = set()
+        resources.RESOURCE_CACHE.last_no_digits = set()
 
     def test_deviation_saves_roi_image(self):
         frame = np.zeros((10, 10, 3), dtype=np.uint8)
@@ -474,7 +474,7 @@ class TestValidateStartingResources(TestCase):
     def test_low_confidence_saves_debug_images(self):
         frame = np.zeros((10, 10, 3), dtype=np.uint8)
         rois = {"wood_stockpile": (0, 0, 5, 5)}
-        resources.core._LAST_LOW_CONFIDENCE = {"wood_stockpile"}
+        resources.RESOURCE_CACHE.last_low_confidence = {"wood_stockpile"}
         ts = 1.111
         with patch("script.resources.reader.cv2.imwrite") as imwrite_mock, \
              patch("script.resources.reader.time.time", return_value=ts), \
@@ -489,7 +489,7 @@ class TestValidateStartingResources(TestCase):
             )
         self.assertEqual(imwrite_mock.call_count, 3)
         self.assertGreaterEqual(warn_mock.call_count, 1)
-        resources.core._LAST_LOW_CONFIDENCE = set()
+        resources.RESOURCE_CACHE.last_low_confidence = set()
 
 
 class TestCacheDiscrepancy(TestCase):
