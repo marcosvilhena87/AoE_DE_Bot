@@ -53,7 +53,7 @@ import script.resources as resources
 class TestPopulationOcrConfidence(TestCase):
     def test_negative_confidences_raise_error(self):
         roi = np.zeros((10, 10, 3), dtype=np.uint8)
-        with patch(
+        with patch.dict(resources.common.CFG, {"allow_low_conf_population": False}, clear=False), patch(
             "script.resources.ocr.executor.execute_ocr",
             return_value=(
                 "34",
@@ -66,6 +66,19 @@ class TestPopulationOcrConfidence(TestCase):
                 resources._read_population_from_roi(
                     roi, conf_threshold=60
                 )
+
+    def test_fraction_patterns_extracted(self):
+        roi = np.zeros((10, 10, 3), dtype=np.uint8)
+        samples = [("3/4", (3, 4)), ("13/14", (13, 14))]
+        for text, expected in samples:
+            with self.subTest(text=text), patch(
+                "script.resources.ocr.executor.execute_ocr",
+                return_value=(text, {"text": [text], "conf": ["95"]}, None, False),
+            ):
+                cur, cap = resources._read_population_from_roi(
+                    roi, conf_threshold=60
+                )
+                self.assertEqual((cur, cap), expected)
 
     def test_low_confidence_allowed(self):
         roi = np.zeros((10, 10, 3), dtype=np.uint8)
@@ -89,7 +102,11 @@ class TestPopulationOcrConfidence(TestCase):
 
         with patch.dict(
             resources.common.CFG,
-            {"population_limit_low_conf_fallback": True, "ocr_retry_limit": 3},
+            {
+                "population_limit_low_conf_fallback": True,
+                "ocr_retry_limit": 3,
+                "allow_low_conf_population": False,
+            },
             clear=False,
         ), patch(
             "script.resources.ocr.executor.execute_ocr",
@@ -115,7 +132,11 @@ class TestPopulationOcrConfidence(TestCase):
 
         with patch.dict(
             resources.common.CFG,
-            {"population_limit_low_conf_fallback": True, "ocr_retry_limit": 2},
+            {
+                "population_limit_low_conf_fallback": True,
+                "ocr_retry_limit": 2,
+                "allow_low_conf_population": False,
+            },
             clear=False,
         ), patch(
             "script.resources.ocr.executor.execute_ocr",
@@ -140,7 +161,7 @@ class TestPopulationOcrConfidence(TestCase):
 
     def test_zero_confidence_requires_flag(self):
         roi = np.zeros((10, 10, 3), dtype=np.uint8)
-        with patch(
+        with patch.dict(resources.common.CFG, {"allow_low_conf_population": False}, clear=False), patch(
             "script.resources.ocr.executor.execute_ocr",
             return_value=(
                 "12/34",
@@ -156,7 +177,10 @@ class TestPopulationOcrConfidence(TestCase):
         roi = np.zeros((10, 10, 3), dtype=np.uint8)
         with patch.dict(
             resources.common.CFG,
-            {"population_limit_low_conf_fallback": True},
+            {
+                "population_limit_low_conf_fallback": True,
+                "allow_low_conf_population": False,
+            },
             clear=False,
         ), patch(
             "script.resources.ocr.executor.execute_ocr",

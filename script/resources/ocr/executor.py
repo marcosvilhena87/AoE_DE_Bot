@@ -419,6 +419,7 @@ def _read_population_from_roi(roi, conf_threshold=None, roi_bbox=None, failure_c
         conf_threshold=conf_threshold,
         allow_fallback=False,
         whitelist="0123456789/",
+        resource="population_limit",
     )
     raw_text = "".join(filter(None, data.get("text", [])))
     parts = [p for p in raw_text.split("/") if p]

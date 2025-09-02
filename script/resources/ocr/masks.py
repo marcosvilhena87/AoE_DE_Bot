@@ -127,6 +127,8 @@ def _ocr_digits_better(gray, color=None, resource=None, whitelist="0123456789"):
         gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, block_size, 2
     )
     if resource == "population_limit":
+        pop_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, 3))
+        adaptive = cv2.morphologyEx(adaptive, cv2.MORPH_CLOSE, pop_kernel, iterations=1)
         _otsu_ret, otsu = cv2.threshold(
             gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU
         )
