@@ -678,14 +678,37 @@ def gather_hud_stats(
         required_icons = [n for n in required_icons if n in regions]
         all_icons = list(regions.keys())
 
-    return _read_resources(
-        frame,
-        required_icons,
-        all_icons,
-        cache,
-        max_cache_age,
-        conf_threshold,
-    )
+    def _run_read():
+        return _read_resources(
+            frame,
+            required_icons,
+            all_icons,
+            cache,
+            max_cache_age,
+            conf_threshold,
+        )
+
+    results, pop = _run_read()
+
+    cur_pop, pop_cap = pop
+    idle_val = results.get("idle_villager")
+
+    needs_retry = False
+    if pop_cap is not None:
+        if cur_pop is not None and cur_pop > pop_cap:
+            needs_retry = True
+        if idle_val is not None and idle_val > pop_cap:
+            needs_retry = True
+    if needs_retry:
+        logger.warning(
+            "Population readings exceed cap (idle=%s cur=%s cap=%s); retrying OCR",
+            idle_val,
+            cur_pop,
+            pop_cap,
+        )
+        results, pop = _run_read()
+
+    return results, pop
 
 
 def validate_starting_resources(

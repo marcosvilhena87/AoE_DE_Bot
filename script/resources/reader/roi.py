@@ -28,15 +28,35 @@ def prepare_roi(
     when the region has invalid dimensions and is not required.
     """
     x, y, w, h = regions[name]
+
+    # Keep idle-villager ROI from encroaching on the population area
+    if name == "idle_villager" and "population_limit" in regions:
+        pop_x, _py, pop_w, _ph = regions["population_limit"]
+        pop_right = pop_x + pop_w
+        if x < pop_right:
+            # Trim any overlap on the left side
+            shift = pop_right - x
+            x = pop_right
+            w = max(0, w - shift)
+            regions[name] = (x, y, w, h)
+
     deficit = get_narrow_roi_deficit(name)
     if deficit:
-        expand_left = deficit // 2
-        expand_right = deficit - expand_left
+        if name == "idle_villager":
+            expand_left = 0
+            expand_right = deficit
+        else:
+            expand_left = deficit // 2
+            expand_right = deficit - expand_left
         orig_x = x
         orig_w = w
         x = max(0, orig_x - expand_left)
         right = min(frame.shape[1], orig_x + orig_w + expand_right)
-        w = right - x
+        if name == "idle_villager" and "population_limit" in regions:
+            pop_right = regions["population_limit"][0] + regions["population_limit"][2]
+            if x < pop_right:
+                x = pop_right
+        w = max(0, right - x)
         regions[name] = (x, y, w, h)
         logger.debug(
             "Expanding narrow ROI for %s by %dpx (left=%d right=%d)",
@@ -45,6 +65,7 @@ def prepare_roi(
             expand_left,
             expand_right,
         )
+
     if name == "wood_stockpile":
         orig_x = x
         orig_w = w
@@ -174,6 +195,8 @@ def expand_population_roi_after_failure(
     x1 = min(frame.shape[1], orig_right + expand_px)
     if max_right is not None:
         x1 = min(max_right, x1)
+        if x1 <= x0:
+            return None
     y1 = min(frame.shape[0], y + h + expand_px)
     logger.debug(
         "Expanding population ROI after %d failures by %dpx to x=%d y=%d w=%d h=%d",
