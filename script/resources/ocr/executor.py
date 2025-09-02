@@ -238,6 +238,7 @@ def handle_ocr_failure(
     if low_confidence is None:
         low_confidence = set()
 
+    required_set = set(required_icons)
     debug_success = CFG.get("ocr_debug_success")
 
     for name in list(low_confidence):
@@ -256,7 +257,17 @@ def handle_ocr_failure(
                 )
                 continue
             if fallback is None:
-                fallback = 0
+                if name in required_set:
+                    raise common.ResourceReadError(
+                        f"No cached value for {name} after {count} low-confidence OCR results"
+                    )
+                logger.warning(
+                    "No cached value for %s after %d low-confidence OCR results",
+                    name,
+                    count,
+                )
+                low_confidence.remove(name)
+                continue
             results[name] = fallback
             logger.warning(
                 "Using fallback value %s=%d after %d low-confidence OCR results",
@@ -282,7 +293,16 @@ def handle_ocr_failure(
                 )
                 continue
             if fallback is None:
-                fallback = 0
+                if name in required_set:
+                    raise common.ResourceReadError(
+                        f"No cached value for {name} after {count} OCR failures"
+                    )
+                logger.warning(
+                    "No cached value for %s after %d OCR failures",
+                    name,
+                    count,
+                )
+                continue
             results[name] = fallback
             logger.warning(
                 "Using fallback value %s=%d after %d OCR failures",
@@ -295,7 +315,6 @@ def handle_ocr_failure(
     if not failed and not debug_success:
         return
 
-    required_set = set(required_icons)
     required_failed = [f for f in failed if f in required_set]
     optional_failed = [f for f in failed if f not in required_set]
 

@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 from unittest.mock import patch
 
 import script.resources.reader as resources
@@ -137,7 +138,7 @@ def test_confidence_zero_does_not_call_image_to_string():
         return "7", data, np.zeros((1, 1), dtype=np.uint8)
 
     resources.RESOURCE_CACHE.last_resource_values["wood_stockpile"] = 0
-    with patch.dict(resources.CFG, {"wood_stockpile_low_conf_fallback": False}, clear=False), \
+    with patch.dict(resources.CFG, {"wood_stockpile_low_conf_fallback": False, "allow_zero_confidence_digits": False}, clear=False), \
          patch("script.resources.reader.detect_resource_regions", side_effect=fake_detect), \
          patch("script.screen_utils._grab_frame", side_effect=fake_grab_frame), \
          patch("script.resources.ocr.masks._ocr_digits_better", side_effect=fake_ocr), \
@@ -202,5 +203,42 @@ def test_zero_variance_returns_zero():
         stone, _, _ = resources._ocr_digits_better(make_stone_roi())
     assert gold == "0"
     assert stone == "0"
+
+
+def test_low_conf_required_without_cache_raises():
+    frame = np.zeros((20, 20, 3), dtype=np.uint8)
+    regions = {"wood_stockpile": (0, 0, 10, 10)}
+    results = {"wood_stockpile": None}
+    cache = resources.ResourceCache()
+    with patch("script.resources.ocr.executor.cv2.imwrite"), pytest.raises(
+        resources.common.ResourceReadError
+    ):
+        resources.handle_ocr_failure(
+            frame,
+            regions,
+            results,
+            ["wood_stockpile"],
+            cache_obj=cache,
+            retry_limit=1,
+            low_confidence={"wood_stockpile"},
+        )
+
+
+def test_low_conf_optional_without_cache_keeps_none():
+    frame = np.zeros((20, 20, 3), dtype=np.uint8)
+    regions = {"wood_stockpile": (0, 0, 10, 10)}
+    results = {"wood_stockpile": None}
+    cache = resources.ResourceCache()
+    with patch("script.resources.ocr.executor.cv2.imwrite"):
+        resources.handle_ocr_failure(
+            frame,
+            regions,
+            results,
+            [],
+            cache_obj=cache,
+            retry_limit=1,
+            low_confidence={"wood_stockpile"},
+        )
+    assert results["wood_stockpile"] is None
 
 
