@@ -116,7 +116,7 @@ class TestWoodStockpileOCR(TestCase):
                 cache_obj,
             )
         self.assertTrue(low_conf)
-        self.assertIsNone(parse_confidences(data))
+        self.assertEqual(parse_confidences(data), [0.0, 0.0])
         self.assertIsNone(digits)
 
     def test_wood_stockpile_roi_expansion_captures_80(self):
