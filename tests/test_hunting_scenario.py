@@ -71,7 +71,7 @@ class TestHuntingScenario(TestCase):
         info = config_utils.ScenarioInfo(
             starting_villagers=3,
             starting_idle_villagers=3,
-            population_limit=50,
+            population_limit=4,
             starting_resources={
                 "wood_stockpile": 80,
                 "food_stockpile": 140,
@@ -89,7 +89,7 @@ class TestHuntingScenario(TestCase):
              patch("script.config_utils.parse_scenario_info", return_value=info) as parse_mock, \
              patch(
                  "script.resources.reader.gather_hud_stats",
-                 return_value=(gathered, (info.starting_villagers, 4)),
+                 return_value=(gathered, (info.starting_villagers, info.population_limit)),
              ) as gather_mock, \
              patch.object(resources.reader, "RESOURCE_CACHE", resources.ResourceCache()):
             runpy.run_path(
@@ -98,7 +98,7 @@ class TestHuntingScenario(TestCase):
             )
 
             self.assertEqual(common.CURRENT_POP, info.starting_villagers)
-            self.assertEqual(common.POP_CAP, 4)
+            self.assertEqual(common.POP_CAP, info.population_limit)
             self.assertEqual(common.TARGET_POP, info.objective_villagers)
             self.assertEqual(
                 resources.reader.RESOURCE_CACHE.last_resource_values, gathered
@@ -114,7 +114,7 @@ class TestHuntingScenario(TestCase):
         info = config_utils.ScenarioInfo(
             starting_villagers=3,
             starting_idle_villagers=3,
-            population_limit=50,
+            population_limit=4,
             starting_resources=None,
             objective_villagers=7,
             starting_buildings={},
@@ -141,7 +141,7 @@ class TestHuntingScenario(TestCase):
         info = config_utils.ScenarioInfo(
             starting_villagers=3,
             starting_idle_villagers=3,
-            population_limit=50,
+            population_limit=4,
             starting_resources=None,
             objective_villagers=8,
             starting_buildings={"Town Center": 1},
@@ -155,7 +155,7 @@ class TestHuntingScenario(TestCase):
             "script.resources.reader.gather_hud_stats",
             return_value=(
                 {"idle_villager": info.starting_idle_villagers},
-                (info.starting_villagers, 4),
+                (info.starting_villagers, info.population_limit),
             ),
         ) as gather_mock, patch.object(
             resources.reader, "RESOURCE_CACHE", resources.ResourceCache()
@@ -183,7 +183,7 @@ class TestHuntingScenario(TestCase):
         info = config_utils.ScenarioInfo(
             starting_villagers=3,
             starting_idle_villagers=3,
-            population_limit=50,
+            population_limit=4,
             starting_resources={
                 "wood_stockpile": 80,
                 "food_stockpile": 140,
@@ -205,7 +205,7 @@ class TestHuntingScenario(TestCase):
 
         with patch.object(module.hud, "wait_hud", return_value=((0, 0, 0, 0), "asset")), \
             patch.object(module, "parse_scenario_info", return_value=info), \
-            patch.object(module.resources, "gather_hud_stats", return_value=(gathered, (info.starting_villagers, 4))) as gather_mock, \
+            patch.object(module.resources, "gather_hud_stats", return_value=(gathered, (info.starting_villagers, info.population_limit))) as gather_mock, \
             patch.object(module, "run_mission") as run_mock, \
             patch.object(module.resources, "RESOURCE_CACHE", resources.ResourceCache()), \
             self.assertLogs(module.logger, level="ERROR") as log_ctx:
@@ -217,3 +217,77 @@ class TestHuntingScenario(TestCase):
         self.assertTrue(
             any("idle villager" in m.lower() for m in log_ctx.output)
         )
+
+    def test_aborts_on_population_mismatch(self):
+        info = config_utils.ScenarioInfo(
+            starting_villagers=3,
+            starting_idle_villagers=3,
+            population_limit=4,
+            starting_resources={
+                "wood_stockpile": 80,
+                "food_stockpile": 140,
+                "gold_stockpile": 0,
+                "stone_stockpile": 0,
+            },
+            objective_villagers=7,
+            starting_buildings={"Town Center": 1},
+        )
+
+        gathered = dict(info.starting_resources)
+        gathered["idle_villager"] = info.starting_idle_villagers
+
+        import importlib
+
+        module = importlib.import_module(
+            "campaigns.Ascent_of_Egypt.Egypt_1_Hunting"
+        )
+
+        with patch.object(module.hud, "wait_hud", return_value=((0, 0, 0, 0), "asset")), \
+            patch.object(module, "parse_scenario_info", return_value=info), \
+            patch.object(module.resources, "gather_hud_stats", return_value=(gathered, (info.starting_villagers - 1, info.population_limit))) as gather_mock, \
+            patch.object(module, "run_mission") as run_mock, \
+            patch.object(module.resources, "RESOURCE_CACHE", resources.ResourceCache()), \
+            self.assertLogs(module.logger, level="ERROR") as log_ctx:
+            module.main()
+
+        run_mock.assert_not_called()
+        gather_mock.assert_called_once()
+        self.assertEqual(module.resources.RESOURCE_CACHE.last_resource_values, {})
+        self.assertTrue(any("population" in m.lower() for m in log_ctx.output))
+
+    def test_aborts_on_pop_cap_mismatch(self):
+        info = config_utils.ScenarioInfo(
+            starting_villagers=3,
+            starting_idle_villagers=3,
+            population_limit=4,
+            starting_resources={
+                "wood_stockpile": 80,
+                "food_stockpile": 140,
+                "gold_stockpile": 0,
+                "stone_stockpile": 0,
+            },
+            objective_villagers=7,
+            starting_buildings={"Town Center": 1},
+        )
+
+        gathered = dict(info.starting_resources)
+        gathered["idle_villager"] = info.starting_idle_villagers
+
+        import importlib
+
+        module = importlib.import_module(
+            "campaigns.Ascent_of_Egypt.Egypt_1_Hunting"
+        )
+
+        with patch.object(module.hud, "wait_hud", return_value=((0, 0, 0, 0), "asset")), \
+            patch.object(module, "parse_scenario_info", return_value=info), \
+            patch.object(module.resources, "gather_hud_stats", return_value=(gathered, (info.starting_villagers, info.population_limit - 1))) as gather_mock, \
+            patch.object(module, "run_mission") as run_mock, \
+            patch.object(module.resources, "RESOURCE_CACHE", resources.ResourceCache()), \
+            self.assertLogs(module.logger, level="ERROR") as log_ctx:
+            module.main()
+
+        run_mock.assert_not_called()
+        gather_mock.assert_called_once()
+        self.assertEqual(module.resources.RESOURCE_CACHE.last_resource_values, {})
+        self.assertTrue(any("population" in m.lower() for m in log_ctx.output))

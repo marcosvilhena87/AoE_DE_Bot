@@ -58,6 +58,16 @@ def main() -> None:
     # Leia o HUD para obter os valores atuais de recursos e população
     res_vals, (cur_pop, pop_cap) = resources.gather_hud_stats()
 
+    if cur_pop != info.starting_villagers or pop_cap != info.population_limit:
+        logger.error(
+            "HUD population (%s/%s) does not match expected %s/%s; aborting scenario.",
+            cur_pop,
+            pop_cap,
+            info.starting_villagers,
+            info.population_limit,
+        )
+        return
+
     # Validação dos recursos iniciais
     try:
         resources.validate_starting_resources(
@@ -85,8 +95,8 @@ def main() -> None:
     resources.RESOURCE_CACHE.last_resource_ts["idle_villager"] = now
 
     # Atualize população e limites
-    common.CURRENT_POP = cur_pop if cur_pop is not None else info.starting_villagers
-    common.POP_CAP = pop_cap if pop_cap is not None else 4
+    common.CURRENT_POP = cur_pop
+    common.POP_CAP = pop_cap
     common.TARGET_POP = info.objective_villagers
 
     logger.info("Setup complete.")
