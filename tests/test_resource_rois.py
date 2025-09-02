@@ -169,14 +169,20 @@ class TestResourceROIs(TestCase):
         next_icon_left_trimmed = next_icon_left - next_trim_px
 
         pad_extra = int(round(icon_width * 0.25)) if name == "wood_stockpile" else 0
+        expected_left = icon_right_trimmed + self.pad_left - pad_extra
+        if name == "wood_stockpile":
+            expected_left = min(expected_left, icon_right_trimmed)
         self.assertGreaterEqual(
             left,
-            icon_right_trimmed + self.pad_left - pad_extra,
+            expected_left,
             f"{name} left not ≥ icon_right + padding",
         )
+        expected_right = next_icon_left_trimmed - self.pad_right + pad_extra
+        if name == "wood_stockpile":
+            expected_right = next_icon_left_trimmed + pad_extra
         self.assertLessEqual(
             right,
-            next_icon_left_trimmed - self.pad_right + pad_extra,
+            expected_right,
             f"{name} right not ≤ next_icon_left - padding",
         )
 

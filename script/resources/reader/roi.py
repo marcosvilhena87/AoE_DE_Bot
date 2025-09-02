@@ -69,8 +69,8 @@ def prepare_roi(
     if name == "wood_stockpile":
         orig_x = x
         orig_w = w
-        expand_left = 4
-        expand_right = 4
+        expand_left = 6
+        expand_right = 6
         x = max(0, orig_x - expand_left)
         right = min(frame.shape[1], orig_x + orig_w + expand_right)
         w = right - x
