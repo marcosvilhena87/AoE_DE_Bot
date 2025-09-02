@@ -1,6 +1,6 @@
-Situação Inicial do Cenário:
+Initial Scenario Situation:
 
-Starting Age:  Stone Age
+Starting Age: Stone Age
 Starting Resources: 80 wood, 140 food, 0 gold, 0 stone
 Population Limit: 50
 Starting Units: 3 Villagers
@@ -8,8 +8,7 @@ Starting Buildings: 1 Town Center
 Starting Idle Villagers: 3 Villagers
 
 Obs:
-Antes de prosseguir com os objetivos, assegurar que a situação inicial do cenário foi detectada.
-
+Before proceeding with the objectives, ensure that the initial situation of the scenario has been detected.
 
 Objectives
 Grow your tribe to 7 villagers.
@@ -33,5 +32,4 @@ CREATING VILLAGERS
 Villagers cost 50 food. To create a villager, select a Town Center, and then click on the Create Villager button in the lower left corner of the game screen. After a brief training period, the villager appears beside the Town Center.
 
 BUILDING HOUSES
-
 Houses cost 30 wood and each House supports four villagers. The Town Center also supports four villagers. To build a House, select a villager, click the Build House button in the building panel in the lower-left corner of the game screen, and then click a location on the map. The House is shown in red if you cannot build in a particular location.
