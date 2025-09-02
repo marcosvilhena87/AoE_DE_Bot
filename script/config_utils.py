@@ -136,6 +136,7 @@ def load_config(path: str | Path | None = None) -> dict[str, Any]:
 @dataclass
 class ScenarioInfo:
     starting_villagers: int = 0
+    starting_idle_villagers: int = 0
     population_limit: int = 0
     objective_villagers: int = 0
     # Expected starting resources keyed by resource name used in OCR routines
@@ -162,6 +163,10 @@ def parse_scenario_info(path: str | Path) -> ScenarioInfo:
                     m = re.search(r"(\d+)\s+villagers", line, re.IGNORECASE)
                     if m:
                         info.starting_villagers = int(m.group(1))
+                elif lower.startswith("starting idle villagers"):
+                    m = re.search(r"(\d+)", line)
+                    if m:
+                        info.starting_idle_villagers = int(m.group(1))
                 elif lower.startswith("starting resources"):
                     res = {}
                     for name in ("wood", "food", "gold", "stone"):
