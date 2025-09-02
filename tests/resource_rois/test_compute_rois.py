@@ -187,6 +187,29 @@ class TestComputeResourceROIs(TestCase):
         )
         self.assertGreaterEqual(regions["population_limit"][2], min_pop_width)
 
+    def test_idle_roi_generated_when_span_non_positive(self):
+        detected = {
+            "population_limit": (0, 0, 5, 5),
+            "idle_villager": (10, 0, 5, 5),
+        }
+        regions, spans, _narrow = resources.compute_resource_rois(
+            0,
+            40,
+            0,
+            10,
+            [0, 0, 0, 0, 0, 70],
+            [0] * 6,
+            [0] * 6,
+            [999] * 6,
+            [0] * 6,
+            0,
+            10,
+            detected=detected,
+        )
+        self.assertIn("idle_villager", regions)
+        self.assertEqual(regions["idle_villager"], (15, 0, 10, 10))
+        self.assertEqual(spans["idle_villager"], (15, 25))
+
 
 class TestNarrowROIExpansion(TestCase):
     def setUp(self):

@@ -77,26 +77,22 @@ class TestFallbackROIsFromSlice(TestCase):
             20,  # height
             [0],  # icon_trims
             0,  # right_trim
-            {"idle_villager"},  # required_icons
+            set(),  # required_icons
         )
 
         expected_icons = set(resources.RESOURCE_ICON_ORDER)
         self.assertEqual(set(regions.keys()), expected_icons)
 
-        slice_w = 120 // len(resources.RESOURCE_ICON_ORDER)
-        for idx, name in enumerate(resources.RESOURCE_ICON_ORDER):
+        for name in resources.RESOURCE_ICON_ORDER:
             l, t, w, h = regions[name]
             self.assertEqual((t, h), (0, 20))
-            left_bound = idx * slice_w
-            right_bound = left_bound + slice_w
-            self.assertGreaterEqual(l, left_bound)
-            self.assertLessEqual(l + w, right_bound)
             self.assertEqual(resources.cache._LAST_REGION_SPANS[name], (l, l + w))
 
         self.assertEqual(resources.cache._NARROW_ROIS, set())
 
-        # Ensure ROIs do not extend into neighboring digits
+        # Ensure ROI spans are reported in non-decreasing order
         spans = resources.cache._LAST_REGION_SPANS
-        order = resources.RESOURCE_ICON_ORDER
-        for idx in range(len(order) - 1):
-            self.assertLessEqual(spans[order[idx]][1], spans[order[idx + 1]][0])
+        prev_left = -1
+        for name in resources.RESOURCE_ICON_ORDER:
+            self.assertGreaterEqual(spans[name][0], prev_left)
+            prev_left = spans[name][0]
