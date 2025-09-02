@@ -596,7 +596,7 @@ def read_population_from_roi(
                 roi,
                 failure_count,
                 conf_threshold,
-                max_right=None,
+                max_right=x + w,
             )
             if expansion:
                 cur_pop, pop_cap, _, x, y, w, h = expansion

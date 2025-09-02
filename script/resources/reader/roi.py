@@ -156,7 +156,8 @@ def expand_population_roi_after_failure(
         return None
     x0 = max(0, x - expand_px)
     y0 = max(0, y - expand_px)
-    x1 = min(frame.shape[1], x + w + expand_px)
+    orig_right = x + w
+    x1 = min(frame.shape[1], orig_right + expand_px)
     if max_right is not None:
         x1 = min(max_right, x1)
     y1 = min(frame.shape[0], y + h + expand_px)
