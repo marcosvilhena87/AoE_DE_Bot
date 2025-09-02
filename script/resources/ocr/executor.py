@@ -32,6 +32,7 @@ def execute_ocr(
     if conf_threshold is None:
         conf_threshold = CFG.get("ocr_conf_threshold", 60)
     allow_zero = CFG.get("allow_zero_confidence_digits")
+    metric = 0
 
     if whitelist is None:
         whitelist = "0123456789"
@@ -121,7 +122,10 @@ def execute_ocr(
             texts = data.get("text", [])
             digit_confs = [c for t, c in zip(texts, confs) if any(ch.isdigit() for ch in t)]
             metric = np.median(digit_confs) if digit_confs else 0
-            low_conf = not (digit_confs and metric >= conf_threshold)
+            if digit_confs and metric >= conf_threshold:
+                low_conf = False
+            else:
+                low_conf = True
 
     if not digits and allow_fallback:
         text = pytesseract.image_to_string(
@@ -138,6 +142,11 @@ def execute_ocr(
         best_digits = _sanitize_digits(best_digits)
         if zero_conf:
             best_data["zero_conf"] = True
+        logger.debug(
+            "Final OCR confidence threshold %d, median confidence %.2f",
+            conf_threshold,
+            metric,
+        )
         return best_digits, best_data, best_mask, True
     if not digits:
         debug_dir = ROOT / "debug"
@@ -193,11 +202,21 @@ def execute_ocr(
         digits = _sanitize_digits(digits)
         if zero_conf:
             data["zero_conf"] = True
+        logger.debug(
+            "Final OCR confidence threshold %d, median confidence %.2f",
+            conf_threshold,
+            metric,
+        )
         return digits, data, mask, True
     if digits:
         digits = _sanitize_digits(digits)
         if zero_conf:
             data["zero_conf"] = True
+    logger.debug(
+        "Final OCR confidence threshold %d, median confidence %.2f",
+        conf_threshold,
+        metric,
+    )
     return digits, data, mask, low_conf
 
 

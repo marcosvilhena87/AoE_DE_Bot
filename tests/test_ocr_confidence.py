@@ -68,3 +68,16 @@ class TestZeroConfidenceHandling(TestCase):
         self.assertEqual(digits, "123")
         self.assertFalse(low_conf)
         self.assertTrue(data.get("zero_conf"))
+
+
+class TestMedianConfidence(TestCase):
+    def test_high_confidence_token_not_flagged(self):
+        gray = np.zeros((10, 10), dtype=np.uint8)
+        fake_data = {"text": ["140"], "conf": ["95"]}
+        with patch(
+            "script.resources.ocr.masks._ocr_digits_better",
+            return_value=("140", fake_data, None),
+        ):
+            digits, _data, _mask, low_conf = execute_ocr(gray)
+        self.assertEqual(digits, "140")
+        self.assertFalse(low_conf)
