@@ -1,9 +1,15 @@
+Situação Inicial do Cenário:
+
 Starting Age:  Stone Age
 Starting Resources: 80 wood, 140 food, 0 gold, 0 stone
 Population Limit: 50
 Starting Units: 3 Villagers
 Starting Buildings: 1 Town Center
 Starting Idle Villagers: 3 Villagers
+
+Obs:
+Antes de prosseguir com os objetivos assegurar que situação inicial do cenário foi detectada.
+
 
 Objectives
 Grow your tribe to 7 villagers.
