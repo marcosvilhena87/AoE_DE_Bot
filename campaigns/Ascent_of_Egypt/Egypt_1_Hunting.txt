@@ -2,7 +2,7 @@ Initial State of the Scenario:
 
 Starting Age: Stone Age
 Starting Resources: 80 wood, 140 food, 0 gold, 0 stone
-Population Limit: 50
+Starting Population Limit: 3/4
 Starting Units: 3 Villagers
 Starting Buildings: 1 Town Center
 Starting Idle Villagers: 3 Villagers
