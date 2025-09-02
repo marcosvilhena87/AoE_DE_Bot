@@ -1,4 +1,4 @@
-Initial Scenario Situation:
+Initial State of the Scenario:
 
 Starting Age: Stone Age
 Starting Resources: 80 wood, 140 food, 0 gold, 0 stone
@@ -8,7 +8,7 @@ Starting Buildings: 1 Town Center
 Starting Idle Villagers: 3 Villagers
 
 Obs:
-Before proceeding with the objectives, ensure that the initial situation of the scenario has been detected.
+Before proceeding with the objectives, ensure that the initial state of the scenario has been detected.
 
 Objectives
 Grow your tribe to 7 villagers.
