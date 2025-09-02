@@ -51,6 +51,9 @@ def main() -> None:
 
     scenario_txt = Path(__file__).with_suffix(".txt")
     info = parse_scenario_info(scenario_txt)
+    if not info.starting_buildings or info.starting_buildings.get("Town Center", 0) < 1:
+        logger.error("Required starting building 'Town Center' not found; aborting scenario.")
+        return
 
     # Leia o HUD para obter os valores atuais de recursos e população
     res_vals, (cur_pop, pop_cap) = resources.gather_hud_stats()

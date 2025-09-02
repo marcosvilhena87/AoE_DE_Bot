@@ -32,6 +32,23 @@ class DummyMSS:
 sys.modules.setdefault("pyautogui", dummy_pg)
 sys.modules.setdefault("mss", types.SimpleNamespace(mss=lambda: DummyMSS()))
 sys.modules.setdefault(
+    "cv2",
+    types.SimpleNamespace(
+        cvtColor=lambda src, code: src,
+        resize=lambda img, *a, **k: img,
+        threshold=lambda img, *a, **k: (None, img),
+        imread=lambda *a, **k: np.zeros((1, 1), dtype=np.uint8),
+        imwrite=lambda *a, **k: True,
+        matchTemplate=lambda *a, **k: np.zeros((1, 1), dtype=np.uint8),
+        IMREAD_GRAYSCALE=0,
+        COLOR_BGR2GRAY=0,
+        INTER_LINEAR=0,
+        THRESH_BINARY=0,
+        THRESH_OTSU=0,
+        TM_CCOEFF_NORMED=0,
+    ),
+)
+sys.modules.setdefault(
     "pytesseract",
     types.SimpleNamespace(
         pytesseract=types.SimpleNamespace(tesseract_cmd=""),
@@ -64,6 +81,7 @@ class TestForagingScenario(TestCase):
                 "stone_stockpile": 100,
             },
             objective_villagers=0,
+            starting_buildings={"Town Center": 1},
         )
 
         gathered = dict(info.starting_resources)
