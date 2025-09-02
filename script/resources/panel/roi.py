@@ -234,27 +234,6 @@ def _fallback_rois_from_slice(
         l, t, w, hgt = regions[name]
         spans[name] = (l, l + w)
 
-    if "idle_villager" in required_icons:
-        idx_iv = RESOURCE_ICON_ORDER.index("idle_villager")
-        left_iv = left + int(idx_iv * slice_w + pad_left_fallback[idx_iv])
-        right_iv = left + int(width - pad_right_fallback[idx_iv])
-        max_iv = (
-            cfg.max_widths[idx_iv]
-            if idx_iv < len(cfg.max_widths)
-            else cfg.max_widths[-1]
-        )
-        min_iv = (
-            cfg.min_widths[idx_iv]
-            if idx_iv < len(cfg.min_widths)
-            else cfg.min_widths[-1]
-        )
-        avail_iv = right_iv - left_iv
-        width_iv = min(max_iv, avail_iv)
-        if avail_iv >= min_iv:
-            width_iv = max(width_iv, min_iv)
-        regions["idle_villager"] = (left_iv, top, width_iv, height)
-        spans["idle_villager"] = (left_iv, left_iv + width_iv)
-
     cache._LAST_REGION_SPANS = spans.copy()
 
     return regions
