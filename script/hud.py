@@ -87,6 +87,21 @@ def read_population_from_hud(retries=1, conf_threshold=None, save_failed_roi=Fal
         width = int(pop_cfg.get("width_pct", 0) * W)
         height = int(pop_cfg.get("height_pct", 0) * H)
         regions["population_limit"] = (left, top, width, height)
+    idle_bounds = regions.get("idle_villager")
+    if idle_bounds and "population_limit" in regions:
+        left, top, width, height = regions["population_limit"]
+        idle_left = idle_bounds[0]
+        clamp_right = idle_left - CFG.get("population_idle_padding", 6)
+        if clamp_right < left + width:
+            width = max(0, clamp_right - left)
+            regions["population_limit"] = (left, top, width, height)
+        logger.debug(
+            "Population ROI after clamp: x=%d y=%d w=%d h=%d",
+            left,
+            top,
+            width,
+            height,
+        )
     roi_bbox = None
     if "population_limit" in regions:
         x, y, w, h = regions["population_limit"]
