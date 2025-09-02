@@ -56,22 +56,28 @@ def main() -> None:
     scenario_txt = Path(__file__).with_suffix(".txt")
     info = parse_scenario_info(scenario_txt)
 
-    # Configuração inicial de população
-    common.CURRENT_POP = info.starting_villagers
-    common.POP_CAP = 4  # População suportada pelo Town Center inicial
-    common.TARGET_POP = info.objective_villagers
+    # Leia o HUD para obter os valores atuais de recursos e população
+    res_vals, (cur_pop, pop_cap) = resources.gather_hud_stats()
 
-    # Inicialização de recursos com base no cenário
+    # Validação dos recursos iniciais
+    try:
+        resources.validate_starting_resources(
+            res_vals, info.starting_resources, raise_on_error=True
+        )
+    except resources.ResourceValidationError as exc:
+        logger.error("Erro na validação dos recursos iniciais: %s", exc)
+        raise
+
+    # Atualize os caches com os valores confirmados
     now = time.time()
-    if info.starting_resources:
-        resources.RESOURCE_CACHE.last_resource_values.update(info.starting_resources)
-        for name in info.starting_resources:
-            resources.RESOURCE_CACHE.last_resource_ts[name] = now
+    resources.RESOURCE_CACHE.last_resource_values.update(res_vals)
+    for name in res_vals:
+        resources.RESOURCE_CACHE.last_resource_ts[name] = now
 
-    resources.RESOURCE_CACHE.last_resource_values["idle_villager"] = (
-        info.starting_villagers
-    )
-    resources.RESOURCE_CACHE.last_resource_ts["idle_villager"] = now
+    # Atualize população e limites
+    common.CURRENT_POP = cur_pop if cur_pop is not None else info.starting_villagers
+    common.POP_CAP = pop_cap if pop_cap is not None else 4
+    common.TARGET_POP = info.objective_villagers
 
     logger.info("Setup complete.")
     if "PYTEST_CURRENT_TEST" in os.environ:
