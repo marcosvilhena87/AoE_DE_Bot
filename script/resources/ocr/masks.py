@@ -174,8 +174,17 @@ def _ocr_digits_better(gray, color=None, resource=None, whitelist="0123456789"):
         gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, block_size, 2
     )
     if resource == "population_limit":
-        pop_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, 3))
-        adaptive = cv2.morphologyEx(adaptive, cv2.MORPH_CLOSE, pop_kernel, iterations=1)
+        pop_close_cfg = CFG.get("population_morph_close", True)
+        do_pop_close = bool(pop_close_cfg)
+        pop_kernel_size = (1, 3)
+        var_thresh = None
+        if isinstance(pop_close_cfg, dict):
+            pop_kernel_size = tuple(pop_close_cfg.get("kernel", pop_close_cfg.get("kernel_size", pop_kernel_size)))
+            var_thresh = pop_close_cfg.get("variance_threshold")
+            do_pop_close = pop_close_cfg.get("enabled", True)
+        if do_pop_close and (var_thresh is None or variance <= var_thresh):
+            pop_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, pop_kernel_size)
+            adaptive = cv2.morphologyEx(adaptive, cv2.MORPH_CLOSE, pop_kernel, iterations=1)
         _otsu_ret, otsu = cv2.threshold(
             gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU
         )
