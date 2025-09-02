@@ -45,6 +45,20 @@ def prepare_roi(
             expand_left,
             expand_right,
         )
+    if name == "wood_stockpile":
+        orig_x = x
+        orig_w = w
+        expand_left = 4
+        expand_right = 4
+        x = max(0, orig_x - expand_left)
+        right = min(frame.shape[1], orig_x + orig_w + expand_right)
+        w = right - x
+        regions[name] = (x, y, w, h)
+        logger.debug(
+            "Expanding ROI for %s by %dpx on each side",
+            name,
+            expand_left,
+        )
     if w <= 0 or h <= 0:
         logger.error("ROI for '%s' has invalid dimensions w=%d h=%d", name, w, h)
         if name in required_set:
