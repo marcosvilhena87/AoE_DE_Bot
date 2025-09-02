@@ -209,3 +209,31 @@ class TestIdleVillagerOCR(TestCase):
         self.assertEqual(fourth["idle_villager"], 3)
         self.assertEqual(fifth["idle_villager"], 3)
         self.assertEqual(resources.RESOURCE_CACHE.last_resource_values["idle_villager"], 3)
+
+    def test_idle_villager_low_confidence_logging(self):
+        def fake_detect(frame, required_icons, cache=None):
+            return {"idle_villager": (0, 0, 50, 50)}
+
+        frame = np.zeros((100, 100, 3), dtype=np.uint8)
+        low_conf = str(resources.CFG["idle_villager_ocr_conf_threshold"] - 1)
+        with patch(
+            "script.resources.reader.core.detect_resource_regions",
+            side_effect=fake_detect,
+        ), patch("script.screen_utils._grab_frame", return_value=frame), patch(
+            "script.resources.reader.pytesseract.image_to_data",
+            return_value={"text": ["3"], "conf": [low_conf]},
+        ), patch(
+            "script.resources.reader.core.execute_ocr",
+            return_value=("", {"text": [""], "conf": []}, None, True),
+        ), patch(
+            "script.resources.reader.roi.execute_ocr",
+            return_value=("", {"text": [""], "conf": []}, None, True),
+        ), patch.dict(
+            resources.CFG, {"idle_villager_low_conf_fallback": False}, clear=False
+        ), self.assertLogs(resources.logger, level="WARNING") as cm:
+            result, _ = resources.read_resources_from_hud(
+                required_icons=[], icons_to_read=["idle_villager"]
+            )
+
+        self.assertIsNone(result.get("idle_villager"))
+        self.assertTrue(any("OCR failed for idle_villager" in m for m in cm.output))
