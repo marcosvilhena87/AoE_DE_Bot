@@ -247,3 +247,80 @@ class TestWoodStockpileLowConfRetry(TestCase):
             ],
         )
 
+    def test_initial_low_conf_returns_none_and_triggers_retry(self):
+        frame = np.zeros((10, 10, 3), dtype=np.uint8)
+        roi = np.zeros((1, 1, 3), dtype=np.uint8)
+        gray = np.zeros((1, 1), dtype=np.uint8)
+        roi_info = (0, 0, 1, 1, roi, gray, 0, 0)
+        cache = resources.ResourceCache()
+
+        with patch(
+            "script.resources.reader.core._ocr_resource",
+            return_value=("123", {}, None, True),
+        ), patch(
+            "script.resources.reader.core._retry_ocr",
+            return_value=(
+                "123",
+                {},
+                None,
+                roi,
+                gray,
+                0,
+                0,
+                1,
+                1,
+                True,
+            ),
+        ), patch.dict(
+            resources.CFG,
+            {"allow_low_conf_digits": True},
+            clear=False,
+        ):
+            value, _, _, _, _ = resources.core._process_resource(
+                frame,
+                "wood_stockpile",
+                roi_info,
+                cache_obj=cache,
+                res_conf_threshold=60,
+                max_cache_age=None,
+                low_conf_counts={},
+            )
+        self.assertIsNone(value)
+        self.assertEqual(cache.resource_failure_counts["wood_stockpile"], 1)
+
+        roi_info2 = (0, 0, 1, 1, roi, gray, 0, cache.resource_failure_counts["wood_stockpile"])
+        with patch(
+            "script.resources.reader.core._ocr_resource",
+            return_value=(None, {}, None, True),
+        ), patch(
+            "script.resources.reader.core.expand_roi_after_failure",
+            return_value=(
+                "456",
+                {},
+                None,
+                roi,
+                gray,
+                0,
+                0,
+                1,
+                1,
+                False,
+            ),
+        ) as expand_mock, patch.dict(
+            resources.CFG,
+            {"allow_low_conf_digits": True},
+            clear=False,
+        ):
+            value2, _, _, _, _ = resources.core._process_resource(
+                frame,
+                "wood_stockpile",
+                roi_info2,
+                cache_obj=cache,
+                res_conf_threshold=60,
+                max_cache_age=None,
+                low_conf_counts={},
+            )
+        self.assertEqual(value2, 456)
+        expand_mock.assert_called_once()
+        self.assertEqual(expand_mock.call_args[0][9], 1)
+
