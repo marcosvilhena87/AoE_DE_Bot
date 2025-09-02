@@ -222,6 +222,53 @@ class TestPopulationROI(TestCase):
             0,
         )
 
+    def test_population_roi_expansion_stays_left_of_idle_villagers(self):
+        frame = np.zeros((40, 40, 3), dtype=np.uint8)
+        bbox = {"left": 10, "top": 10, "width": 4, "height": 4}
+        bboxes = []
+
+        def fake_grab(bbox=None):
+            if bbox is None:
+                return frame
+            l, t, w, h = (
+                bbox["left"],
+                bbox["top"],
+                bbox["width"],
+                bbox["height"],
+            )
+            return frame[t : t + h, l : l + w]
+
+        def fake_pop(roi, conf_threshold=None, roi_bbox=None, failure_count=0):
+            bboxes.append(roi_bbox)
+            if roi.shape[1] <= 4:
+                raise common.PopulationReadError("tight")
+            return 12, 34
+
+        resources.RESOURCE_CACHE.resource_failure_counts.pop("population_limit", None)
+        with patch.dict(
+            common.CFG,
+            {
+                "population_ocr_roi_expand_base": 3,
+                "population_ocr_roi_expand_step": 0,
+                "population_ocr_roi_expand_growth": 1.0,
+            },
+            clear=False,
+        ), patch("script.screen_utils._grab_frame", side_effect=fake_grab), patch(
+            "script.resources.ocr.executor._read_population_from_roi",
+            side_effect=fake_pop,
+        ), patch(
+            "script.resources.reader.roi._read_population_from_roi",
+            side_effect=fake_pop,
+        ):
+            cur, cap = resources.read_population_from_roi(bbox, retries=1)
+
+        self.assertEqual((cur, cap), (12, 34))
+        self.assertEqual(len(bboxes), 2)
+        initial_right = bbox["left"] + bbox["width"]
+        self.assertEqual(bboxes[0][0] + bboxes[0][2], initial_right)
+        self.assertEqual(bboxes[1][0] + bboxes[1][2], initial_right)
+        self.assertLess(bboxes[1][0], bbox["left"])
+
     def test_population_string_with_slash(self):
         roi = np.zeros((10, 10, 3), dtype=np.uint8)
         gray = np.zeros((10, 10), dtype=np.uint8)
