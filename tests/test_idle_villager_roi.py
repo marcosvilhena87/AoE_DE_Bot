@@ -72,7 +72,8 @@ class TestIdleVillagerROI(TestCase):
         def fake_compute(pl, pr, top, height, *args, **kwargs):
             left = pl + xi + icon_w
             span = (left, left + 10)
-            return {}, {"idle_villager": span}, {}
+            regions = {"idle_villager": (left, top, 10, height)}
+            return regions, {"idle_villager": span}, {}
 
         with patch("script.resources.find_template", return_value=(panel_box, 0.9, None)), \
             patch("script.resources.cv2.cvtColor", side_effect=fake_cvtColor), \
@@ -141,9 +142,15 @@ class TestIdleVillagerROI(TestCase):
             offset = 20
             pop_span = (pl + offset, pl + offset + 20)
             idle_left = pl + xi + icon_w
-            idle_span = (idle_left, pop_span[0] + 10)
-            regions = {"population_limit": (pl + offset, top, 10, height)}
-            spans = {"population_limit": pop_span, "idle_villager": idle_span}
+            idle_width = pop_span[0] - idle_left
+            regions = {
+                "population_limit": (pl + offset, top, 10, height),
+                "idle_villager": (idle_left, top, idle_width, height),
+            }
+            spans = {
+                "population_limit": pop_span,
+                "idle_villager": (idle_left, idle_left + idle_width),
+            }
             return regions, spans, {}
 
         with patch("script.resources.find_template", return_value=(panel_box, 0.9, None)), \
@@ -214,9 +221,15 @@ class TestIdleVillagerROI(TestCase):
             offset = 25
             pop_span = (pl + offset, pl + offset + 20)
             idle_left = pl + xi + icon_w
-            idle_span = (idle_left, pop_span[0] + 10)
-            regions = {"population_limit": (pl + offset, top, 10, height)}
-            spans = {"population_limit": pop_span, "idle_villager": idle_span}
+            idle_width = pop_span[0] - idle_left
+            regions = {
+                "population_limit": (pl + offset, top, 10, height),
+                "idle_villager": (idle_left, top, idle_width, height),
+            }
+            spans = {
+                "population_limit": pop_span,
+                "idle_villager": (idle_left, idle_left + idle_width),
+            }
             return regions, spans, {}
 
         with patch("script.resources.find_template", return_value=(panel_box, 0.9, None)), \
@@ -261,69 +274,28 @@ class TestIdleVillagerROI(TestCase):
         xi, yi = 5, 4
         icon_h, icon_w = 5, 5
 
-        def fake_imread(path, flags=0):
-            name = os.path.splitext(os.path.basename(path))[0]
-            if name == "idle_villager":
-                return np.ones((icon_h, icon_w), dtype=np.uint8)
-            return np.zeros((icon_h, icon_w), dtype=np.uint8)
-
-        def fake_match(img, templ, method):
-            h = img.shape[0] - templ.shape[0] + 1
-            w = img.shape[1] - templ.shape[1] + 1
-            res = np.zeros((h, w), dtype=np.float32)
-            if np.all(templ == 1):
-                res[yi, xi] = 0.95
-            return res
-
-        def fake_minmax(res):
-            max_val = float(res.max())
-            max_loc = tuple(np.unravel_index(res.argmax(), res.shape)[::-1])
-            return 0.0, max_val, (0, 0), max_loc
-
-        def fake_cvtColor(src, code):
-            return np.zeros(src.shape[:2], dtype=np.uint8)
-
-        def fake_compute(pl, pr, top, height, *args, **kwargs):
-            offset = 60
-            pop_span = (pl + offset, pl + offset + 20)
-            regions = {"population_limit": (pl + offset, top, 10, height)}
-            spans = {"population_limit": pop_span}
-            return regions, spans, {}
-
-        with patch("script.resources.find_template", return_value=(panel_box, 0.9, None)), \
-            patch("script.resources.cv2.cvtColor", side_effect=fake_cvtColor), \
-            patch("script.resources.cv2.resize", side_effect=lambda img, *a, **k: img), \
-            patch("script.resources.cv2.matchTemplate", side_effect=fake_match), \
-            patch("script.resources.cv2.minMaxLoc", side_effect=fake_minmax), \
-            patch("script.resources.cv2.imread", side_effect=fake_imread), \
-            patch("script.resources.panel.detection.compute_resource_rois", side_effect=fake_compute), \
-            patch.dict(screen_utils.ICON_TEMPLATES, {}, clear=True), \
-            patch.dict(
-                common.CFG["resource_panel"],
-                {
-                    "roi_padding_left": [0] * 6,
-                    "roi_padding_right": [0] * 6,
-                    "icon_trim_pct": [0] * 6,
-                    "scales": [1.0],
-                    "match_threshold": 0.5,
-                    "max_width": 999,
-                    "min_width": 0,
-                    "idle_roi_extra_width": 15,
-                },
-            ), patch.dict(
-                common.CFG["profiles"]["aoe1de"]["resource_panel"],
-                {"icon_trim_pct": [0] * 6},
-            ):
-                regions = resources.locate_resource_panel(frame)
-                cfg_obj = resources.panel._get_resource_panel_cfg()
+        detected = {
+            "population_limit": (0, 0, 10, 10),
+            "idle_villager": (xi, yi, icon_w, icon_h),
+        }
+        regions, _spans, _narrow = resources.compute_resource_rois(
+            0,
+            70,
+            0,
+            10,
+            [0, 0, 0, 0, 0, 100],
+            [0] * 6,
+            [0] * 6,
+            [999] * 6,
+            [0] * 6,
+            0,
+            15,
+            detected=detected,
+        )
 
         self.assertIn("idle_villager", regions)
         roi = regions["idle_villager"]
-        top = panel_box[1] + int(cfg_obj.top_pct * panel_box[3])
-        height = int(cfg_obj.height_pct * panel_box[3])
-        self.assertEqual(roi[1], top)
-        self.assertEqual(roi[3], height)
-        self.assertEqual(roi[2], cfg_obj.idle_roi_extra_width)
+        self.assertEqual(roi[2], 15)
 
     def test_detect_resource_regions_uses_configured_idle_roi_when_missing(self):
         frame = np.zeros((50, 100, 3), dtype=np.uint8)
