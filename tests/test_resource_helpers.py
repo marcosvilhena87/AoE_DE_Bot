@@ -273,61 +273,23 @@ class TestReadResourcesLowConfFallback(TestCase):
         frame = np.zeros((20, 20, 3), dtype=np.uint8)
         cache = resources.ResourceCache()
         cache.last_resource_values["wood_stockpile"] = 77
+        roi_info = (
+            0,
+            0,
+            1,
+            1,
+            np.zeros((1, 1, 3), dtype=np.uint8),
+            np.zeros((1, 1), dtype=np.uint8),
+            0,
+            0,
+        )
         with patch(
-            "script.resources.reader.core.detect_resource_regions",
-            return_value={"wood_stockpile": (0, 0, 10, 10)},
-        ), patch(
-            "script.resources.ocr.preprocess.preprocess_roi",
-            return_value=np.zeros((10, 10), dtype=np.uint8),
-        ), patch(
-            "script.resources.reader.core.execute_ocr",
-            return_value=("123", {"text": ["123"]}, None, True),
-        ), patch.dict(
-            resources.CFG,
-            {
-                "treat_low_conf_as_failure": True,
-                "wood_stockpile_low_conf_fallback": True,
-            },
-            clear=False,
-        ), patch("script.resources.reader.core.handle_ocr_failure"):
-            result, _ = resources._read_resources(
-                frame,
-                ["wood_stockpile"],
-                ["wood_stockpile"],
-                cache_obj=cache,
-            )
-        self.assertEqual(result["wood_stockpile"], 77)
-
-
-class TestIdleVillagerPopulationMismatch(TestCase):
-    def test_idle_count_exceeding_population_falls_back(self):
-        frame = np.zeros((10, 10, 3), dtype=np.uint8)
-        cache = resources.ResourceCache()
-        with patch(
-            "script.resources.reader.core.detect_resource_regions",
-            return_value={
-                "idle_villager": (0, 0, 1, 1),
-                "population_limit": (1, 0, 1, 1),
-            },
-        ), patch(
-            "script.resources.reader.core.prepare_roi",
-            return_value=(
-                0,
-                0,
-                1,
-                1,
-                np.zeros((1, 1, 3), dtype=np.uint8),
-                np.zeros((1, 1), dtype=np.uint8),
-                0,
-                0,
-            ),
-        ), patch(
             "script.resources.reader.core._ocr_resource",
-            return_value=("5", {}, None, False),
+            return_value=("123", {}, None, True),
         ), patch(
             "script.resources.reader.core._retry_ocr",
             return_value=(
-                "5",
+                "123",
                 {},
                 None,
                 np.zeros((1, 1, 3), dtype=np.uint8),
@@ -336,23 +298,59 @@ class TestIdleVillagerPopulationMismatch(TestCase):
                 0,
                 1,
                 1,
-                False,
+                True,
             ),
-        ), patch(
+        ), patch.dict(
+            resources.CFG,
+            {
+                "treat_low_conf_as_failure": True,
+                "wood_stockpile_low_conf_fallback": True,
+            },
+            clear=False,
+        ):
+            value, _, _, _, _ = resources.core._process_resource(
+                frame,
+                "wood_stockpile",
+                roi_info,
+                cache_obj=cache,
+                res_conf_threshold=60,
+                max_cache_age=None,
+                low_conf_counts={},
+            )
+        self.assertEqual(value, 77)
+
+
+class TestIdleVillagerPopulationMismatch(TestCase):
+    def test_idle_count_exceeding_population_falls_back(self):
+        frame = np.zeros((10, 10, 3), dtype=np.uint8)
+        cache = resources.ResourceCache()
+        results = {"idle_villager": 5}
+        regions = {
+            "idle_villager": (0, 0, 1, 1),
+            "population_limit": (1, 0, 1, 1),
+        }
+        with patch(
             "script.resources.reader.core._extract_population",
             return_value=(3, 10),
         ), patch(
-            "script.resources.reader.core.handle_ocr_failure"
-        ), patch(
             "script.resources.reader.core.logger.warning"
         ) as warn_mock:
-            result, _ = resources._read_resources(
+            _ = resources.core._post_process_population(
                 frame,
+                regions,
                 ["idle_villager", "population_limit"],
-                ["idle_villager", "population_limit"],
+                {"idle_villager", "population_limit"},
+                results,
                 cache_obj=cache,
+                max_cache_age=None,
+                conf_threshold=60,
+                low_conf_counts={},
+                low_confidence=set(),
+                cache_hits=set(),
+                prev_idle_val=None,
+                prev_idle_ts=None,
             )
-        self.assertIsNone(result["idle_villager"])
+        self.assertIsNone(results["idle_villager"])
         warn_mock.assert_called()
 
 
