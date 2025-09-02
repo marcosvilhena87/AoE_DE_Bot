@@ -73,7 +73,7 @@
   "ocr_contrast_stretch": true,
   "ocr_psm_list": [7, 6, 11, 13],
   "ocr_zero_variance": 15,
-  "ocr_ws_dilate_var": 500,
+  "ocr_ws_dilate_var": 10000,
   "//ocr_ws_dilate_var": "Variance threshold for wood stockpile dilation; <=0 disables.",
   "wood_stockpile_dilate": false,
   "//wood_stockpile_dilate": "Force dilation for wood stockpile masks; enable if your HUD requires it.",
@@ -121,10 +121,10 @@
     "optional": []
   },
   "wood_stockpile_roi": {
-    "top_pct": 0.111,
-    "height_pct": 0.027,
+    "top_pct": 0.110,
+    "height_pct": 0.029,
     "left_pct": 0.187,
-    "width_pct": 0.033
+    "width_pct": 0.035
   },
   "food_stockpile_roi": {
     "top_pct": 0.111,       
