@@ -4,24 +4,29 @@ from __future__ import annotations
 
 
 def parse_confidences(data):
-    """Convert OCR confidence values to floats, clamping negatives to ``0``.
+    """Return positive OCR confidence values or ``None`` when unavailable.
 
-    Any values that cannot be parsed as floats are ignored. Unlike the previous
-    behaviour, non-positive confidences are retained with negative numbers being
-    converted to ``0`` so that callers can explicitly treat them as unreliable
-    rather than silently discarding them.
+    Values that cannot be parsed as floats are ignored. Negative confidences
+    are clamped to ``0`` and, along with explicit zeros, are treated as
+    "unknown" and therefore omitted from the returned list. If no positive
+    confidences remain after filtering, ``None`` is returned to signal that the
+    OCR engine did not provide meaningful confidence information.
     """
 
+    raw = data.get("conf")
+    if not raw:
+        return None
+
     confs = []
-    for c in data.get("conf", []):
+    for c in raw:
         try:
             val = float(c)
         except (ValueError, TypeError):
             continue
-        if val < 0:
-            val = 0.0
+        if val <= 0:
+            continue
         confs.append(val)
-    return confs
+    return confs or None
 
 
 def _sanitize_digits(digits: str) -> str:

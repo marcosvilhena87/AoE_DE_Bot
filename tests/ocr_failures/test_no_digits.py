@@ -123,7 +123,7 @@ class TestNoDigits(TestCase):
         frame = np.zeros((600, 600, 3), dtype=np.uint8)
 
         resources.RESOURCE_CACHE.last_resource_values["wood_stockpile"] = 456
-        with patch.dict(resources.CFG, {"wood_stockpile_low_conf_fallback": True}, clear=False), \
+        with patch.dict(resources.CFG, {"wood_stockpile_low_conf_fallback": True, "allow_zero_confidence_digits": False}, clear=False), \
             patch(
                 "script.resources.reader.detect_resource_regions",
                 return_value={"wood_stockpile": (0, 0, 50, 50)},

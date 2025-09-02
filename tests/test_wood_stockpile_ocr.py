@@ -97,7 +97,7 @@ class TestWoodStockpileOCR(TestCase):
         with patch(
             "script.resources.ocr.executor.masks._ocr_digits_better",
             side_effect=fake_ocr_digits_better,
-        ), patch.dict(CFG, {"treat_low_conf_as_failure": True}, clear=False):
+        ), patch.dict(CFG, {"treat_low_conf_as_failure": True, "allow_zero_confidence_digits": False}, clear=False):
             digits, data, _mask, low_conf = _ocr_resource(
                 "wood_stockpile",
                 roi,
@@ -107,7 +107,7 @@ class TestWoodStockpileOCR(TestCase):
                 cache_obj,
             )
         self.assertTrue(low_conf)
-        self.assertEqual(parse_confidences(data), [91.0, 0.0])
+        self.assertEqual(parse_confidences(data), [91.0])
         self.assertIsNone(digits)
 
     def test_wood_stockpile_roi_expansion_captures_80(self):
