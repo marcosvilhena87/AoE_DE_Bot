@@ -44,3 +44,17 @@ def test_longer_digits_preferred_over_shorter_even_if_confidence_lower():
     with patch("script.resources.ocr.masks.pytesseract.image_to_data", side_effect=outputs):
         digits, data, mask = _run_masks(masks, psms, False, None, 0)
     assert digits == "140"
+
+
+def test_population_limit_prefers_candidates_with_slash_over_more_digits():
+    masks = [np.zeros((1, 1), dtype=np.uint8), np.zeros((1, 1), dtype=np.uint8)]
+    psms = [6]
+    outputs = [
+        {"text": ["775"], "conf": ["91", "91", "91"]},
+        {"text": ["3/4"], "conf": ["89", "89", "89"]},
+    ]
+    with patch("script.resources.ocr.masks.pytesseract.image_to_data", side_effect=outputs):
+        digits, data, mask = _run_masks(
+            masks, psms, False, None, 0, resource="population_limit"
+        )
+    assert digits == "34"

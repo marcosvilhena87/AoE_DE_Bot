@@ -13,7 +13,16 @@ from .colors import color_mask_sets
 from .confidence import parse_confidences
 
 
-def _run_masks(masks, psms, debug, debug_dir, ts, start_idx=0, whitelist="0123456789"):
+def _run_masks(
+    masks,
+    psms,
+    debug,
+    debug_dir,
+    ts,
+    start_idx=0,
+    whitelist="0123456789",
+    resource=None,
+):
     results = []
     for idx, mask in enumerate(masks, start=start_idx):
         if debug and debug_dir is not None:
@@ -27,21 +36,23 @@ def _run_masks(masks, psms, debug, debug_dir, ts, start_idx=0, whitelist="012345
             )
             text = "".join(data.get("text", [])).strip()
             digits = "".join(filter(str.isdigit, text))
-            results.append((digits, data, mask))
+            results.append((digits, data, mask, text))
     if not results:
         return "", {"text": [], "conf": []}, None
 
     scored = []
-    for digits, data, mask in results:
+    for digits, data, mask, text in results:
         confs = parse_confidences(data)
         metric = float(np.median(confs)) if confs else 0.0
         if digits:
-            scored.append((digits, data, mask, metric))
+            has_slash = resource == "population_limit" and "/" in text
+            scored.append((digits, data, mask, metric, has_slash))
 
     if not scored:
-        return results[0]
+        first = results[0]
+        return first[0], first[1], first[2]
 
-    scored.sort(key=lambda r: (-len(r[0]), -r[3]))
+    scored.sort(key=lambda r: (-int(r[4]), -len(r[0]), -r[3]))
     best = scored[0]
     return best[0], best[1], best[2]
 
@@ -116,7 +127,14 @@ def _ocr_digits_better(gray, color=None, resource=None, whitelist="0123456789"):
             gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU
         )
     digits, data, mask = _run_masks(
-        [thresh, cv2.bitwise_not(thresh)], psms, debug, debug_dir, ts, 0, whitelist=whitelist
+        [thresh, cv2.bitwise_not(thresh)],
+        psms,
+        debug,
+        debug_dir,
+        ts,
+        0,
+        whitelist=whitelist,
+        resource=resource,
     )
     if digits and (resource != "wood_stockpile" or len(digits) > 1):
         confs = parse_confidences(data)
@@ -143,6 +161,7 @@ def _ocr_digits_better(gray, color=None, resource=None, whitelist="0123456789"):
                     ts,
                     4,
                     whitelist=whitelist,
+                    resource=resource,
                 )
                 if alt_digits and alt_digits != digits:
                     alt_confs = parse_confidences(alt_data)
@@ -168,6 +187,7 @@ def _ocr_digits_better(gray, color=None, resource=None, whitelist="0123456789"):
             ts,
             2,
             whitelist=whitelist,
+            resource=resource,
         )
         if digits:
             return digits, data, mask
@@ -195,6 +215,7 @@ def _ocr_digits_better(gray, color=None, resource=None, whitelist="0123456789"):
         ts,
         4 if resource == "population_limit" else 2,
         whitelist=whitelist,
+        resource=resource,
     )
 
     if (
@@ -217,6 +238,7 @@ def _ocr_digits_better(gray, color=None, resource=None, whitelist="0123456789"):
                 ts,
                 4,
                 whitelist=whitelist,
+                resource=resource,
             )
 
     if not digits:
@@ -226,11 +248,25 @@ def _ocr_digits_better(gray, color=None, resource=None, whitelist="0123456789"):
             hsv = cv2.cvtColor(cv2.cvtColor(orig, cv2.COLOR_GRAY2BGR), cv2.COLOR_BGR2HSV)
         base_masks, closed_masks = color_mask_sets(hsv, resource, kernel)
         digits, data, mask = _run_masks(
-            base_masks, psms, debug, debug_dir, ts, 6, whitelist=whitelist
+            base_masks,
+            psms,
+            debug,
+            debug_dir,
+            ts,
+            6,
+            whitelist=whitelist,
+            resource=resource,
         )
         if not digits:
             digits, data, mask = _run_masks(
-                closed_masks, psms, debug, debug_dir, ts, 8, whitelist=whitelist
+                closed_masks,
+                psms,
+                debug,
+                debug_dir,
+                ts,
+                8,
+                whitelist=whitelist,
+                resource=resource,
             )
 
     if not digits:
