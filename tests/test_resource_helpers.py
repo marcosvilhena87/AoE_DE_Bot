@@ -4,6 +4,7 @@ import types
 from unittest import TestCase
 from unittest.mock import patch
 import cv2
+import time
 
 import numpy as np
 
@@ -489,3 +490,40 @@ class TestValidateStartingResources(TestCase):
         self.assertEqual(imwrite_mock.call_count, 3)
         self.assertGreaterEqual(warn_mock.call_count, 1)
         resources.core._LAST_LOW_CONFIDENCE = set()
+
+
+class TestCacheDiscrepancy(TestCase):
+    def test_mismatched_cache_ignored_and_validation_succeeds(self):
+        cache = resources.ResourceCache()
+        cache.last_resource_values["wood_stockpile"] = 900
+        cache.last_resource_ts["wood_stockpile"] = time.time()
+
+        with patch.dict(
+            resources.CFG,
+            {
+                "wood_stockpile_low_conf_fallback": True,
+                "resource_cache_tolerance": 50,
+                "starting_resources": {"wood_stockpile": 80},
+            },
+            clear=False,
+        ):
+            value, cache_hit, low_conf, no_digit = resources.core._handle_cache_and_fallback(
+                "wood_stockpile",
+                "80",
+                True,
+                {"text": ["80"]},
+                np.zeros((1, 1), dtype=np.uint8),
+                None,
+                0,
+                cache_obj=cache,
+                max_cache_age=None,
+                low_conf_counts={},
+            )
+
+        self.assertEqual(value, 80)
+        self.assertFalse(cache_hit)
+        self.assertFalse(low_conf)
+        failing = resources.validate_starting_resources(
+            {"wood_stockpile": value}, {"wood_stockpile": 80}, raise_on_error=False
+        )
+        self.assertEqual(failing, set())
