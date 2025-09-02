@@ -66,12 +66,18 @@ class TestForagingScenario(TestCase):
             objective_villagers=0,
         )
 
+        gathered = dict(info.starting_resources)
+        gathered["idle_villager"] = info.starting_idle_villagers
+
         with patch(
             "script.hud.wait_hud", return_value=((0, 0, 0, 0), "asset")
         ) as wait_mock, patch(
             "script.config_utils.parse_scenario_info", return_value=info
-        ) as parse_mock, patch.object(
-            resources, "RESOURCE_CACHE", resources.ResourceCache()
+        ) as parse_mock, patch(
+            "script.resources.reader.gather_hud_stats",
+            return_value=(gathered, (info.starting_villagers, 4)),
+        ) as gather_mock, patch.object(
+            resources.reader, "RESOURCE_CACHE", resources.ResourceCache()
         ):
             runpy.run_path(
                 os.path.join("campaigns", "Ascent_of_Egypt", "Egypt_2_Foraging.py"),
@@ -81,11 +87,12 @@ class TestForagingScenario(TestCase):
             self.assertEqual(common.CURRENT_POP, info.starting_villagers)
             self.assertEqual(common.POP_CAP, 4)
             self.assertEqual(common.TARGET_POP, info.objective_villagers)
-            expected = dict(info.starting_resources)
-            expected["idle_villager"] = info.starting_idle_villagers
-            self.assertEqual(resources.RESOURCE_CACHE.last_resource_values, expected)
-            for name in expected:
-                self.assertIn(name, resources.RESOURCE_CACHE.last_resource_ts)
+            self.assertEqual(
+                resources.reader.RESOURCE_CACHE.last_resource_values, gathered
+            )
+            for name in gathered:
+                self.assertIn(name, resources.reader.RESOURCE_CACHE.last_resource_ts)
 
             wait_mock.assert_called_once()
             parse_mock.assert_called_once()
+            gather_mock.assert_called_once()
