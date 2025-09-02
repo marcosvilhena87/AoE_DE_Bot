@@ -113,8 +113,10 @@ def _ocr_digits_better(gray, color=None, resource=None, whitelist="0123456789"):
     thresh = cv2.adaptiveThreshold(
         gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2
     )
-    ws_dilate_var = CFG.get("ocr_ws_dilate_var", 1500)
-    ws_should_dilate = ws_dilate_var > 0 and variance < ws_dilate_var
+    ws_dilate_var = CFG.get("ocr_ws_dilate_var", 500)
+    ws_should_dilate = CFG.get("wood_stockpile_dilate", False) or (
+        ws_dilate_var > 0 and variance < ws_dilate_var
+    )
     if resource == "wood_stockpile":
         ws_kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, (3, 3))
         thresh = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, ws_kernel, iterations=1)
