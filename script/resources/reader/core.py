@@ -733,15 +733,49 @@ def validate_starting_resources(
         debug_dir = ROOT / "debug"
         debug_dir.mkdir(exist_ok=True)
         ts = int(time.time() * 1000)
+        text = f"{name} {ts}"
         roi_img = frame[y : y + h, x : x + w]
+        roi_dbg = roi_img.copy()
+        cv2.putText(
+            roi_dbg,
+            text,
+            (5, 15),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.5,
+            (0, 0, 255),
+            1,
+            cv2.LINE_AA,
+        )
         roi_path = debug_dir / f"resource_roi_{name}_{ts}.png"
         gray = preprocess_roi(roi_img)
-        gray_path = debug_dir / f"resource_gray_{name}_{ts}.png"
+        gray_dbg = gray.copy()
+        cv2.putText(
+            gray_dbg,
+            text,
+            (5, 15),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.5,
+            255,
+            1,
+            cv2.LINE_AA,
+        )
         _, mask = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        mask_dbg = mask.copy()
+        cv2.putText(
+            mask_dbg,
+            text,
+            (5, 15),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.5,
+            255,
+            1,
+            cv2.LINE_AA,
+        )
+        gray_path = debug_dir / f"resource_gray_{name}_{ts}.png"
         thresh_path = debug_dir / f"resource_thresh_{name}_{ts}.png"
-        cv2.imwrite(str(roi_path), roi_img)
-        cv2.imwrite(str(gray_path), gray)
-        cv2.imwrite(str(thresh_path), mask)
+        cv2.imwrite(str(roi_path), roi_dbg)
+        cv2.imwrite(str(gray_path), gray_dbg)
+        cv2.imwrite(str(thresh_path), mask_dbg)
         return x, y, w, h, roi_path, gray_path, thresh_path
 
     for name, exp in expected.items():
@@ -771,8 +805,11 @@ def validate_starting_resources(
 
         tol = tolerance if tolerances is None else tolerances.get(name, tolerance)
         deviation = abs(actual - exp)
-        need_debug = name in _LAST_LOW_CONFIDENCE or deviation > tol
-        debug = _save_debug(name) if need_debug else None
+        debug = None
+        if deviation > tol:
+            debug = _save_debug(name)
+        elif name in _LAST_LOW_CONFIDENCE:
+            debug = _save_debug(name)
 
         debug_info = ""
         if debug is not None:
