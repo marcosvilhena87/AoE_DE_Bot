@@ -132,7 +132,19 @@ def expand_population_roi_after_failure(
     roi,
     failure_count: int,
     res_conf_threshold: int | None,
+    max_right: int | None = None,
 ):
+    """Expand the population ROI after a failed OCR attempt.
+
+    Args:
+        frame: Full frame image.
+        x, y, w, h: Original ROI bounding box.
+        roi: Color ROI image.
+        failure_count: Number of consecutive OCR failures.
+        res_conf_threshold: Confidence threshold for OCR.
+        max_right: Optional right boundary to prevent expansion past the
+            idle-villager region.
+    """
     base_expand = CFG.get(
         "population_ocr_roi_expand_base",
         CFG.get("population_ocr_roi_expand_px", 1),
@@ -145,6 +157,8 @@ def expand_population_roi_after_failure(
     x0 = max(0, x - expand_px)
     y0 = max(0, y - expand_px)
     x1 = min(frame.shape[1], x + w + expand_px)
+    if max_right is not None:
+        x1 = min(max_right, x1)
     y1 = min(frame.shape[0], y + h + expand_px)
     logger.debug(
         "Expanding population ROI after %d failures by %dpx to x=%d y=%d w=%d h=%d",

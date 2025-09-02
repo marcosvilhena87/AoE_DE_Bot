@@ -125,3 +125,57 @@ def test_population_low_conf_cache_fallback():
 
     assert (cur, cap) == (80, 200)
     assert results["population_limit"] == 80
+
+
+def test_population_roi_expansion_respects_idle_villager_boundary():
+    frame = np.zeros((20, 200, 3), dtype=np.uint8)
+    regions = {
+        "population_limit": (50, 0, 20, 10),
+        "idle_villager": (90, 0, 10, 10),
+    }
+    results = {}
+    cache = resources.cache.ResourceCache()
+
+    side_effects = [
+        resources.common.PopulationReadError("fail"),
+        (80, 200),
+    ]
+
+    def fake_read(roi, conf_threshold=None, roi_bbox=None, failure_count=0):
+        res = side_effects.pop(0)
+        if isinstance(res, Exception):
+            raise res
+        return res
+
+    expansion = {}
+    orig_expand = resources.reader.roi.expand_population_roi_after_failure
+
+    def wrapper(frame, x, y, w, h, r, failure_count, res_conf_threshold, max_right=None):
+        res = orig_expand(frame, x, y, w, h, r, failure_count, res_conf_threshold, max_right=max_right)
+        expansion["res"] = res
+        return res
+
+    mock_read_fn = patch("script.resources.ocr.executor._read_population_from_roi", side_effect=fake_read)
+    with patch.dict(
+        resources.common.CFG,
+        {"population_ocr_roi_expand_base": 50},
+        clear=False,
+    ), mock_read_fn as mock_exec, patch(
+        "script.resources.reader.roi._read_population_from_roi",
+        mock_exec,
+    ), patch(
+        "script.resources.reader.roi.expand_population_roi_after_failure",
+        new=wrapper,
+    ):
+        resources._extract_population(
+            frame,
+            regions,
+            results,
+            True,
+            cache_obj=cache,
+        )
+
+    assert expansion["res"] is not None
+    x0 = expansion["res"][3]
+    width = expansion["res"][5]
+    assert x0 + width <= regions["idle_villager"][0]

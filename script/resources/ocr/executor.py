@@ -596,6 +596,7 @@ def read_population_from_roi(
                 roi,
                 failure_count,
                 conf_threshold,
+                max_right=None,
             )
             if expansion:
                 cur_pop, pop_cap, _, x, y, w, h = expansion
@@ -644,6 +645,7 @@ def _extract_population(
         except common.PopulationReadError as exc:
             low_conf = getattr(exc, "low_conf", False)
             low_conf_digits = getattr(exc, "low_conf_digits", None)
+            max_right = regions["idle_villager"][0] if "idle_villager" in regions else None
             expansion = expand_population_roi_after_failure(
                 frame,
                 x,
@@ -653,6 +655,7 @@ def _extract_population(
                 roi,
                 failure_count,
                 conf_threshold,
+                max_right=max_right,
             )
             if expansion:
                 cur_pop, pop_cap, _, x, y, w, h = expansion
