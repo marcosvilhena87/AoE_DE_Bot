@@ -60,7 +60,7 @@ class TestInternalPopulation(TestCase):
         info = config_utils.parse_scenario_info("campaigns/Ascent_of_Egypt/Egypt_1_Hunting.txt")
         self.assertEqual(info.starting_villagers, 3)
         self.assertEqual(info.starting_idle_villagers, 3)
-        self.assertEqual(info.population_limit, 50)
+        self.assertEqual(info.population_limit, 4)
         self.assertEqual(info.objective_villagers, 7)
         self.assertEqual(
             info.starting_resources,
@@ -71,6 +71,7 @@ class TestInternalPopulation(TestCase):
                 "stone_stockpile": 0,
             },
         )
+        self.assertEqual(info.starting_buildings, {"Town Center": 1})
 
     def test_train_villagers_updates_population_without_ocr(self):
         common.CURRENT_POP = 3

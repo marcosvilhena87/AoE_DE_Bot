@@ -141,6 +141,8 @@ class ScenarioInfo:
     objective_villagers: int = 0
     # Expected starting resources keyed by resource name used in OCR routines
     starting_resources: dict[str, int] | None = None
+    # Starting buildings and their counts, keyed by building name
+    starting_buildings: dict[str, int] | None = None
 
 
 def parse_scenario_info(path: str | Path) -> ScenarioInfo:
@@ -155,10 +157,12 @@ def parse_scenario_info(path: str | Path) -> ScenarioInfo:
                     in_objectives = False
                     continue
                 lower = line.lower()
-                if lower.startswith("population limit"):
-                    m = re.search(r"(\d+)", line)
-                    if m:
-                        info.population_limit = int(m.group(1))
+                if lower.startswith("population limit") or lower.startswith(
+                    "starting population limit"
+                ):
+                    nums = re.findall(r"(\d+)", line)
+                    if nums:
+                        info.population_limit = int(nums[-1])
                 elif lower.startswith("starting units"):
                     m = re.search(r"(\d+)\s+villagers", line, re.IGNORECASE)
                     if m:
@@ -167,6 +171,20 @@ def parse_scenario_info(path: str | Path) -> ScenarioInfo:
                     m = re.search(r"(\d+)", line)
                     if m:
                         info.starting_idle_villagers = int(m.group(1))
+                elif lower.startswith("starting buildings"):
+                    buildings: dict[str, int] = {}
+                    parts = line.split(":", 1)
+                    if len(parts) == 2:
+                        for part in parts[1].split(","):
+                            part = part.strip()
+                            if not part:
+                                continue
+                            m = re.match(r"(\d+)\s+(.+)", part)
+                            if m:
+                                count = int(m.group(1))
+                                name = m.group(2).strip()
+                                buildings[name] = count
+                    info.starting_buildings = buildings or None
                 elif lower.startswith("starting resources"):
                     res = {}
                     for name in ("wood", "food", "gold", "stone"):

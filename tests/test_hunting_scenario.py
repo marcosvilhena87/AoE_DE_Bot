@@ -30,6 +30,23 @@ class DummyMSS:
 sys.modules.setdefault("pyautogui", dummy_pg)
 sys.modules.setdefault("mss", types.SimpleNamespace(mss=lambda: DummyMSS()))
 sys.modules.setdefault(
+    "cv2",
+    types.SimpleNamespace(
+        cvtColor=lambda src, code: src,
+        resize=lambda img, *a, **k: img,
+        threshold=lambda img, *a, **k: (None, img),
+        imread=lambda *a, **k: np.zeros((1, 1), dtype=np.uint8),
+        imwrite=lambda *a, **k: True,
+        matchTemplate=lambda *a, **k: np.zeros((1, 1), dtype=np.uint8),
+        IMREAD_GRAYSCALE=0,
+        COLOR_BGR2GRAY=0,
+        INTER_LINEAR=0,
+        THRESH_BINARY=0,
+        THRESH_OTSU=0,
+        TM_CCOEFF_NORMED=0,
+    ),
+)
+sys.modules.setdefault(
     "pytesseract",
     types.SimpleNamespace(
         pytesseract=types.SimpleNamespace(tesseract_cmd=""),
@@ -62,10 +79,15 @@ class TestHuntingScenario(TestCase):
                 "stone_stockpile": 0,
             },
             objective_villagers=7,
+            starting_buildings={"Town Center": 1},
         )
 
         with patch("script.hud.wait_hud", return_value=((0, 0, 0, 0), "asset")) as wait_mock, \
              patch("script.config_utils.parse_scenario_info", return_value=info) as parse_mock, \
+             patch(
+                 "script.resources.reader.gather_hud_stats",
+                 return_value=(info.starting_resources, (info.starting_villagers, 4)),
+             ) as gather_mock, \
              patch.object(resources.reader, "RESOURCE_CACHE", resources.ResourceCache()):
             runpy.run_path(
                 os.path.join("campaigns", "Ascent_of_Egypt", "Egypt_1_Hunting.py"),
@@ -85,6 +107,34 @@ class TestHuntingScenario(TestCase):
 
             wait_mock.assert_called_once()
             parse_mock.assert_called_once()
+            gather_mock.assert_called_once()
+
+    def test_aborts_when_town_center_missing(self):
+        info = config_utils.ScenarioInfo(
+            starting_villagers=3,
+            starting_idle_villagers=3,
+            population_limit=50,
+            starting_resources=None,
+            objective_villagers=7,
+            starting_buildings={},
+        )
+
+        import importlib
+
+        module = importlib.import_module(
+            "campaigns.Ascent_of_Egypt.Egypt_1_Hunting"
+        )
+
+        with patch.object(module.hud, "wait_hud", return_value=((0, 0, 0, 0), "asset")), \
+            patch.object(module, "parse_scenario_info", return_value=info), \
+            patch.object(module.resources, "gather_hud_stats") as gather_mock, \
+            self.assertLogs(module.logger, level="ERROR") as log_ctx:
+            module.main()
+
+        gather_mock.assert_not_called()
+        self.assertTrue(
+            any("town center" in m.lower() for m in log_ctx.output)
+        )
 
     def test_idle_villager_cache_seeded(self):
         info = config_utils.ScenarioInfo(
@@ -93,13 +143,17 @@ class TestHuntingScenario(TestCase):
             population_limit=50,
             starting_resources=None,
             objective_villagers=8,
+            starting_buildings={"Town Center": 1},
         )
 
         with patch(
             "script.hud.wait_hud", return_value=((0, 0, 0, 0), "asset")
         ) as wait_mock, patch(
             "script.config_utils.parse_scenario_info", return_value=info
-        ) as parse_mock, patch.object(
+        ) as parse_mock, patch(
+            "script.resources.reader.gather_hud_stats",
+            return_value=({}, (info.starting_villagers, 4)),
+        ) as gather_mock, patch.object(
             resources.reader, "RESOURCE_CACHE", resources.ResourceCache()
         ):
             runpy.run_path(
@@ -119,3 +173,4 @@ class TestHuntingScenario(TestCase):
 
             wait_mock.assert_called_once()
             parse_mock.assert_called_once()
+            gather_mock.assert_called_once()
