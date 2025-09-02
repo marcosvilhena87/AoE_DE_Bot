@@ -45,6 +45,9 @@ def prepare_roi(
         if name == "idle_villager":
             expand_left = 0
             expand_right = deficit
+        elif name == "population_limit":
+            expand_left = deficit
+            expand_right = 0
         else:
             expand_left = deficit // 2
             expand_right = deficit - expand_left
