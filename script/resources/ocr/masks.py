@@ -102,12 +102,14 @@ def _ocr_digits_better(gray, color=None, resource=None, whitelist="0123456789"):
     thresh = cv2.adaptiveThreshold(
         gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2
     )
+    ws_dilate_var = CFG.get("ocr_ws_dilate_var", 1500)
+    ws_should_dilate = ws_dilate_var > 0 and variance < ws_dilate_var
     if resource == "wood_stockpile":
         ws_kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, (3, 3))
         thresh = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, ws_kernel, iterations=1)
         # Skip dilation when the ROI already exhibits good contrast to avoid
         # eroding loops in digits like "8".
-        if variance < CFG.get("ocr_ws_dilate_var", 5000):
+        if ws_should_dilate:
             thresh = cv2.dilate(thresh, ws_kernel, iterations=1)
     if _is_nearly_empty(thresh):
         _otsu_ret, thresh = cv2.threshold(
@@ -153,7 +155,7 @@ def _ocr_digits_better(gray, color=None, resource=None, whitelist="0123456789"):
         if resource == "wood_stockpile":
             ws_kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, (3, 3))
             adaptive = cv2.morphologyEx(adaptive, cv2.MORPH_CLOSE, ws_kernel, iterations=1)
-            if variance < CFG.get("ocr_ws_dilate_var", 5000):
+            if ws_should_dilate:
                 adaptive = cv2.dilate(adaptive, ws_kernel, iterations=1)
     if _is_nearly_empty(adaptive):
         _otsu_ret, adaptive = cv2.threshold(
@@ -179,7 +181,7 @@ def _ocr_digits_better(gray, color=None, resource=None, whitelist="0123456789"):
             white = cv2.inRange(hsv_ws, np.array([0, 0, 200]), np.array([180, 50, 255]))
             ws_kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, (3, 3))
             white = cv2.morphologyEx(white, cv2.MORPH_CLOSE, ws_kernel, iterations=1)
-            if variance < CFG.get("ocr_ws_dilate_var", 5000):
+            if ws_should_dilate:
                 white = cv2.dilate(white, ws_kernel, iterations=1)
             digits, data, mask = _run_masks(
                 [white, cv2.bitwise_not(white)],
