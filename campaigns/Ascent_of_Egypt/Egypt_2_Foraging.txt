@@ -8,7 +8,7 @@ Starting Buildings: 1 Town Center
 Starting Idle Villagers: 3 Villagers
 
 Obs:
-Before committing to the objectives, it was demonstrated that the initial state of the scenario was detected, with the exception of Starting Buildings.
+Before proceeding with the objectives, ensure that the initial state of the scenario has been detected, with the exception of Starting Buildings.
 
 Objectives
 Collect food and then construct 3 buildings: Granary, Storage Pit and Dock
