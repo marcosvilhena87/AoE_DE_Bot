@@ -347,6 +347,17 @@ def _handle_cache_and_fallback(
                 )
                 use_cache = True
         if use_cache:
+            cached_val = cache_obj.last_resource_values[name]
+            tol = CFG.get("resource_cache_tolerance", 100)
+            expected = CFG.get("starting_resources", {}).get(name)
+            if expected is not None and abs(cached_val - expected) > tol:
+                logger.warning(
+                    "Discarding cached value for %s due to mismatch with expected %d",
+                    name,
+                    expected,
+                )
+                use_cache = False
+        if use_cache:
             value = cache_obj.last_resource_values[name]
             cache_hit = True
         else:
@@ -416,8 +427,22 @@ def _handle_cache_and_fallback(
     ):
         fallback_key = f"{name}_low_conf_fallback"
         if CFG.get(fallback_key, False) and name in cache_obj.last_resource_values:
+            cached_val = cache_obj.last_resource_values[name]
+            tol = CFG.get("resource_cache_tolerance", 100)
+            expected = CFG.get("starting_resources", {}).get(name)
+            compare = value if digits is not None else expected
+            if compare is not None and abs(cached_val - compare) > tol:
+                logger.warning(
+                    "Discarding cached value for %s due to mismatch with %d",
+                    name,
+                    compare,
+                )
+                cache_obj.last_resource_values[name] = compare if compare is not None else cached_val
+                cache_obj.last_resource_ts[name] = time.time()
+                cache_obj.resource_failure_counts[name] = 0
+                return compare, False, False, no_digit_flag
             cache_hit = True
-            value = cache_obj.last_resource_values[name]
+            value = cached_val
             logger.warning(
                 "Using cached value for %s due to low-confidence OCR", name
             )
