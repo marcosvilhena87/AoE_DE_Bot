@@ -463,114 +463,114 @@ def _handle_cache_and_fallback(
     return value, cache_hit, low_conf_flag, no_digit_flag
 
 
-def _read_resources(
-    frame,
-    required_icons,
-    icons_to_read,
-    cache_obj: ResourceCache = RESOURCE_CACHE,
-    max_cache_age: float | None = None,
-    conf_threshold: int | None = None,
-):
-    required_icons = list(required_icons)
-    icons_to_read = list(icons_to_read)
-    required_set = set(required_icons)
+def _process_resource(
+    frame: np.ndarray,
+    name: str,
+    roi_info: tuple[int, int, int, int, np.ndarray, np.ndarray, int, int],
+    *,
+    cache_obj: ResourceCache,
+    res_conf_threshold: int,
+    max_cache_age: float | None,
+    low_conf_counts: dict[str, int],
+) -> tuple[int | None, bool, bool, bool, tuple[np.ndarray, np.ndarray]]:
+    """Read and resolve a single resource value from the HUD.
 
-    regions = detect_resource_regions(frame, icons_to_read, cache_obj)
+    Parameters
+    ----------
+    frame:
+        Full game frame from which the ROI was extracted.
+    name:
+        Name of the resource being processed.
+    roi_info:
+        Tuple returned by :func:`prepare_roi` describing the ROI and
+        preprocessing results.
+    cache_obj:
+        Cache used for lookups and statistics.
+    res_conf_threshold:
+        Minimum OCR confidence required for this resource.
+    max_cache_age:
+        Optional maximum age for cached values when falling back.
+    low_conf_counts:
+        Counter tracking consecutive low-confidence results.
 
-    if max_cache_age is None:
-        max_cache_age = cache._RESOURCE_CACHE_MAX_AGE
-    if conf_threshold is None:
-        conf_threshold = CFG.get(
-            "population_limit_ocr_conf_threshold",
-            CFG.get("ocr_conf_threshold", 60),
-        )
+    Returns
+    -------
+    tuple
+        ``(value, cache_hit, low_conf_flag, no_digit_flag, debug_images)``
+        where ``debug_images`` contains the grayscale ROI and threshold mask.
+    """
 
-    resource_icons = [n for n in icons_to_read if n != "population_limit"]
-    results: dict[str, int | None] = {}
-    cache_hits = set()
-    debug_images = {}
-    low_confidence = set()
-    no_digits = set()
-    low_conf_counts = getattr(cache_obj, "resource_low_conf_counts", {})
-    cache_obj.resource_low_conf_counts = low_conf_counts
-    prev_idle_val = cache_obj.last_resource_values.get("idle_villager")
-    prev_idle_ts = cache_obj.last_resource_ts.get("idle_villager")
-    for name in resource_icons:
-        res_conf_threshold = CFG.get(f"{name}_ocr_conf_threshold", conf_threshold)
-        if name not in regions:
-            if name in required_set:
-                results[name] = None
-                no_digits.add(name)
-            continue
-        roi_info = prepare_roi(frame, regions, name, required_set, cache_obj)
-        if roi_info is None:
-            continue
-        x, y, w, h, roi, gray, top_crop, failure_count = roi_info
-        digits, data, mask, low_conf = _ocr_resource(
-            name, roi, gray, res_conf_threshold, (x, y, w, h), cache_obj
-        )
-        digits, data, mask, roi, gray, x, y, w, h, low_conf = _retry_ocr(
-            frame,
-            name,
-            digits,
-            data,
-            mask,
-            roi,
-            gray,
-            x,
-            y,
-            w,
-            h,
-            top_crop,
-            failure_count,
-            res_conf_threshold,
-            low_conf,
-        )
-        if digits and low_conf:
-            low_conf_counts[name] = low_conf_counts.get(name, 0) + 1
-        else:
-            low_conf_counts[name] = 0
-        debug_images[name] = (gray, mask)
-        if CFG.get("ocr_debug"):
-            debug_dir = ROOT / "debug"
-            debug_dir.mkdir(exist_ok=True)
-            ts = int(time.time() * 1000)
-            cv2.imwrite(str(debug_dir / f"resource_{name}_roi_{ts}.png"), roi)
-            if mask is not None:
-                cv2.imwrite(str(debug_dir / f"resource_{name}_thresh_{ts}.png"), mask)
-        value, cache_hit, low_conf_flag, no_digit_flag = _handle_cache_and_fallback(
-            name,
-            digits,
-            low_conf,
-            data,
-            roi,
-            mask,
-            failure_count,
-            cache_obj=cache_obj,
-            max_cache_age=max_cache_age,
-            low_conf_counts=low_conf_counts,
-        )
-        results[name] = value
-        if cache_hit:
-            cache_hits.add(name)
-        if low_conf_flag:
-            low_confidence.add(name)
-        if no_digit_flag:
-            no_digits.add(name)
-        if value is not None:
-            logger.info("Detected %s=%d", name, value)
-
-    filtered_regions = {n: regions[n] for n in resource_icons if n in regions}
-    required_for_ocr = [n for n in required_icons if n != "population_limit"]
-    handle_ocr_failure(
-        frame,
-        filtered_regions,
-        results,
-        required_for_ocr,
-        cache_obj,
-        debug_images=debug_images,
-        low_confidence=low_confidence,
+    x, y, w, h, roi, gray, top_crop, failure_count = roi_info
+    digits, data, mask, low_conf = _ocr_resource(
+        name, roi, gray, res_conf_threshold, (x, y, w, h), cache_obj
     )
+    digits, data, mask, roi, gray, x, y, w, h, low_conf = _retry_ocr(
+        frame,
+        name,
+        digits,
+        data,
+        mask,
+        roi,
+        gray,
+        x,
+        y,
+        w,
+        h,
+        top_crop,
+        failure_count,
+        res_conf_threshold,
+        low_conf,
+    )
+    if digits and low_conf:
+        low_conf_counts[name] = low_conf_counts.get(name, 0) + 1
+    else:
+        low_conf_counts[name] = 0
+    debug_images = (gray, mask)
+    if CFG.get("ocr_debug"):
+        debug_dir = ROOT / "debug"
+        debug_dir.mkdir(exist_ok=True)
+        ts = int(time.time() * 1000)
+        cv2.imwrite(str(debug_dir / f"resource_{name}_roi_{ts}.png"), roi)
+        if mask is not None:
+            cv2.imwrite(str(debug_dir / f"resource_{name}_thresh_{ts}.png"), mask)
+    value, cache_hit, low_conf_flag, no_digit_flag = _handle_cache_and_fallback(
+        name,
+        digits,
+        low_conf,
+        data,
+        roi,
+        mask,
+        failure_count,
+        cache_obj=cache_obj,
+        max_cache_age=max_cache_age,
+        low_conf_counts=low_conf_counts,
+    )
+    if value is not None:
+        logger.info("Detected %s=%d", name, value)
+    return value, cache_hit, low_conf_flag, no_digit_flag, debug_images
+
+
+def _post_process_population(
+    frame: np.ndarray,
+    regions: dict[str, tuple[int, int, int, int]],
+    icons_to_read: list[str],
+    required_set: set[str],
+    results: dict[str, int | None],
+    *,
+    cache_obj: ResourceCache,
+    max_cache_age: float | None,
+    conf_threshold: int,
+    low_conf_counts: dict[str, int],
+    low_confidence: set[str],
+    cache_hits: set[str],
+    prev_idle_val: int | None,
+    prev_idle_ts: float | None,
+) -> tuple[int | None, int | None]:
+    """Handle population readings and idle villager validation.
+
+    Returns the current population and population cap while applying
+    fallback logic for inconsistent idle villager counts.
+    """
 
     cur_pop = pop_cap = None
     if "population_limit" in icons_to_read:
@@ -596,7 +596,9 @@ def _read_resources(
                 cur_pop,
             )
             low_confidence.add("idle_villager")
-            low_conf_counts["idle_villager"] = low_conf_counts.get("idle_villager", 0) + 1
+            low_conf_counts["idle_villager"] = low_conf_counts.get(
+                "idle_villager", 0
+            ) + 1
             ts_cache = prev_idle_ts
             use_cache = False
             if prev_idle_val is not None and ts_cache is not None:
@@ -616,13 +618,108 @@ def _read_resources(
                 cache_obj.last_resource_values.pop("idle_villager", None)
                 cache_obj.last_resource_ts.pop("idle_villager", None)
 
-    cache._LAST_READ_FROM_CACHE = cache_hits
+    return cur_pop, pop_cap
 
+
+def _read_resources(
+    frame,
+    required_icons,
+    icons_to_read,
+    cache_obj: ResourceCache = RESOURCE_CACHE,
+    max_cache_age: float | None = None,
+    conf_threshold: int | None = None,
+):
+    required_icons = list(required_icons)
+    icons_to_read = list(icons_to_read)
+    required_set = set(required_icons)
+
+    regions = detect_resource_regions(frame, icons_to_read, cache_obj)
+
+    if max_cache_age is None:
+        max_cache_age = cache._RESOURCE_CACHE_MAX_AGE
+    if conf_threshold is None:
+        conf_threshold = CFG.get(
+            "population_limit_ocr_conf_threshold",
+            CFG.get("ocr_conf_threshold", 60),
+        )
+
+    resource_icons = [n for n in icons_to_read if n != "population_limit"]
+    results: dict[str, int | None] = {}
+    cache_hits: set[str] = set()
+    debug_images: dict[str, tuple[np.ndarray, np.ndarray]] = {}
+    low_confidence: set[str] = set()
+    no_digits: set[str] = set()
+    low_conf_counts = getattr(cache_obj, "resource_low_conf_counts", {})
+    cache_obj.resource_low_conf_counts = low_conf_counts
+    prev_idle_val = cache_obj.last_resource_values.get("idle_villager")
+    prev_idle_ts = cache_obj.last_resource_ts.get("idle_villager")
+
+    for name in resource_icons:
+        res_conf_threshold = CFG.get(f"{name}_ocr_conf_threshold", conf_threshold)
+        if name not in regions:
+            if name in required_set:
+                results[name] = None
+                no_digits.add(name)
+            continue
+        roi_info = prepare_roi(frame, regions, name, required_set, cache_obj)
+        if roi_info is None:
+            continue
+        (
+            value,
+            cache_hit,
+            low_conf_flag,
+            no_digit_flag,
+            dbg,
+        ) = _process_resource(
+            frame,
+            name,
+            roi_info,
+            cache_obj=cache_obj,
+            res_conf_threshold=res_conf_threshold,
+            max_cache_age=max_cache_age,
+            low_conf_counts=low_conf_counts,
+        )
+        debug_images[name] = dbg
+        results[name] = value
+        if cache_hit:
+            cache_hits.add(name)
+        if low_conf_flag:
+            low_confidence.add(name)
+        if no_digit_flag:
+            no_digits.add(name)
+
+    filtered_regions = {n: regions[n] for n in resource_icons if n in regions}
+    required_for_ocr = [n for n in required_icons if n != "population_limit"]
+    handle_ocr_failure(
+        frame,
+        filtered_regions,
+        results,
+        required_for_ocr,
+        cache_obj,
+        debug_images=debug_images,
+        low_confidence=low_confidence,
+    )
+
+    cur_pop, pop_cap = _post_process_population(
+        frame,
+        regions,
+        icons_to_read,
+        required_set,
+        results,
+        cache_obj=cache_obj,
+        max_cache_age=max_cache_age,
+        conf_threshold=conf_threshold,
+        low_conf_counts=low_conf_counts,
+        low_confidence=low_confidence,
+        cache_hits=cache_hits,
+        prev_idle_val=prev_idle_val,
+        prev_idle_ts=prev_idle_ts,
+    )
+
+    cache._LAST_READ_FROM_CACHE = cache_hits
     cache_obj.last_low_confidence = set(low_confidence)
     cache_obj.last_no_digits = set(no_digits)
-
     logger.info("Resumo de recursos detectados: %s", results)
-
     return results, (cur_pop, pop_cap)
 
 
