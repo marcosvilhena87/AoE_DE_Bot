@@ -469,6 +469,33 @@ def _read_population_from_roi(roi, conf_threshold=None, roi_bbox=None, failure_c
         if len(raw_text) == 2:
             cur = int(raw_text[0])
             cap = int(raw_text[1])
+        elif len(raw_text) == 3:
+            cur = cap = None
+            # Secondary OCR pass: invert the ROI to try to recover a slash
+            inv_gray = cv2.bitwise_not(gray)
+            _, alt_data, _, _ = execute_ocr(
+                inv_gray,
+                color=roi,
+                conf_threshold=conf_threshold,
+                allow_fallback=False,
+                whitelist="0123456789/",
+                resource="population_limit",
+            )
+            alt_text = "".join(filter(None, alt_data.get("text", [])))
+            alt_parts = [p for p in alt_text.split("/") if p]
+            if len(alt_parts) >= 2:
+                cur = int("".join(filter(str.isdigit, alt_parts[0])) or 0)
+                cap = int("".join(filter(str.isdigit, alt_parts[1])) or 0)
+            else:
+                # Treat the middle digit as a potential separator
+                candidates = [
+                    (int(raw_text[0]), int(raw_text[1:])),
+                    (int(raw_text[:2]), int(raw_text[2])),
+                ]
+                for c, p in candidates:
+                    if c <= p:
+                        cur, cap = c, p
+                        break
         elif len(raw_text) == 4:
             half = len(raw_text) // 2
             cur = int(raw_text[:half])
@@ -480,9 +507,10 @@ def _read_population_from_roi(roi, conf_threshold=None, roi_bbox=None, failure_c
                 return cur, cap
             if allow_low_conf or (low_conf_fallback and failure_count >= retry_limit - 1):
                 logger.warning(
-                    "Returning low-confidence population %d/%d%s; conf=%s",
+                    "Returning low-confidence population %d/%d from ambiguous OCR '%s'%s; conf=%s",
                     cur,
                     cap,
+                    raw_text,
                     " after %d attempts" % (failure_count + 1)
                     if low_conf_fallback and not allow_low_conf
                     else "",
