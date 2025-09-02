@@ -285,6 +285,34 @@ class TestPopulationROI(TestCase):
         _, kwargs = ocr_mock.call_args
         self.assertEqual(kwargs.get("whitelist"), "0123456789/")
 
+    def test_population_error_reports_final_attempt(self):
+        roi = np.zeros((10, 10, 3), dtype=np.uint8)
+        bbox = {"left": 0, "top": 0, "width": 1, "height": 1}
+
+        def fake_grab(bbox=None):
+            if bbox is None:
+                return np.zeros((20, 20, 3), dtype=np.uint8)
+            h, w = bbox["height"], bbox["width"]
+            return np.zeros((h, w, 3), dtype=np.uint8)
+
+        def failing_read(*args, **kwargs):
+            raise common.PopulationReadError("text='0/0', confs=[0]")
+
+        with patch("script.screen_utils._grab_frame", side_effect=fake_grab), patch(
+            "script.resources.ocr.executor._read_population_from_roi",
+            side_effect=failing_read,
+        ), patch(
+            "script.resources.reader.roi.expand_population_roi_after_failure",
+            return_value=None,
+        ):
+            with self.assertRaises(common.PopulationReadError) as ctx:
+                resources.read_population_from_roi(bbox, retries=2)
+
+        err = ctx.exception
+        self.assertEqual(getattr(err, "attempt"), 2)
+        self.assertIn("after 2 attempts", str(err))
+        self.assertEqual(len(getattr(err, "attempt_errors", [])), 2)
+
     def test_population_string_without_slash_two_digits(self):
         roi = np.zeros((10, 10, 3), dtype=np.uint8)
         gray = np.zeros((10, 10), dtype=np.uint8)

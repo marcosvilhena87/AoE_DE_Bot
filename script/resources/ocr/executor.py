@@ -602,6 +602,7 @@ def read_population_from_roi(
     y = roi_bbox["top"]
     w = roi_bbox["width"]
     h = roi_bbox["height"]
+    attempt_errors: list[common.PopulationReadError] = []
     last_exc = None
     for attempt in range(retries):
         roi = screen_utils._grab_frame({"left": x, "top": y, "width": w, "height": h})
@@ -615,6 +616,8 @@ def read_population_from_roi(
             cache_obj.resource_failure_counts["population_limit"] = 0
             return cur_pop, pop_cap
         except common.PopulationReadError as exc:
+            exc.attempt = attempt + 1
+            attempt_errors.append(exc)
             last_exc = exc
             failure_count = cache_obj.resource_failure_counts.get(
                 "population_limit", 0
@@ -642,7 +645,22 @@ def read_population_from_roi(
                 logger.debug("OCR attempt %s failed: %s", attempt + 1, exc)
                 time.sleep(0.1)
 
-    raise last_exc
+    if last_exc is not None:
+        final_attempt = getattr(last_exc, "attempt", retries)
+        logger.debug(
+            "Final OCR attempt %s failed: %s", final_attempt, last_exc
+        )
+        msg = f"OCR failed after {final_attempt} attempts: {last_exc}"
+        err = common.PopulationReadError(msg)
+        err.attempt = final_attempt
+        err.attempt_errors = attempt_errors
+        if hasattr(last_exc, "low_conf"):
+            err.low_conf = last_exc.low_conf
+        if hasattr(last_exc, "low_conf_digits"):
+            err.low_conf_digits = last_exc.low_conf_digits
+        raise err
+
+    raise RuntimeError("read_population_from_roi failed without exception")
 
 
 def _extract_population(
