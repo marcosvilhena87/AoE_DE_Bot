@@ -17,6 +17,8 @@
   "//ocr_conf_max_attempts": "Full OCR retries before only lowering the confidence threshold.",
   "allow_low_conf_population": true,
   "//allow_low_conf_population": "Accept population digits even when confidence is below the threshold; logs a warning instead of raising.",
+  "allow_zero_confidence_digits": true,
+  "//allow_zero_confidence_digits": "Treat all-zero OCR confidences as unknown instead of failure.",
     "treat_low_conf_as_failure": true,
     "//treat_low_conf_as_failure": "Return None when OCR confidence is below threshold.",
     "wood_stockpile_low_conf_fallback": true,

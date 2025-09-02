@@ -154,7 +154,7 @@ class TestExecuteOcr(TestCase):
         with patch(
             "script.resources.ocr.masks._ocr_digits_better",
             side_effect=[("123", data1, None), ("789", data2, None)],
-        ) as ocr_mock, patch("script.resources.reader.pytesseract.image_to_string") as img2str_mock:
+        ) as ocr_mock, patch("script.resources.reader.pytesseract.image_to_string") as img2str_mock, patch.dict(resources.CFG, {"allow_zero_confidence_digits": False}, clear=False):
             digits, _, _, low_conf = resources.execute_ocr(
                 gray, conf_threshold=60, resource="wood_stockpile"
             )

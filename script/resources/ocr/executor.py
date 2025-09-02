@@ -31,6 +31,7 @@ def execute_ocr(
     decay = CFG.get("ocr_conf_decay", 1.0)
     if conf_threshold is None:
         conf_threshold = CFG.get("ocr_conf_threshold", 60)
+    allow_zero = CFG.get("allow_zero_confidence_digits")
 
     if whitelist is None:
         whitelist = "0123456789"
@@ -54,24 +55,22 @@ def execute_ocr(
     best_mask = mask
     attempts = 0
     max_attempts = CFG.get("ocr_conf_max_attempts", 10)
-    while digits and data.get("conf"):
+    while digits:
         confs = parse_confidences(data)
+        if confs is None:
+            if data.get("conf"):
+                zero_conf = True
+                if not allow_zero:
+                    low_conf = True
+            break
         texts = data.get("text", [])
         digit_confs = [c for t, c in zip(texts, confs) if any(ch.isdigit() for ch in t)]
-        any_zero = any(c == 0 for c in digit_confs)
-        if digit_confs and all(c == 0 for c in digit_confs):
-            zero_conf = True
-            low_conf = True
-            break
-        non_zero = [c for c in digit_confs if c > 0]
-        metric = np.median(non_zero) if non_zero else 0
-        if non_zero and metric >= conf_threshold and not any_zero:
+        metric = np.median(digit_confs) if digit_confs else 0
+        if digit_confs and metric >= conf_threshold:
             low_conf = False
             break
         low_conf = True
         if metric == 0:
-            # Median confidence of zero indicates entirely unreliable results.
-            # Keep the current digits but mark them as low confidence.
             break
         if conf_threshold <= min_conf:
             digits, data, mask = best_digits, best_data, best_mask
@@ -111,16 +110,18 @@ def execute_ocr(
             )
 
     # Re-evaluate confidence using the chosen metric after any decay loop
-    if digits and data.get("conf"):
+    if digits:
         confs = parse_confidences(data)
-        texts = data.get("text", [])
-        digit_confs = [c for t, c in zip(texts, confs) if any(ch.isdigit() for ch in t)]
-        any_zero = any(c == 0 for c in digit_confs)
-        if digit_confs and all(c == 0 for c in digit_confs):
-            zero_conf = True
-        non_zero = [c for c in digit_confs if c > 0]
-        metric = np.median(non_zero) if non_zero else 0
-        low_conf = any_zero or not (non_zero and metric >= conf_threshold)
+        if confs is None:
+            if data.get("conf"):
+                zero_conf = True
+                if not allow_zero:
+                    low_conf = True
+        else:
+            texts = data.get("text", [])
+            digit_confs = [c for t, c in zip(texts, confs) if any(ch.isdigit() for ch in t)]
+            metric = np.median(digit_confs) if digit_confs else 0
+            low_conf = not (digit_confs and metric >= conf_threshold)
 
     if not digits and allow_fallback:
         text = pytesseract.image_to_string(
@@ -197,7 +198,6 @@ def execute_ocr(
         digits = _sanitize_digits(digits)
         if zero_conf:
             data["zero_conf"] = True
-            low_conf = True
     return digits, data, mask, low_conf
 
 
@@ -428,7 +428,7 @@ def _read_population_from_roi(roi, conf_threshold=None, roi_bbox=None, failure_c
     raw_text = "".join(filter(None, data.get("text", [])))
     parts = [p for p in raw_text.split("/") if p]
     confidences = parse_confidences(data)
-    zero_conf = data.get("zero_conf") or (confidences and all(c == 0 for c in confidences))
+    zero_conf = data.get("zero_conf")
     allow_low_conf = CFG.get("allow_low_conf_population", False)
     retry_limit = CFG.get("ocr_retry_limit", 3)
     low_conf_fallback = CFG.get("population_limit_low_conf_fallback", False)

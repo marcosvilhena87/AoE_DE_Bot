@@ -99,7 +99,7 @@ class TestResourceLowConfidence(TestCase):
             return "123", data, np.zeros((1, 1), dtype=np.uint8)
 
         resources.RESOURCE_CACHE.last_resource_values["wood_stockpile"] = 0
-        with patch.dict(resources.CFG, {"wood_stockpile_low_conf_fallback": False}, clear=False), \
+        with patch.dict(resources.CFG, {"wood_stockpile_low_conf_fallback": False, "allow_zero_confidence_digits": False}, clear=False), \
             patch("script.resources.reader.detect_resource_regions", side_effect=fake_detect), \
             patch("script.screen_utils._grab_frame", side_effect=fake_grab_frame), \
             patch("script.resources.ocr.masks._ocr_digits_better", side_effect=fake_ocr) as ocr_mock, \

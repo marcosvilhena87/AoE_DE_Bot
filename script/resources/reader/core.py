@@ -116,7 +116,7 @@ def _ocr_resource(
         roi=roi_bbox,
         resource=name,
     )
-    if data.get("zero_conf"):
+    if data.get("zero_conf") and not CFG.get("allow_zero_confidence_digits"):
         low_conf = True
     logger.info(
         "OCR %s: digits=%s conf=%s low_conf=%s",
@@ -140,7 +140,7 @@ def _ocr_resource(
                 roi=roi_bbox,
                 resource=name,
             )
-            if data_retry.get("zero_conf"):
+            if data_retry.get("zero_conf") and not CFG.get("allow_zero_confidence_digits"):
                 low_conf = True
             logger.info(
                 "Retry OCR %s: digits=%s conf=%s low_conf=%s",
@@ -209,7 +209,7 @@ def _retry_ocr(
                 h,
                 low_conf,
             ) = expansion
-            if data.get("zero_conf"):
+            if data.get("zero_conf") and not CFG.get("allow_zero_confidence_digits"):
                 low_conf = True
     if not digits:
         span_left, span_right = cache._LAST_REGION_SPANS.get(name, (x, x + w))
@@ -238,7 +238,7 @@ def _retry_ocr(
                     roi=(cand_x, y, cand_w, h),
                     resource=name,
                 )
-                if data_retry.get("zero_conf"):
+                if data_retry.get("zero_conf") and not CFG.get("allow_zero_confidence_digits"):
                     low_conf = True
                 logger.info(
                     "OCR %s: digits=%s conf=%s low_conf=%s",
@@ -271,7 +271,7 @@ def _retry_ocr(
                         roi=(cand_x, y, expanded_w, h),
                         resource=name,
                     )
-                    if data_retry.get("zero_conf"):
+                    if data_retry.get("zero_conf") and not CFG.get("allow_zero_confidence_digits"):
                         low_conf = True
                     logger.info(
                         "OCR %s: digits=%s conf=%s low_conf=%s",
