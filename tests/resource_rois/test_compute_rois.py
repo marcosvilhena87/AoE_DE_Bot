@@ -167,12 +167,12 @@ class TestComputeResourceROIs(TestCase):
     def test_population_roi_respects_min_width(self):
         detected = {
             "population_limit": (0, 0, 5, 5),
-            "idle_villager": (20, 0, 5, 5),
+            "idle_villager": (200, 0, 5, 5),
         }
         min_pop_width = 50
         regions, _spans, _narrow = resources.compute_resource_rois(
             0,
-            200,
+            300,
             0,
             10,
             [2] * 6,
@@ -186,6 +186,34 @@ class TestComputeResourceROIs(TestCase):
             detected=detected,
         )
         self.assertGreaterEqual(regions["population_limit"][2], min_pop_width)
+
+    def test_population_roi_excludes_nearby_idle_villager(self):
+        detected = {
+            "population_limit": (0, 0, 5, 5),
+            "idle_villager": (15, 0, 5, 5),
+        }
+        min_pop_width = 10
+        regions, _spans, _narrow = resources.compute_resource_rois(
+            0,
+            40,
+            0,
+            10,
+            [2] * 6,
+            [2] * 6,
+            [0] * 6,
+            [999] * 6,
+            [0] * 6,
+            min_pop_width,
+            0,
+            [0] * 6,
+            detected=detected,
+        )
+        roi = regions["population_limit"]
+        left, _, width, _ = roi
+        right = left + width
+        idle_left = detected["idle_villager"][0]
+        self.assertLessEqual(right, idle_left - 4)
+        self.assertLess(width, min_pop_width)
 
     def test_idle_roi_generated_when_span_non_positive(self):
         detected = {
