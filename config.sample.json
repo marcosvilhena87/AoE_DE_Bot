@@ -35,7 +35,7 @@
     "idle_villager_low_conf_streak": 5,
     "//*_low_conf_fallback": "Use cached value when OCR confidence is low.",
     "wood_stockpile_ocr_conf_threshold": 45,
-    "wood_stockpile_color_pass": false,
+    "wood_stockpile_color_pass": true,
     "//wood_stockpile_color_pass": "Validate wood stockpile with a second color-mask OCR pass.",
     "food_stockpile_ocr_conf_threshold": 45,
     "gold_stockpile_ocr_conf_threshold": 45,
@@ -122,10 +122,10 @@
     "optional": []
   },
   "wood_stockpile_roi": {
-    "top_pct": 0.111,        
-    "height_pct": 0.027,    
-    "left_pct": 0.19,       
-    "width_pct": 0.03       
+    "top_pct": 0.111,
+    "height_pct": 0.027,
+    "left_pct": 0.187,
+    "width_pct": 0.033
   },
   "food_stockpile_roi": {
     "top_pct": 0.111,       
