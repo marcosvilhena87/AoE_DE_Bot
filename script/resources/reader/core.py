@@ -454,6 +454,20 @@ def _handle_cache_and_fallback(
         low_conf_flag = True
         return value, cache_hit, low_conf_flag, no_digit_flag
 
+    if (
+        name == "wood_stockpile"
+        and low_conf
+        and name not in cache_obj.last_resource_values
+    ):
+        logger.warning(
+            "Discarding %s=%d due to low-confidence OCR", name, value
+        )
+        value = None
+        low_conf_flag = True
+        no_digit_flag = False
+        cache_obj.resource_failure_counts[name] = failure_count + 1
+        return value, cache_hit, low_conf_flag, no_digit_flag
+
     if not low_conf:
         cache_obj.last_resource_values[name] = value
         cache_obj.last_resource_ts[name] = time.time()
