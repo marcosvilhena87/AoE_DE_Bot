@@ -58,16 +58,16 @@ class TestCampaignResourceValidation(TestCase):
         if spans is None:
             spans = {k: (v[0], v[0] + v[2]) for k, v in bounds.items()}
 
-        campaign.resources.core._LAST_LOW_CONFIDENCE.clear()
-        campaign.resources.core._LAST_NO_DIGITS.clear()
+        campaign.resources.RESOURCE_CACHE.last_low_confidence.clear()
+        campaign.resources.RESOURCE_CACHE.last_no_digits.clear()
         low_conf = set() if low_conf is None else set(low_conf)
         no_digits = set() if no_digits is None else set(no_digits)
 
         def gh_side_effect(*args, **kwargs):
             campaign.resources._LAST_REGION_BOUNDS = bounds.copy()
             campaign.resources._LAST_REGION_SPANS = spans.copy()
-            campaign.resources.core._LAST_LOW_CONFIDENCE = low_conf.copy()
-            campaign.resources.core._LAST_NO_DIGITS = no_digits.copy()
+            campaign.resources.RESOURCE_CACHE.last_low_confidence = low_conf.copy()
+            campaign.resources.RESOURCE_CACHE.last_no_digits = no_digits.copy()
             return res_list.pop(0), (0, 0)
 
         logger_mock = MagicMock()

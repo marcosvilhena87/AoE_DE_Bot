@@ -233,7 +233,9 @@ class TestWoodStockpileLowConfRetry(TestCase):
             result, _ = resources.read_resources_from_hud(["wood_stockpile"])
 
         self.assertEqual(result["wood_stockpile"], 999)
-        self.assertIn("wood_stockpile", resources._LAST_LOW_CONFIDENCE)
+        self.assertIn(
+            "wood_stockpile", resources.RESOURCE_CACHE.last_low_confidence
+        )
         self.assertEqual(
             calls,
             [
