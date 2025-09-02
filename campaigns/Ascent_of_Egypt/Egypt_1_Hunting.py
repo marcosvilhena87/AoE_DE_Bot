@@ -71,14 +71,21 @@ def main() -> None:
         logger.error("Erro na validação dos recursos iniciais: %s", exc)
         raise
 
+    hud_idle = res_vals.get("idle_villager")
+    if hud_idle != info.starting_idle_villagers:
+        logger.error(
+            "HUD idle villager count (%s) does not match expected %s; aborting scenario.",
+            hud_idle,
+            info.starting_idle_villagers,
+        )
+        return
+
     # Atualize os caches com os valores confirmados
     now = time.time()
     resources.RESOURCE_CACHE.last_resource_values.update(res_vals)
     for name in res_vals:
         resources.RESOURCE_CACHE.last_resource_ts[name] = now
-    resources.RESOURCE_CACHE.last_resource_values["idle_villager"] = (
-        info.starting_idle_villagers
-    )
+    resources.RESOURCE_CACHE.last_resource_values["idle_villager"] = hud_idle
     resources.RESOURCE_CACHE.last_resource_ts["idle_villager"] = now
 
     # Atualize população e limites
