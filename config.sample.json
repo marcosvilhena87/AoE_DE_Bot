@@ -149,8 +149,9 @@
     "top_pct": 0.111,
     "height_pct": 0.027,
     "left_pct": 0.374,
-    "width_pct": 0.05
+    "width_pct": 0.03
   },
+  "//population_limit_roi": "Remove this block to use automatic HUD detection; oversized ROIs can overlap the idle-villager icon and break OCR.",
   "idle_villager_roi": {
     "top_pct": 0.10,
     "height_pct": 0.06,
