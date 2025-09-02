@@ -227,6 +227,7 @@ class TestGatherHudStats(TestCase):
                 "stone_stockpile": 0,
             },
             starting_villagers=3,
+            starting_idle_villagers=0,
             objective_villagers=5,
         )
 

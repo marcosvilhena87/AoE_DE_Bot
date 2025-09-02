@@ -55,6 +55,7 @@ class TestForagingScenario(TestCase):
     def test_main_initialises_counters(self):
         info = config_utils.ScenarioInfo(
             starting_villagers=3,
+            starting_idle_villagers=3,
             population_limit=50,
             starting_resources={
                 "wood_stockpile": 200,
@@ -80,10 +81,10 @@ class TestForagingScenario(TestCase):
             self.assertEqual(common.CURRENT_POP, info.starting_villagers)
             self.assertEqual(common.POP_CAP, 4)
             self.assertEqual(common.TARGET_POP, info.objective_villagers)
-            self.assertEqual(
-                resources.RESOURCE_CACHE.last_resource_values, info.starting_resources
-            )
-            for name in info.starting_resources:
+            expected = dict(info.starting_resources)
+            expected["idle_villager"] = info.starting_idle_villagers
+            self.assertEqual(resources.RESOURCE_CACHE.last_resource_values, expected)
+            for name in expected:
                 self.assertIn(name, resources.RESOURCE_CACHE.last_resource_ts)
 
             wait_mock.assert_called_once()

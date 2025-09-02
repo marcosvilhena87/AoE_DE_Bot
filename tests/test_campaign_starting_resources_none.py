@@ -40,6 +40,7 @@ class TestCampaignNoStartingResources(TestCase):
         info = types.SimpleNamespace(
             starting_resources=None,
             starting_villagers=3,
+            starting_idle_villagers=0,
             objective_villagers=5,
         )
 

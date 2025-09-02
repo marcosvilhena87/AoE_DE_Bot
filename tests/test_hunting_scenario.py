@@ -53,6 +53,7 @@ class TestHuntingScenario(TestCase):
     def test_main_initialises_counters(self):
         info = config_utils.ScenarioInfo(
             starting_villagers=3,
+            starting_idle_villagers=3,
             population_limit=50,
             starting_resources={
                 "wood_stockpile": 80,
@@ -75,7 +76,7 @@ class TestHuntingScenario(TestCase):
             self.assertEqual(common.POP_CAP, 4)
             self.assertEqual(common.TARGET_POP, info.objective_villagers)
             expected_cache = dict(info.starting_resources)
-            expected_cache["idle_villager"] = info.starting_villagers
+            expected_cache["idle_villager"] = info.starting_idle_villagers
             self.assertEqual(
                 resources.reader.RESOURCE_CACHE.last_resource_values, expected_cache
             )
@@ -88,6 +89,7 @@ class TestHuntingScenario(TestCase):
     def test_idle_villager_cache_seeded(self):
         info = config_utils.ScenarioInfo(
             starting_villagers=3,
+            starting_idle_villagers=3,
             population_limit=50,
             starting_resources=None,
             objective_villagers=8,
@@ -109,7 +111,7 @@ class TestHuntingScenario(TestCase):
                 resources.reader.RESOURCE_CACHE.last_resource_values.get(
                     "idle_villager"
                 ),
-                info.starting_villagers,
+                info.starting_idle_villagers,
             )
             self.assertIn(
                 "idle_villager", resources.reader.RESOURCE_CACHE.last_resource_ts

@@ -67,6 +67,9 @@ def main():
         common.CURRENT_POP = info.starting_villagers
         common.POP_CAP = 4  # 1 Town Center
         common.TARGET_POP = info.objective_villagers
+        idle_start = getattr(info, "starting_idle_villagers", info.starting_villagers)
+        resources.RESOURCE_CACHE.last_resource_values["idle_villager"] = idle_start
+        resources.RESOURCE_CACHE.last_resource_ts["idle_villager"] = time.time()
         try:
             icon_cfg = common.CFG.get("hud_icons", {})
             if info.starting_resources is None:

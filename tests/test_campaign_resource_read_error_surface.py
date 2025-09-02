@@ -36,6 +36,7 @@ class TestResourceReadErrorSurface(TestCase):
         info = types.SimpleNamespace(
             starting_resources={},
             starting_villagers=3,
+            starting_idle_villagers=0,
             objective_villagers=5,
         )
         err_msg = "boom"

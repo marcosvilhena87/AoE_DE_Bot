@@ -73,6 +73,10 @@ def main() -> None:
     resources.RESOURCE_CACHE.last_resource_values.update(res_vals)
     for name in res_vals:
         resources.RESOURCE_CACHE.last_resource_ts[name] = now
+    resources.RESOURCE_CACHE.last_resource_values["idle_villager"] = (
+        info.starting_idle_villagers
+    )
+    resources.RESOURCE_CACHE.last_resource_ts["idle_villager"] = now
 
     # Atualize população e limites
     common.CURRENT_POP = cur_pop if cur_pop is not None else info.starting_villagers
@@ -102,8 +106,8 @@ def run_mission(info) -> None:
     food_spot = common.CFG.get("areas", {}).get("food_spot")
 
     logger.info("Assigning starting villagers to hunt")
-    # Allocate the starting villagers to gather food.
-    for idx in range(info.starting_villagers):
+    # Allocate only the idle starting villagers to gather food.
+    for idx in range(info.starting_idle_villagers):
         if villager.select_idle_villager():
             if food_spot:
                 input_utils._click_norm(*food_spot, button="right")
