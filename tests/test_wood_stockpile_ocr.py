@@ -40,6 +40,7 @@ from script.resources.ocr.preprocess import preprocess_roi
 from script.resources.ocr.executor import execute_ocr
 from script.resources.ocr.confidence import parse_confidences
 from script.resources.reader.core import _ocr_resource
+from script.resources.reader.roi import prepare_roi
 from script.resources.cache import ResourceCache
 
 
@@ -108,3 +109,22 @@ class TestWoodStockpileOCR(TestCase):
         self.assertTrue(low_conf)
         self.assertEqual(parse_confidences(data), [91.0, 0.0])
         self.assertIsNone(digits)
+
+    def test_wood_stockpile_roi_expansion_captures_80(self):
+        frame = np.full((40, 80, 3), (19, 69, 139), dtype=np.uint8)
+        cv2.putText(frame, "80", (0, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+        regions = {"wood_stockpile": (0, 0, 34, 40)}
+        cache_obj = ResourceCache()
+        roi_info = prepare_roi(frame, regions, "wood_stockpile", {"wood_stockpile"}, cache_obj)
+        self.assertIsNotNone(roi_info)
+        x, y, w, h, roi, gray, _top, _fail = roi_info
+        self.assertGreater(w, 34)
+        digits, data, _mask, low_conf = _ocr_resource(
+            "wood_stockpile",
+            roi,
+            gray,
+            CFG.get("ocr_conf_threshold", 60),
+            (x, y, w, h),
+            cache_obj,
+        )
+        self.assertEqual(digits, "80")
