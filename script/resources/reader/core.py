@@ -154,6 +154,12 @@ def _ocr_resource(
             )
             if digits_retry:
                 digits, data, mask = digits_retry, data_retry, mask_retry
+    treat_low_conf_as_failure = (
+        CFG.get("treat_low_conf_as_failure", True)
+        and not CFG.get("allow_low_conf_digits", False)
+    )
+    if low_conf and treat_low_conf_as_failure:
+        digits = None
     return digits, data, mask, low_conf
 
 

@@ -3,6 +3,7 @@ import sys
 import types
 import shutil
 from unittest import TestCase
+from unittest.mock import patch
 
 import cv2
 import numpy as np
@@ -38,6 +39,8 @@ from script.resources import CFG
 from script.resources.ocr.preprocess import preprocess_roi
 from script.resources.ocr.executor import execute_ocr
 from script.resources.ocr.confidence import parse_confidences
+from script.resources.reader.core import _ocr_resource
+from script.resources.cache import ResourceCache
 
 
 class TestWoodStockpileOCR(TestCase):
@@ -79,3 +82,29 @@ class TestWoodStockpileOCR(TestCase):
             gray, color=roi, resource="wood_stockpile"
         )
         self.assertEqual(digits, "300")
+
+    def test_wood_stockpile_zero_conf_rejected(self):
+        roi = np.full((60, 120, 3), (19, 69, 139), dtype=np.uint8)
+        cv2.putText(roi, "80", (5, 50), cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 255, 255), 3)
+        gray = preprocess_roi(roi)
+        cache_obj = ResourceCache()
+
+        def fake_ocr_digits_better(*args, **kwargs):
+            data = {"text": ["2", "0"], "conf": ["91", "0"]}
+            return "20", data, None
+
+        with patch(
+            "script.resources.ocr.executor.masks._ocr_digits_better",
+            side_effect=fake_ocr_digits_better,
+        ), patch.dict(CFG, {"treat_low_conf_as_failure": True}, clear=False):
+            digits, data, _mask, low_conf = _ocr_resource(
+                "wood_stockpile",
+                roi,
+                gray,
+                CFG.get("ocr_conf_threshold", 60),
+                (0, 0, roi.shape[1], roi.shape[0]),
+                cache_obj,
+            )
+        self.assertTrue(low_conf)
+        self.assertEqual(parse_confidences(data), [91.0, 0.0])
+        self.assertIsNone(digits)
