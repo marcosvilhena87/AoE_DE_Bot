@@ -68,6 +68,12 @@ def main():
         common.POP_CAP = 4  # 1 Town Center
         common.TARGET_POP = info.objective_villagers
         idle_start = getattr(info, "starting_idle_villagers", info.starting_villagers)
+
+        # Reset resource cache to prevent stale OCR values across scenarios
+        resources.RESOURCE_CACHE.last_resource_values.clear()
+        resources.RESOURCE_CACHE.last_resource_ts.clear()
+        resources.RESOURCE_CACHE.resource_failure_counts.clear()
+
         resources.RESOURCE_CACHE.last_resource_values["idle_villager"] = idle_start
         resources.RESOURCE_CACHE.last_resource_ts["idle_villager"] = time.time()
         try:
