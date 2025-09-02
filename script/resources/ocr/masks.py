@@ -120,10 +120,11 @@ def _ocr_digits_better(gray, color=None, resource=None, whitelist="0123456789"):
     if resource == "wood_stockpile":
         ws_kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, (3, 3))
         thresh = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, ws_kernel, iterations=1)
-        # Skip dilation when the ROI already exhibits good contrast to avoid
-        # eroding loops in digits like "8".
+        # A rectangular dilation better preserves diagonal strokes in thin digits
+        # like the loops in an "8".
         if ws_should_dilate:
-            thresh = cv2.dilate(thresh, ws_kernel, iterations=1)
+            ws_dilate_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+            thresh = cv2.dilate(thresh, ws_dilate_kernel, iterations=1)
     if _is_nearly_empty(thresh):
         _otsu_ret, thresh = cv2.threshold(
             gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU
@@ -154,7 +155,8 @@ def _ocr_digits_better(gray, color=None, resource=None, whitelist="0123456789"):
                 ws_kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, (3, 3))
                 white = cv2.morphologyEx(white, cv2.MORPH_CLOSE, ws_kernel, iterations=1)
                 if ws_should_dilate:
-                    white = cv2.dilate(white, ws_kernel, iterations=1)
+                    ws_dilate_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+                    white = cv2.dilate(white, ws_dilate_kernel, iterations=1)
                 alt_digits, alt_data, alt_mask = _run_masks(
                     [white, cv2.bitwise_not(white)],
                     psms,
@@ -213,7 +215,8 @@ def _ocr_digits_better(gray, color=None, resource=None, whitelist="0123456789"):
             ws_kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, (3, 3))
             adaptive = cv2.morphologyEx(adaptive, cv2.MORPH_CLOSE, ws_kernel, iterations=1)
             if ws_should_dilate:
-                adaptive = cv2.dilate(adaptive, ws_kernel, iterations=1)
+                ws_dilate_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+                adaptive = cv2.dilate(adaptive, ws_dilate_kernel, iterations=1)
     if _is_nearly_empty(adaptive):
         _otsu_ret, adaptive = cv2.threshold(
             gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU
@@ -240,7 +243,8 @@ def _ocr_digits_better(gray, color=None, resource=None, whitelist="0123456789"):
             ws_kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, (3, 3))
             white = cv2.morphologyEx(white, cv2.MORPH_CLOSE, ws_kernel, iterations=1)
             if ws_should_dilate:
-                white = cv2.dilate(white, ws_kernel, iterations=1)
+                ws_dilate_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+                white = cv2.dilate(white, ws_dilate_kernel, iterations=1)
             digits, data, mask = _run_masks(
                 [white, cv2.bitwise_not(white)],
                 psms,

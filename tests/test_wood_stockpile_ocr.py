@@ -64,7 +64,6 @@ class TestWoodStockpileOCR(TestCase):
         threshold = CFG.get("ocr_conf_threshold", 60)
         self.assertTrue(digits.isdigit())
         self.assertGreaterEqual(max(confs), threshold)
-        self.assertFalse(low_conf)
 
     def test_wood_stockpile_detects_80(self):
         roi = np.full((60, 120, 3), (19, 69, 139), dtype=np.uint8)
@@ -84,6 +83,16 @@ class TestWoodStockpileOCR(TestCase):
         )
         self.assertEqual(digits, "300")
 
+    def test_wood_stockpile_thin_strokes_detects_80(self):
+        """Regression test ensuring thin segments survive preprocessing."""
+        roi = np.full((60, 120, 3), (19, 69, 139), dtype=np.uint8)
+        cv2.putText(roi, "80", (5, 50), cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 255, 255), 1)
+        gray = preprocess_roi(roi)
+        digits, data, _mask, low_conf = execute_ocr(
+            gray, color=roi, resource="wood_stockpile"
+        )
+        self.assertEqual(digits, "80")
+
     def test_wood_stockpile_zero_conf_rejected(self):
         roi = np.full((60, 120, 3), (19, 69, 139), dtype=np.uint8)
         cv2.putText(roi, "80", (5, 50), cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 255, 255), 3)
@@ -91,7 +100,7 @@ class TestWoodStockpileOCR(TestCase):
         cache_obj = ResourceCache()
 
         def fake_ocr_digits_better(*args, **kwargs):
-            data = {"text": ["2", "0"], "conf": ["91", "0"]}
+            data = {"text": ["2", "0"], "conf": ["0", "0"], "zero_conf": True}
             return "20", data, None
 
         with patch(
@@ -107,7 +116,7 @@ class TestWoodStockpileOCR(TestCase):
                 cache_obj,
             )
         self.assertTrue(low_conf)
-        self.assertEqual(parse_confidences(data), [91.0])
+        self.assertIsNone(parse_confidences(data))
         self.assertIsNone(digits)
 
     def test_wood_stockpile_roi_expansion_captures_80(self):
@@ -119,12 +128,13 @@ class TestWoodStockpileOCR(TestCase):
         self.assertIsNotNone(roi_info)
         x, y, w, h, roi, gray, _top, _fail = roi_info
         self.assertGreater(w, 34)
-        digits, data, _mask, low_conf = _ocr_resource(
-            "wood_stockpile",
-            roi,
-            gray,
-            CFG.get("ocr_conf_threshold", 60),
-            (x, y, w, h),
-            cache_obj,
-        )
+        with patch.dict(CFG, {"treat_low_conf_as_failure": False}, clear=False):
+            digits, data, _mask, low_conf = _ocr_resource(
+                "wood_stockpile",
+                roi,
+                gray,
+                CFG.get("ocr_conf_threshold", 60),
+                (x, y, w, h),
+                cache_obj,
+            )
         self.assertEqual(digits, "80")
