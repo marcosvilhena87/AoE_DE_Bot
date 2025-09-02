@@ -193,26 +193,27 @@ class TestComputeResourceROIs(TestCase):
             "idle_villager": (15, 0, 5, 5),
         }
         min_pop_width = 10
-        regions, _spans, _narrow = resources.compute_resource_rois(
-            0,
-            40,
-            0,
-            10,
-            [2] * 6,
-            [2] * 6,
-            [0] * 6,
-            [999] * 6,
-            [0] * 6,
-            min_pop_width,
-            0,
-            [0] * 6,
-            detected=detected,
-        )
+        with patch.dict(resources.CFG, {"population_idle_padding": 6}, clear=False):
+            regions, _spans, _narrow = resources.compute_resource_rois(
+                0,
+                40,
+                0,
+                10,
+                [2] * 6,
+                [2] * 6,
+                [0] * 6,
+                [999] * 6,
+                [0] * 6,
+                min_pop_width,
+                0,
+                [0] * 6,
+                detected=detected,
+            )
         roi = regions["population_limit"]
         left, _, width, _ = roi
         right = left + width
         idle_left = detected["idle_villager"][0]
-        self.assertLessEqual(right, idle_left - 4)
+        self.assertLessEqual(right, idle_left - 6)
         self.assertLess(width, min_pop_width)
 
     def test_idle_roi_generated_when_span_non_positive(self):
