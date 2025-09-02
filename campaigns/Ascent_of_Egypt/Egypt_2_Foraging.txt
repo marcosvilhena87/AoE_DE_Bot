@@ -1,9 +1,14 @@
+Initial State of the Scenario:
+
 Starting Age:  Stone Age
 Starting Resources: 200 wood, 200 food, 0 gold, 100 stone
 Population Limit: 50
 Starting Units: 3 Villagers
 Starting Buildings: 1 Town Center
 Starting Idle Villagers: 3 Villagers
+
+Obs:
+Before proceeding with the objectives, ensure that the initial state of the scenario has been detected.
 
 Objectives
 Collect food and then construct 3 buildings: Granary, Storage Pit and Dock
