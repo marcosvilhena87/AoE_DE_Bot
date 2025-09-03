@@ -194,8 +194,20 @@ def _ocr_digits_better(gray, color=None, resource=None, whitelist="0123456789"):
             var_thresh = pop_close_cfg.get("variance_threshold")
             do_pop_close = pop_close_cfg.get("enabled", True)
         if do_pop_close and (var_thresh is None or variance <= var_thresh):
-            pop_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, pop_kernel_size)
-            adaptive = cv2.morphologyEx(adaptive, cv2.MORPH_CLOSE, pop_kernel, iterations=1)
+            edges = cv2.Canny(adaptive, 50, 150)
+            edge_density = (
+                cv2.countNonZero(edges) / edges.size if edges.size else 0.0
+            )
+            slash_likely = edge_density > CFG.get(
+                "population_slash_edge_density", 0.15
+            )
+            if not slash_likely:
+                pop_kernel = cv2.getStructuringElement(
+                    cv2.MORPH_CROSS, pop_kernel_size
+                )
+                adaptive = cv2.morphologyEx(
+                    adaptive, cv2.MORPH_CLOSE, pop_kernel, iterations=1
+                )
         _otsu_ret, otsu = cv2.threshold(
             gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU
         )
