@@ -670,7 +670,11 @@ def read_population_from_roi(
                 roi_bbox=(x, y, w, h),
                 failure_count=attempt,
             )
-            if low_conf and CFG.get("treat_low_conf_as_failure", False):
+            if (
+                low_conf
+                and CFG.get("treat_low_conf_as_failure", False)
+                and not CFG.get("allow_low_conf_population")
+            ):
                 err = common.PopulationReadError("Low-confidence population OCR")
                 err.low_conf = True
                 err.low_conf_digits = (cur_pop, pop_cap)
@@ -698,7 +702,11 @@ def read_population_from_roi(
             )
             if expansion:
                 cur_pop, pop_cap, _, x, y, w, h, low_conf = expansion
-                if low_conf and CFG.get("treat_low_conf_as_failure", False):
+                if (
+                    low_conf
+                    and CFG.get("treat_low_conf_as_failure", False)
+                    and not CFG.get("allow_low_conf_population")
+                ):
                     err = common.PopulationReadError("Low-confidence population OCR")
                     err.low_conf = True
                     err.low_conf_digits = (cur_pop, pop_cap)

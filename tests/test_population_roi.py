@@ -352,3 +352,51 @@ class TestPopulationROI(TestCase):
             err = ctx.exception
             self.assertTrue(getattr(err, "low_conf", False))
 
+    def test_allow_low_conf_population_returns_digits(self):
+        roi = np.zeros((10, 10, 3), dtype=np.uint8)
+        bbox = {"left": 0, "top": 0, "width": 10, "height": 10}
+        with patch.dict(
+            common.CFG,
+            {"allow_low_conf_population": True, "treat_low_conf_as_failure": True},
+            clear=False,
+        ), patch(
+            "script.screen_utils._grab_frame", return_value=roi
+        ), patch(
+            "script.resources.ocr.executor._read_population_from_roi",
+            return_value=(12, 34, True),
+        ):
+            cur, cap, low_conf = resources.read_population_from_roi(bbox, retries=1)
+
+        self.assertTrue(low_conf)
+        self.assertEqual((cur, cap), (12, 34))
+
+    def test_allow_low_conf_population_after_expansion(self):
+        roi = np.zeros((10, 10, 3), dtype=np.uint8)
+        bbox = {"left": 0, "top": 0, "width": 10, "height": 10}
+
+        def failing_read(*args, **kwargs):
+            err = common.PopulationReadError("fail")
+            err.low_conf = True
+            err.low_conf_digits = (12, 34)
+            raise err
+
+        expansion = (12, 34, None, 0, 0, 10, 10, True)
+
+        with patch.dict(
+            common.CFG,
+            {"allow_low_conf_population": True, "treat_low_conf_as_failure": True},
+            clear=False,
+        ), patch(
+            "script.screen_utils._grab_frame", return_value=roi
+        ), patch(
+            "script.resources.ocr.executor._read_population_from_roi",
+            side_effect=failing_read,
+        ), patch(
+            "script.resources.reader.roi.expand_population_roi_after_failure",
+            return_value=expansion,
+        ):
+            cur, cap, low_conf = resources.read_population_from_roi(bbox, retries=1)
+
+        self.assertTrue(low_conf)
+        self.assertEqual((cur, cap), (12, 34))
+
