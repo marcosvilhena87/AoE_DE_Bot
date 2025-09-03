@@ -158,7 +158,7 @@ def test_population_roi_expansion_respects_idle_villager_boundary():
     mock_read_fn = patch("script.resources.ocr.executor._read_population_from_roi", side_effect=fake_read)
     with patch.dict(
         resources.common.CFG,
-        {"population_ocr_roi_expand_base": 50},
+        {"population_ocr_roi_expand_base": 50, "population_idle_padding": 6},
         clear=False,
     ), mock_read_fn as mock_exec, patch(
         "script.resources.reader.roi._read_population_from_roi",
@@ -177,5 +177,9 @@ def test_population_roi_expansion_respects_idle_villager_boundary():
 
     assert expansion["res"] is not None
     x0 = expansion["res"][3]
+    y0 = expansion["res"][4]
     width = expansion["res"][5]
-    assert x0 + width <= regions["idle_villager"][0]
+    height = expansion["res"][6]
+    assert x0 + width <= regions["idle_villager"][0] - 6
+    assert y0 == regions["population_limit"][1]
+    assert height == regions["population_limit"][3]

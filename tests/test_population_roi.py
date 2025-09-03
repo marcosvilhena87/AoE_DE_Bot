@@ -179,6 +179,7 @@ class TestPopulationROI(TestCase):
         frame = np.zeros((40, 40, 3), dtype=np.uint8)
         bbox = {"left": 10, "top": 10, "width": 4, "height": 4}
         widths = []
+        bboxes = []
 
         def fake_grab(bbox=None):
             if bbox is None:
@@ -193,6 +194,7 @@ class TestPopulationROI(TestCase):
 
         def fake_pop(roi, conf_threshold=None, roi_bbox=None, failure_count=0):
             widths.append(roi.shape[1])
+            bboxes.append(roi_bbox)
             if roi.shape[1] <= 4:
                 raise common.PopulationReadError("tight")
             return 12, 34, False
@@ -218,6 +220,10 @@ class TestPopulationROI(TestCase):
         self.assertFalse(low_conf)
         self.assertEqual((cur, cap), (12, 34))
         self.assertGreater(widths[1], widths[0])
+        self.assertEqual(bboxes[0][1], bbox["top"])
+        self.assertEqual(bboxes[0][3], bbox["height"])
+        self.assertEqual(bboxes[1][1], bbox["top"])
+        self.assertEqual(bboxes[1][3], bbox["height"])
         self.assertEqual(
             resources.RESOURCE_CACHE.resource_failure_counts.get("population_limit"),
             0,
@@ -270,6 +276,10 @@ class TestPopulationROI(TestCase):
         self.assertEqual(bboxes[0][0] + bboxes[0][2], initial_right)
         self.assertEqual(bboxes[1][0] + bboxes[1][2], initial_right)
         self.assertLess(bboxes[1][0], bbox["left"])
+        self.assertEqual(bboxes[0][1], bbox["top"])
+        self.assertEqual(bboxes[0][3], bbox["height"])
+        self.assertEqual(bboxes[1][1], bbox["top"])
+        self.assertEqual(bboxes[1][3], bbox["height"])
 
     def test_population_string_with_slash(self):
         roi = np.zeros((10, 10, 3), dtype=np.uint8)
