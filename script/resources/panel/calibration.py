@@ -63,6 +63,7 @@ def _auto_calibrate_from_icons(frame, cache_obj: cache.ResourceCache = cache.RES
         cfg.max_widths,
         cfg.min_widths,
         cfg.min_pop_width,
+        cfg.idle_roi_extra_width,
         cfg.min_requireds,
         detected_rel,
     )
