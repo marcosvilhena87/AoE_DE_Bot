@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import time
 from typing import Iterable, Callable
+from pathlib import Path
 
 import cv2
 import numpy as np
@@ -913,10 +914,29 @@ def validate_starting_resources(
         cv2.imwrite(str(thresh_path), mask_dbg)
         return x, y, w, h, roi_path, gray_path, thresh_path
 
+    def _log_next_steps(name: str, debug: tuple[int, int, int, int, Path, Path, Path] | None):
+        """Log hints for troubleshooting resource validation issues."""
+        if debug is not None:
+            *_, roi_path, gray_path, thresh_path = debug
+            logger.info(
+                "Debug images for '%s' saved to %s (ROI), %s (gray), %s (threshold). "
+                "Inspect these files to fine-tune ROI placement or enable 'ocr_debug' for more details.",
+                name,
+                roi_path,
+                gray_path,
+                thresh_path,
+            )
+        else:
+            logger.info(
+                "No debug images saved for '%s'. Enable 'ocr_debug' in config and verify ROI coordinates to troubleshoot.",
+                name,
+            )
+
     for name, exp in expected.items():
         actual = current.get(name)
 
         if actual is None:
+            debug = None
             if name in cache.last_low_confidence:
                 debug = _save_debug(name)
                 if debug is not None:
@@ -936,6 +956,7 @@ def validate_starting_resources(
             else:
                 logger.warning(msg)
                 failing.add(name)
+            _log_next_steps(name, debug)
             continue
 
         tol = tolerance if tolerances is None else tolerances.get(name, tolerance)
@@ -966,6 +987,7 @@ def validate_starting_resources(
             else:
                 logger.warning(msg)
                 failing.add(name)
+            _log_next_steps(name, debug)
         elif name in cache.last_low_confidence:
             msg = f"Low-confidence OCR for '{name}'{debug_info}"
             if raise_on_error:
@@ -975,6 +997,7 @@ def validate_starting_resources(
             else:
                 logger.warning(msg)
                 failing.add(name)
+            _log_next_steps(name, debug)
 
     if errors and raise_on_error:
         raise ResourceValidationError(errors, failing)
