@@ -835,7 +835,7 @@ def _extract_population(
             low_conf = getattr(exc, "low_conf", False)
             low_conf_digits = getattr(exc, "low_conf_digits", None)
             max_right = (
-                regions["idle_villager"][0] - CFG.get("population_idle_padding", 6)
+                regions["idle_villager"][0] - CFG.get("population_idle_padding", 0)
                 if "idle_villager" in regions
                 else None
             )

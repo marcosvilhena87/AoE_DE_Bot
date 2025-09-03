@@ -63,7 +63,7 @@
     "//population_ocr_roi_expand_step": "Additional pixels to grow the population ROI per consecutive failure.",
     "population_ocr_roi_expand_growth": 2.0,
     "//population_ocr_roi_expand_growth": "Exponent controlling population ROI growth rate; >1 grows faster.",
-    "population_idle_padding": 6,
+    "population_idle_padding": 0,
     "//population_idle_padding": "Pixels to keep between population ROI and idle villager icon.",
     "idle_icon_inner_trim": 0,
     "//idle_icon_inner_trim": "Pixels to trim inside the idle villager icon ROI on each side; total trim is capped at 50% of the icon width.",

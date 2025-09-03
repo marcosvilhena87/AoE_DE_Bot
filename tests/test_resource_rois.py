@@ -95,7 +95,6 @@ class TestResourceROIs(TestCase):
             icon_y_positions if icon_y_positions is not None else [0] * len(self.positions)
         )
         x_positions = list(self.positions)
-        x_positions[-1] -= common.CFG.get("population_idle_padding", 6)
         loc_iter = iter(zip(x_positions, y_positions))
 
         def fake_minmax(res):
@@ -161,8 +160,6 @@ class TestResourceROIs(TestCase):
         next_icon_left = self.panel_box[0] + self.positions[index + 1]
         expected_left = icon_right
         expected_right = next_icon_left
-        if name == "population_limit":
-            expected_right = next_icon_left - common.CFG.get("population_idle_padding", 6)
         self.assertEqual(left, expected_left, f"{name} left not at icon boundary")
         self.assertEqual(right, expected_right, f"{name} right not at next icon boundary")
 
