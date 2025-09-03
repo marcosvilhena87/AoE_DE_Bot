@@ -97,6 +97,21 @@ class TestPopulationOcrConfidence(TestCase):
             )
             self.assertEqual((cur, cap), (12, 34))
 
+    def test_ambiguous_double_digits_raise_error(self):
+        roi = np.zeros((10, 10, 3), dtype=np.uint8)
+        with patch.dict(resources.common.CFG, {"allow_low_conf_population": True}, clear=False), \
+            patch(
+                "script.resources.ocr.executor.execute_ocr",
+                return_value=(
+                    "77",
+                    {"text": ["7", "7"], "conf": ["40", "40"]},
+                    None,
+                    True,
+                ),
+            ):
+            with self.assertRaises(resources.common.PopulationReadError):
+                resources._read_population_from_roi(roi, conf_threshold=60)
+
     def test_low_confidence_fallback_after_attempts(self):
         roi = np.zeros((10, 10, 3), dtype=np.uint8)
 
@@ -112,7 +127,7 @@ class TestPopulationOcrConfidence(TestCase):
             "script.resources.ocr.executor.execute_ocr",
             return_value=(
                 "12/34",
-                {"text": ["12/34"], "conf": ["40", "40"]},
+                {"text": ["12/34", ""], "conf": ["40", "40"]},
                 None,
                 True,
             ),
@@ -142,7 +157,7 @@ class TestPopulationOcrConfidence(TestCase):
             "script.resources.ocr.executor.execute_ocr",
             return_value=(
                 "12/34",
-                {"text": ["12/34"], "conf": ["40", "40"]},
+                {"text": ["12/34", ""], "conf": ["40", "40"]},
                 None,
                 True,
             ),
