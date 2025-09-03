@@ -737,17 +737,29 @@ def read_population_from_roi(
                 "population_limit", 0
             )
             frame_full = screen_utils._grab_frame()
-            expansion = expand_population_roi_after_failure(
-                frame_full,
-                x,
-                y,
-                w,
-                h,
-                roi,
-                failure_count,
-                conf_threshold,
-                max_right=x + w,
-            )
+            try:
+                expansion = expand_population_roi_after_failure(
+                    frame_full,
+                    x,
+                    y,
+                    w,
+                    h,
+                    roi,
+                    failure_count,
+                    conf_threshold,
+                    max_right=x + w,
+                )
+            except common.PopulationReadError as exp_exc:
+                exp_exc.attempt = attempt + 1
+                attempt_errors[-1] = exp_exc
+                last_exc = exp_exc
+                cache_obj.resource_failure_counts["population_limit"] = (
+                    failure_count + 1
+                )
+                if attempt < retries - 1:
+                    logger.debug("OCR attempt %s failed: %s", attempt + 1, exp_exc)
+                    time.sleep(0.1)
+                continue
             if expansion:
                 cur_pop, pop_cap, _, x, y, w, h, low_conf = expansion
                 if (
@@ -827,17 +839,23 @@ def _extract_population(
                 if "idle_villager" in regions
                 else None
             )
-            expansion = expand_population_roi_after_failure(
-                frame,
-                x,
-                y,
-                w,
-                h,
-                roi,
-                failure_count,
-                conf_threshold,
-                max_right=max_right,
-            )
+            try:
+                expansion = expand_population_roi_after_failure(
+                    frame,
+                    x,
+                    y,
+                    w,
+                    h,
+                    roi,
+                    failure_count,
+                    conf_threshold,
+                    max_right=max_right,
+                )
+            except common.PopulationReadError as exp_exc:
+                exc = exp_exc
+                low_conf = getattr(exp_exc, "low_conf", low_conf)
+                low_conf_digits = getattr(exp_exc, "low_conf_digits", low_conf_digits)
+                expansion = None
             if expansion:
                 cur_pop, pop_cap, _, x, y, w, h, low_conf = expansion
                 if results is not None:
@@ -890,7 +908,7 @@ def _extract_population(
                         low_conf_counts["population_limit"] = 0
                         return cur_pop, pop_cap
                 if pop_required:
-                    raise
+                    raise exc
     else:
         if results is not None:
             results["population_limit"] = None
