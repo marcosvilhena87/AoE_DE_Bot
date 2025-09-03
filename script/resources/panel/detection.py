@@ -104,8 +104,15 @@ def locate_resource_panel(frame, cache_obj: cache.ResourceCache = cache.RESOURCE
         detected["population_limit"] = (px, yi, pw, ph)
         cache_obj.last_icon_bounds["population_limit"] = (px, yi, pw, ph)
 
-    top = y + int(cfg.top_pct * h)
-    height = int(cfg.height_pct * h)
+    if detected:
+        min_y = min(v[1] for v in detected.values())
+        max_y = max(v[1] + v[3] for v in detected.values())
+    else:
+        min_y = int(cfg.top_pct * h)
+        max_y = min_y + int(cfg.height_pct * h)
+
+    top = y + min_y
+    height = max_y - min_y
 
     regions, spans, narrow = compute_resource_rois(
         x,
