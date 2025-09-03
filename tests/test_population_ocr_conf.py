@@ -213,3 +213,23 @@ class TestPopulationOcrConfidence(TestCase):
             cur, cap, low_conf = resources._read_population_from_roi(roi, conf_threshold=60)
         self.assertTrue(low_conf)
         self.assertEqual((cur, cap), (12, 34))
+
+    def test_cur_exceeding_cap_raises_error(self):
+        roi = np.zeros((10, 10, 3), dtype=np.uint8)
+        with patch(
+            "script.resources.ocr.executor.execute_ocr",
+            return_value=(
+                "5/3",
+                {"text": ["5/3"], "conf": ["95"]},
+                None,
+                False,
+            ),
+        ):
+            with self.assertRaises(resources.common.PopulationReadError):
+                resources._read_population_from_roi(roi, conf_threshold=60)
+
+    def test_negative_population_values_raise_error(self):
+        with self.assertRaises(resources.common.PopulationReadError):
+            resources.ocr.executor._validate_population(-1, 5)
+        with self.assertRaises(resources.common.PopulationReadError):
+            resources.ocr.executor._validate_population(1, -5)
