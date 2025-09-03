@@ -316,6 +316,35 @@ class TestPopulationROI(TestCase):
         self.assertIn("after 2 attempts", str(err))
         self.assertEqual(len(getattr(err, "attempt_errors", [])), 2)
 
+    def test_population_expansion_error_includes_final_attempt_and_roi(self):
+        frame = np.zeros((20, 20, 3), dtype=np.uint8)
+        regions = {"population_limit": (0, 0, 5, 5)}
+        cache = resources.cache.ResourceCache()
+
+        with patch(
+            "script.resources.ocr.executor._read_population_from_roi",
+            side_effect=common.PopulationReadError("initial fail"),
+        ), patch(
+            "script.resources.reader.roi.expand_population_roi_after_failure",
+            side_effect=lambda *a, **k: (_ for _ in ()).throw(
+                common.PopulationReadError(
+                    "Failed to read population from HUD at ROI (5, 6, 7, 8): attempt=1"
+                )
+            ),
+        ):
+            with self.assertRaises(common.PopulationReadError) as ctx:
+                resources._extract_population(
+                    frame,
+                    regions,
+                    {},
+                    True,
+                    cache_obj=cache,
+                )
+
+        msg = str(ctx.exception)
+        self.assertIn("(5, 6, 7, 8)", msg)
+        self.assertIn("attempt=1", msg)
+
     def test_population_string_without_slash_two_digits(self):
         roi = np.zeros((10, 10, 3), dtype=np.uint8)
         gray = np.zeros((10, 10), dtype=np.uint8)
