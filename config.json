@@ -41,7 +41,7 @@
     "population_limit_ocr_conf_threshold": 40,
     "idle_villager_ocr_conf_threshold": 55,
     "//*_ocr_conf_threshold": "Optional per-resource OCR confidence overrides.",
-    "food_stockpile_max_width": 60,
+    "food_stockpile_max_width": 80,
     "//food_stockpile_max_width": "Maximum width of the food stockpile ROI.",
     "ocr_retry_limit": 3,
     "//ocr_retry_limit": "Consecutive OCR failures before using fallback value.",
@@ -128,7 +128,7 @@
     "optional": []
   },
   "wood_stockpile_roi": { "top_pct": 0.12, "height_pct": 0.03, "left_pct": 0.2,   "width_pct": 0.03 },
-  "food_stockpile_roi": { "top_pct": 0.12, "height_pct": 0.03, "left_pct": 0.254, "width_pct": 0.03 },
+  "food_stockpile_roi": { "top_pct": 0.12, "height_pct": 0.03, "left_pct": 0.249, "width_pct": 0.04 },
   "gold_stockpile_roi": { "top_pct": 0.12, "height_pct": 0.03, "left_pct": 0.308, "width_pct": 0.03 },
   "stone_stockpile_roi":{ "top_pct": 0.12, "height_pct": 0.03, "left_pct": 0.362, "width_pct": 0.03 },
   "population_limit_roi":{"top_pct": 0.12, "height_pct": 0.03, "left_pct": 0.416, "width_pct": 0.03 },

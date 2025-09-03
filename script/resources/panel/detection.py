@@ -129,6 +129,34 @@ def locate_resource_panel(frame, cache_obj: cache.ResourceCache = cache.RESOURCE
         detected,
     )
 
+    deficit = narrow.get("food_stockpile")
+    if "food_stockpile" in spans and deficit:
+        prev_span = spans.get("wood_stockpile")
+        next_span = spans.get("gold_stockpile")
+        prev_right = prev_span[1] if prev_span else x
+        next_left = next_span[0] if next_span else x + w
+        left, right = spans["food_stockpile"]
+        space_left = left - prev_right
+        space_right = next_left - right
+        expand_left = min(deficit // 2, space_left)
+        expand_right = min(deficit - expand_left, space_right)
+        if expand_left or expand_right:
+            new_left = left - expand_left
+            new_right = right + expand_right
+            spans["food_stockpile"] = (new_left, new_right)
+            fx, fy, fw, fh = regions["food_stockpile"]
+            regions["food_stockpile"] = (
+                new_left,
+                fy,
+                new_right - new_left,
+                fh,
+            )
+            actual = expand_left + expand_right
+            if actual >= deficit:
+                narrow.pop("food_stockpile", None)
+            else:
+                narrow["food_stockpile"] = deficit - actual
+
     cache._NARROW_ROIS = set(narrow.keys())
     cache._NARROW_ROI_DEFICITS = narrow.copy()
     cache._LAST_REGION_SPANS = spans.copy()
