@@ -18,7 +18,7 @@
   "ocr_conf_max_attempts": 10,
   "//ocr_conf_max_attempts": "Full OCR retries before only lowering the confidence threshold.",
   "allow_low_conf_digits": false,
-  "//allow_low_conf_digits": "Accept OCR digits even when confidence is below the threshold.",
+  "//allow_low_conf_digits": "Return digits that look like numbers even when OCR confidence is below the threshold.",
   "allow_low_conf_population": false,
   "//allow_low_conf_population": "Accept population digits even when confidence is below the threshold; enable only if population OCR is reliable. Cannot be combined with 'treat_low_conf_as_failure'.",
   "allow_zero_confidence_digits": true,

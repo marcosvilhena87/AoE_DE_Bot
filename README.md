@@ -65,6 +65,9 @@ Configuration options in `config.json` allow adjusting how resource numbers are 
 * `execute_ocr` returns a `(digits, data, mask, low_conf)` tuple. When no attempt
   meets the confidence threshold, the highest-confidence digits are returned with
   `low_conf=True` so callers can decide whether to accept or retry the value.
+* `allow_low_conf_digits` – when `true`, OCR results that resemble digits are
+  returned even if their confidence falls below the threshold (default
+  `false`).
 * `allow_low_conf_population` – when `true`, population digits are returned even
   when OCR confidence falls below the threshold. Enable this only if population
   OCR is reliable (default `false`). This option conflicts with
