@@ -73,13 +73,10 @@ def compute_resource_rois(
             width = max(0, right - left)
             spans[current] = (left, right)
 
-            roi_top = top + (cur_y - min_y)
-            roi_height = cur_h
-
             if CFG.get("ocr_debug"):
                 logger.info("Span for '%s': (%d, %d)", current, left, right)
 
-            regions[current] = (left, roi_top, width, roi_height)
+            regions[current] = (left, top + (cur_y - min_y), width, cur_h)
             logger.debug(
                 "ROI for '%s': available=(%d,%d) width=%d",
                 current,

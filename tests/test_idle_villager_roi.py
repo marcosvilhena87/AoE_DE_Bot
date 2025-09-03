@@ -43,7 +43,8 @@ import script.screen_utils as screen_utils
 class TestIdleVillagerROI(TestCase):
     def test_idle_villager_roi_uses_icon_bounds(self):
         detected = {
-            "idle_villager": (10, 0, 20, 10),
+            "food_stockpile": (0, 0, 20, 10),
+            "idle_villager": (10, 3, 20, 7),
         }
         regions, spans, _narrow = resources.compute_resource_rois(
             0,
@@ -60,12 +61,13 @@ class TestIdleVillagerROI(TestCase):
             detected=detected,
         )
         self.assertIn("idle_villager", regions)
-        self.assertEqual(regions["idle_villager"], (10, 0, 20, 10))
+        self.assertEqual(regions["idle_villager"], (10, 3, 20, 7))
         self.assertEqual(spans["idle_villager"], (10, 30))
 
     def test_idle_villager_roi_respects_inner_trim_config(self):
         detected = {
-            "idle_villager": (10, 0, 20, 10),
+            "food_stockpile": (0, 0, 20, 10),
+            "idle_villager": (10, 2, 20, 10),
         }
         with patch.dict(resources.CFG, {"idle_icon_inner_trim": 3}, clear=False):
             regions, spans, _ = resources.compute_resource_rois(
@@ -82,7 +84,7 @@ class TestIdleVillagerROI(TestCase):
                 0,
                 detected=detected,
             )
-        self.assertEqual(regions["idle_villager"], (13, 0, 14, 10))
+        self.assertEqual(regions["idle_villager"], (13, 2, 14, 10))
         self.assertEqual(spans["idle_villager"], (13, 27))
 
     def test_detect_resource_regions_uses_configured_idle_roi_when_missing(self):
@@ -122,7 +124,8 @@ class TestIdleVillagerROI(TestCase):
 
     def test_idle_villager_extreme_inner_trim_not_negative(self):
         detected = {
-            "idle_villager": (10, 0, 20, 10),
+            "food_stockpile": (0, 0, 20, 10),
+            "idle_villager": (10, 3, 20, 10),
         }
         with patch.dict(resources.CFG, {"idle_icon_inner_trim": 999}, clear=False):
             regions, spans, _ = resources.compute_resource_rois(
@@ -139,7 +142,7 @@ class TestIdleVillagerROI(TestCase):
                 0,
                 detected=detected,
             )
-        self.assertEqual(regions["idle_villager"], (15, 0, 10, 10))
+        self.assertEqual(regions["idle_villager"], (15, 3, 10, 10))
         self.assertEqual(spans["idle_villager"], (15, 25))
 
         with patch.dict(
@@ -161,6 +164,6 @@ class TestIdleVillagerROI(TestCase):
                 0,
                 detected=detected,
             )
-        self.assertEqual(regions["idle_villager"], (15, 0, 10, 10))
+        self.assertEqual(regions["idle_villager"], (15, 3, 10, 10))
         self.assertEqual(spans["idle_villager"], (15, 25))
 
