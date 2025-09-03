@@ -45,8 +45,19 @@ sys.modules.setdefault(
 sys.modules.setdefault("pytesseract", types.SimpleNamespace(pytesseract=types.SimpleNamespace(tesseract_cmd="")))
 os.environ.setdefault("TESSERACT_CMD", "/usr/bin/true")
 
+# Provide minimal common module for resources import
+sys.modules["script.common"] = types.SimpleNamespace(
+    CFG={},
+    HUD_ANCHOR={},
+    PopulationReadError=RuntimeError,
+    ResourceReadError=RuntimeError,
+)
+
 # Ensure project root is importable
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+for name in list(sys.modules):
+    if name.startswith("script.resources"):
+        del sys.modules[name]
 
 import script.resources as resources
 import script.common as common
@@ -79,7 +90,7 @@ class TestPopulationROIBounds(TestCase):
             return res
 
         with patch.dict(
-            resources.common.CFG,
+            resources.CFG,
             {"population_ocr_roi_expand_base": 50, "population_idle_padding": 6},
             clear=False,
         ), patch(
@@ -128,7 +139,7 @@ class TestPopulationROIBounds(TestCase):
             return res
 
         with patch.dict(
-            resources.common.CFG,
+            resources.CFG,
             {
                 "population_ocr_roi_expand_base": 1,
                 "population_ocr_roi_expand_step": 0,
