@@ -130,6 +130,7 @@ class TestResourceROIs(TestCase):
                 "match_threshold": 0.5,
                 "max_width": 999,
                 "min_width": 0,
+                "min_pop_width": 0,
             },
         ), patch.dict(
             common.CFG["profiles"]["aoe1de"]["resource_panel"],
@@ -150,15 +151,10 @@ class TestResourceROIs(TestCase):
         icon_left = self.panel_box[0] + self.positions[index]
         icon_right = icon_left + icon_width
         next_icon_left = self.panel_box[0] + self.positions[index + 1]
-        if name == "stone_stockpile":
-            prev_icon_left = self.panel_box[0] + self.positions[index - 1]
-            expected_left = prev_icon_left + icon_width
-            expected_right = next_icon_left
-        else:
-            expected_left = icon_right
-            expected_right = next_icon_left
-            if name == "population_limit":
-                expected_right = next_icon_left - common.CFG.get("population_idle_padding", 6)
+        expected_left = icon_right
+        expected_right = next_icon_left
+        if name == "population_limit":
+            expected_right = next_icon_left - common.CFG.get("population_idle_padding", 6)
         self.assertEqual(left, expected_left, f"{name} left not at icon boundary")
         self.assertEqual(right, expected_right, f"{name} right not at next icon boundary")
 
@@ -191,15 +187,14 @@ class TestResourceROIs(TestCase):
             x, y, w, h = regions[name]
             self.assertGreater(w, 0, f"{name} ROI width not positive")
             roi = self.frame[y : y + h, x : x + w]
-            if name != "stone_stockpile":
-                self.assertFalse(
-                    np.any(roi == self.icon_color),
-                    f"{name} ROI overlaps icon",
-                )
-                self.assertTrue(
-                    np.all(roi == self.digit_values[name]),
-                    f"{name} ROI missing digits",
-                )
+            self.assertFalse(
+                np.any(roi == self.icon_color),
+                f"{name} ROI overlaps icon",
+            )
+            self.assertTrue(
+                np.all(roi == self.digit_values[name]),
+                f"{name} ROI missing digits",
+            )
 
     def test_rois_trimmed_icon_bounds(self):
         trim = [0.2] * 6
