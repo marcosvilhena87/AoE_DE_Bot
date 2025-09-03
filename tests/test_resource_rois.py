@@ -90,8 +90,13 @@ class TestResourceROIs(TestCase):
         self.icon_color = icon_color
         self.digit_values = {self.icons[i]: digits[i] for i in range(5)}
 
-    def _locate_regions(self, icon_trim_pct=None):
-        loc_iter = iter([(x, 0) for x in self.positions])
+    def _locate_regions(self, icon_trim_pct=None, icon_y_positions=None):
+        y_positions = (
+            icon_y_positions if icon_y_positions is not None else [0] * len(self.positions)
+        )
+        x_positions = list(self.positions)
+        x_positions[-1] -= common.CFG.get("population_idle_padding", 6)
+        loc_iter = iter(zip(x_positions, y_positions))
 
         def fake_minmax(res):
             xi, yi = next(loc_iter)
@@ -99,6 +104,7 @@ class TestResourceROIs(TestCase):
 
         trim = icon_trim_pct if icon_trim_pct is not None else [0] * 6
         self.trim = trim
+        self.y_positions = y_positions
 
         with patch(
             "script.resources.find_template", return_value=(self.panel_box, 0.9, None)
@@ -139,7 +145,9 @@ class TestResourceROIs(TestCase):
             },
         ):
             regions = resources.locate_resource_panel(self.frame)
-            icon_width = screen_utils.ICON_TEMPLATES[self.icons[0]].shape[1]
+            icon_template = screen_utils.ICON_TEMPLATES[self.icons[0]]
+            icon_width = icon_template.shape[1]
+            self.icon_height = icon_template.shape[0]
 
         return regions, icon_width
 
@@ -157,6 +165,26 @@ class TestResourceROIs(TestCase):
             expected_right = next_icon_left - common.CFG.get("population_idle_padding", 6)
         self.assertEqual(left, expected_left, f"{name} left not at icon boundary")
         self.assertEqual(right, expected_right, f"{name} right not at next icon boundary")
+
+    def _assert_vertical_bounds(self, regions, index):
+        name = self.icons[index]
+        roi = regions[name]
+        top = roi[1]
+        height = roi[3]
+        bottom = top + height
+
+        icon_y = self.panel_box[1] + self.y_positions[index]
+        icon_bottom = icon_y + self.icon_height
+        next_icon_y = self.panel_box[1] + self.y_positions[index + 1]
+        next_icon_bottom = next_icon_y + self.icon_height
+
+        expected_top = min(icon_y, next_icon_y)
+        expected_bottom = max(icon_bottom, next_icon_bottom)
+        expected_height = expected_bottom - expected_top
+
+        self.assertEqual(top, expected_top, f"{name} top not at min icon boundary")
+        self.assertEqual(height, expected_height, f"{name} height does not span icons")
+        self.assertEqual(bottom, expected_bottom, f"{name} bottom not at max icon boundary")
 
     def test_wood_stockpile_roi_bounds(self):
         regions, icon_width = self._locate_regions()
@@ -177,6 +205,31 @@ class TestResourceROIs(TestCase):
     def test_population_limit_roi_bounds(self):
         regions, icon_width = self._locate_regions()
         self._assert_bounds(regions, icon_width, 4)
+
+    def test_wood_stockpile_roi_vertical_bounds(self):
+        y_positions = [0, 2, 4, 1, 3, 5]
+        regions, _ = self._locate_regions(icon_y_positions=y_positions)
+        self._assert_vertical_bounds(regions, 0)
+
+    def test_food_stockpile_roi_vertical_bounds(self):
+        y_positions = [0, 2, 4, 1, 3, 5]
+        regions, _ = self._locate_regions(icon_y_positions=y_positions)
+        self._assert_vertical_bounds(regions, 1)
+
+    def test_gold_stockpile_roi_vertical_bounds(self):
+        y_positions = [0, 2, 4, 1, 3, 5]
+        regions, _ = self._locate_regions(icon_y_positions=y_positions)
+        self._assert_vertical_bounds(regions, 2)
+
+    def test_stone_stockpile_roi_vertical_bounds(self):
+        y_positions = [0, 2, 4, 1, 3, 5]
+        regions, _ = self._locate_regions(icon_y_positions=y_positions)
+        self._assert_vertical_bounds(regions, 3)
+
+    def test_population_limit_roi_vertical_bounds(self):
+        y_positions = [0, 2, 4, 1, 3, 5]
+        regions, _ = self._locate_regions(icon_y_positions=y_positions)
+        self._assert_vertical_bounds(regions, 4)
 
     def test_synthetic_frame_rois_between_icons(self):
         self._build_synthetic_frame()
@@ -344,7 +397,7 @@ class TestResourceROIs(TestCase):
         icon_right1 = positions[0] + icon_width
         next_icon_left1 = positions[1]
         avail_width1 = next_icon_left1 - icon_right1
-        expected_width1 = min(avail_width1, max_widths[0])
+        expected_width1 = avail_width1
         expected_left1 = icon_right1
         expected_right1 = expected_left1 + expected_width1
 
@@ -356,7 +409,7 @@ class TestResourceROIs(TestCase):
         left2, _, width2, _ = roi2
         icon_right2 = positions[1] + icon_width
         avail_width2 = panel_box[2] - icon_right2
-        expected_width2 = min(avail_width2, max_widths[1])
+        expected_width2 = avail_width2
         expected_left2 = icon_right2
 
         self.assertEqual(width2, expected_width2)
