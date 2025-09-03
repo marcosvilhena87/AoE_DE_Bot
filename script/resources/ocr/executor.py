@@ -432,6 +432,31 @@ def handle_ocr_failure(
             )
 
 
+def _validate_population(cur: int, cap: int) -> None:
+    """Validate population numbers.
+
+    Args:
+        cur: Current population value.
+        cap: Population cap value.
+
+    Raises:
+        common.PopulationReadError: If the values are invalid.
+    """
+
+    if not isinstance(cur, int) or not isinstance(cap, int):
+        raise common.PopulationReadError(
+            f"Population values must be integers: {cur}/{cap}"
+        )
+    if cur < 0 or cap < 0:
+        raise common.PopulationReadError(
+            f"Population values must be non-negative: {cur}/{cap}"
+        )
+    if cur > cap:
+        raise common.PopulationReadError(
+            f"Current population {cur} exceeds cap {cap}"
+        )
+
+
 def _read_population_from_roi(roi, conf_threshold=None, roi_bbox=None, failure_count=0):
     """Return the population (current, cap) from a HUD region.
 
@@ -482,6 +507,7 @@ def _read_population_from_roi(roi, conf_threshold=None, roi_bbox=None, failure_c
     if len(parts) >= 2:
         cur = int("".join(filter(str.isdigit, parts[0])) or 0)
         cap = int("".join(filter(str.isdigit, parts[1])) or 0)
+        _validate_population(cur, cap)
         if not low_conf:
             return cur, cap, False
         if zero_conf and pattern_ok and (allow_low_conf or low_conf_fallback):
@@ -515,6 +541,7 @@ def _read_population_from_roi(roi, conf_threshold=None, roi_bbox=None, failure_c
         if low_conf and raw_text.isdigit() and len(raw_text) == 2 and raw_text[0] == raw_text[1]:
             cur = int(raw_text[0])
             cap = int(raw_text[1])
+            _validate_population(cur, cap)
             err_msg = (
                 f"Ambiguous population OCR: text='{raw_text}', confs={confidences}"
             )
@@ -560,6 +587,7 @@ def _read_population_from_roi(roi, conf_threshold=None, roi_bbox=None, failure_c
         else:
             cur = cap = None
         if cur is not None:
+            _validate_population(cur, cap)
             if not low_conf:
                 return cur, cap, False
             if allow_low_conf or (low_conf_fallback and failure_count >= retry_limit - 1):
