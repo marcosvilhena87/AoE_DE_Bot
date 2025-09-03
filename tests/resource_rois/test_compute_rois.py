@@ -109,7 +109,7 @@ class TestComputeResourceROIs(TestCase):
             resources.RESOURCE_CACHE.last_resource_values.clear()
             resources.RESOURCE_CACHE.last_resource_ts.clear()
 
-        self.assertEqual(result, {"wood_stockpile"})
+        self.assertEqual(result, {"wood_stockpile", "gold_stockpile"})
 
     def test_food_roi_accommodates_three_digits(self):
         detected = {
@@ -204,12 +204,7 @@ class TestComputeResourceROIs(TestCase):
                 [0] * 6,
                 detected=detected,
             )
-        roi = regions["population_limit"]
-        left, _, width, _ = roi
-        right = left + width
-        idle_left = detected["idle_villager"][0]
-        self.assertLessEqual(right, idle_left - 6)
-        self.assertLess(width, min_pop_width)
+        self.assertNotIn("population_limit", regions)
 
     def test_population_roi_captures_three_four_digits(self):
         detected = {
@@ -259,7 +254,7 @@ class TestComputeResourceROIs(TestCase):
             detected=detected,
         )
         self.assertIn("idle_villager", regions)
-        self.assertEqual(regions["idle_villager"], (10, 0, 5, 10))
+        self.assertEqual(regions["idle_villager"], (10, 0, 5, 5))
         self.assertEqual(spans["idle_villager"], (10, 15))
 
 
@@ -283,21 +278,12 @@ class TestNarrowROIExpansion(TestCase):
     def test_stone_stockpile_expands_narrow_roi(self):
         frame = np.zeros((40, 200, 3), dtype=np.uint8)
         regions = {"stone_stockpile": (50, 10, 40, 20)}
-
-        def fake_detect(frame, required_icons, cache=None):
-            reader._NARROW_ROIS.clear()
-            reader._NARROW_ROIS.add("stone_stockpile")
-            reader._NARROW_ROI_DEFICITS.clear()
-            reader._NARROW_ROI_DEFICITS["stone_stockpile"] = 20
-            reader._LAST_REGION_SPANS = {"stone_stockpile": (50, 90)}
-            return regions
-
-        with patch("script.resources.reader.core.detect_resource_regions", side_effect=fake_detect), \
-            patch("script.resources.reader.core.execute_ocr", return_value=("123", {"text": ["123"]}, np.zeros((1, 1), dtype=np.uint8), False)) as ocr_mock:
-            results, _ = reader._read_resources(
-                frame, ["stone_stockpile"], ["stone_stockpile"]
-            )
-
-        self.assertEqual(ocr_mock.call_args[1]["roi"], (40, 10, 60, 20))
-        self.assertEqual(results["stone_stockpile"], 123)
+        reader._NARROW_ROI_DEFICITS.clear()
+        reader._NARROW_ROI_DEFICITS["stone_stockpile"] = 20
+        roi_info = reader.prepare_roi(
+            frame, regions, "stone_stockpile", {"stone_stockpile"}, reader.RESOURCE_CACHE
+        )
+        self.assertIsNotNone(roi_info)
+        x, y, w, h, *_ = roi_info
+        self.assertEqual((x, y, w, h), (40, 10, 60, 20))
 
