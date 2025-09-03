@@ -33,6 +33,7 @@ os.environ.setdefault("TESSERACT_CMD", "/usr/bin/true")
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import script.units.villager as villager
+import script.common as common
 
 
 class TestSelectIdleVillager(TestCase):
@@ -45,7 +46,7 @@ class TestSelectIdleVillager(TestCase):
 
         with patch("script.input_utils._press_key_safe") as press_mock, \
              patch("script.resources.reader.read_resources_from_hud", side_effect=lambda *a, **k: next(reads)), \
-             patch("script.hud.read_population_from_hud", return_value=(2, 10)):
+             patch("script.hud.read_population_from_hud", return_value=(2, 10, False)):
             self.assertTrue(villager.select_idle_villager())
             press_mock.assert_called_once()
 
@@ -58,7 +59,7 @@ class TestSelectIdleVillager(TestCase):
 
         with patch("script.input_utils._press_key_safe") as press_mock, \
              patch("script.resources.reader.read_resources_from_hud", side_effect=lambda *a, **k: next(reads)), \
-             patch("script.hud.read_population_from_hud", return_value=(0, 10)):
+             patch("script.hud.read_population_from_hud", return_value=(0, 10, False)):
             self.assertFalse(villager.select_idle_villager())
             press_mock.assert_not_called()
 
@@ -71,6 +72,20 @@ class TestSelectIdleVillager(TestCase):
 
         with patch("script.input_utils._press_key_safe") as press_mock, \
              patch("script.resources.reader.read_resources_from_hud", side_effect=lambda *a, **k: next(reads)), \
-             patch("script.hud.read_population_from_hud", return_value=(3, 10)):
+             patch("script.hud.read_population_from_hud", return_value=(3, 10, False)):
             self.assertFalse(villager.select_idle_villager())
             press_mock.assert_not_called()
+
+    def test_low_conf_population_does_not_update_current_pop(self):
+        villager._last_idle_villager_count = 0
+        common.CURRENT_POP = 5
+        reads = iter([
+            ({"idle_villager": 0}, (None, None)),
+            ({"idle_villager": 0}, (None, None)),
+        ])
+        with patch("script.input_utils._press_key_safe") as press_mock, \
+             patch("script.resources.reader.read_resources_from_hud", side_effect=lambda *a, **k: next(reads)), \
+             patch("script.hud.read_population_from_hud", return_value=(7, 10, True)):
+            villager.select_idle_villager()
+            press_mock.assert_not_called()
+        self.assertEqual(common.CURRENT_POP, 5)

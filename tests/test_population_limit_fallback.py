@@ -138,7 +138,7 @@ def test_population_roi_expansion_respects_idle_villager_boundary():
 
     side_effects = [
         resources.common.PopulationReadError("fail"),
-        (80, 200),
+        (80, 200, False),
     ]
 
     def fake_read(roi, conf_threshold=None, roi_bbox=None, failure_count=0):

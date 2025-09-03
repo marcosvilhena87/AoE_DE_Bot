@@ -195,7 +195,7 @@ class TestPopulationROI(TestCase):
             widths.append(roi.shape[1])
             if roi.shape[1] <= 4:
                 raise common.PopulationReadError("tight")
-            return 12, 34
+            return 12, 34, False
 
         resources.RESOURCE_CACHE.resource_failure_counts.pop("population_limit", None)
         with patch.dict(
@@ -213,8 +213,9 @@ class TestPopulationROI(TestCase):
             "script.resources.reader.roi._read_population_from_roi",
             side_effect=fake_pop,
         ):
-            cur, cap = resources.read_population_from_roi(bbox, retries=1)
+            cur, cap, low_conf = resources.read_population_from_roi(bbox, retries=1)
 
+        self.assertFalse(low_conf)
         self.assertEqual((cur, cap), (12, 34))
         self.assertGreater(widths[1], widths[0])
         self.assertEqual(
@@ -242,7 +243,7 @@ class TestPopulationROI(TestCase):
             bboxes.append(roi_bbox)
             if roi.shape[1] <= 4:
                 raise common.PopulationReadError("tight")
-            return 12, 34
+            return 12, 34, False
 
         resources.RESOURCE_CACHE.resource_failure_counts.pop("population_limit", None)
         with patch.dict(
@@ -260,8 +261,9 @@ class TestPopulationROI(TestCase):
             "script.resources.reader.roi._read_population_from_roi",
             side_effect=fake_pop,
         ):
-            cur, cap = resources.read_population_from_roi(bbox, retries=1)
+            cur, cap, low_conf = resources.read_population_from_roi(bbox, retries=1)
 
+        self.assertFalse(low_conf)
         self.assertEqual((cur, cap), (12, 34))
         self.assertEqual(len(bboxes), 2)
         initial_right = bbox["left"] + bbox["width"]
@@ -278,8 +280,9 @@ class TestPopulationROI(TestCase):
             "script.resources.ocr.executor.execute_ocr",
             return_value=("2025", {"text": ["20/25"], "conf": ["80"]}, None, False),
         ) as ocr_mock:
-            cur, cap = resources._read_population_from_roi(roi)
+            cur, cap, low_conf = resources._read_population_from_roi(roi)
 
+        self.assertFalse(low_conf)
         self.assertEqual((cur, cap), (20, 25))
         ocr_mock.assert_called_once()
         _, kwargs = ocr_mock.call_args
@@ -322,8 +325,9 @@ class TestPopulationROI(TestCase):
             "script.resources.ocr.executor.execute_ocr",
             return_value=("34", {"text": ["34"], "conf": ["80"]}, None, False),
         ) as ocr_mock:
-            cur, cap = resources._read_population_from_roi(roi)
+            cur, cap, low_conf = resources._read_population_from_roi(roi)
 
+        self.assertFalse(low_conf)
         self.assertEqual((cur, cap), (3, 4))
         ocr_mock.assert_called_once()
         _, kwargs = ocr_mock.call_args

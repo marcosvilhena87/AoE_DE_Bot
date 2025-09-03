@@ -212,13 +212,13 @@ def expand_population_roi_after_failure(
     )
     roi_expanded = frame[y0:y1, x0:x1]
     try:
-        cur_pop, pop_cap = _read_population_from_roi(
+        cur_pop, pop_cap, low_conf = _read_population_from_roi(
             roi_expanded,
             conf_threshold=res_conf_threshold,
             roi_bbox=(x0, y0, x1 - x0, y1 - y0),
             failure_count=failure_count + 1,
         )
-        return cur_pop, pop_cap, roi_expanded, x0, y0, x1 - x0, y1 - y0
+        return cur_pop, pop_cap, roi_expanded, x0, y0, x1 - x0, y1 - y0, low_conf
     except common.PopulationReadError:
         return None
 

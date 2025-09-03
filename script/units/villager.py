@@ -35,8 +35,9 @@ def select_idle_villager(delay: float = 0.1) -> bool:
 
         cur_pop = common.CURRENT_POP
         try:
-            cur_pop, _ = hud.read_population_from_hud()
-            common.CURRENT_POP = cur_pop
+            cur_pop, _, low_conf = hud.read_population_from_hud()
+            if not low_conf:
+                common.CURRENT_POP = cur_pop
         except (common.ResourceReadError, common.PopulationReadError) as exc:
             logger.debug("Population read failed: %s", exc)
             cur_pop = common.CURRENT_POP
@@ -151,7 +152,7 @@ def build_house():
         time.sleep(0.5)
 
         try:
-            cur, limit = hud.read_population_from_hud()
+            cur, limit, _ = hud.read_population_from_hud()
         except (common.ResourceReadError, common.PopulationReadError) as exc:  # pragma: no cover - falha de OCR
             logger.warning("Failed to read population: %s", exc)
             limit = common.POP_CAP

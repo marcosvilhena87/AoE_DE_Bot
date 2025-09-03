@@ -52,7 +52,7 @@ class TestClickAndBuildHouse(TestCase):
         ), \
             patch("script.input_utils._press_key_safe"), \
             patch("script.input_utils._click_norm") as click_mock, \
-            patch("script.hud.read_population_from_hud", return_value=(0, 8)) as read_pop_mock, \
+            patch("script.hud.read_population_from_hud", return_value=(0, 8, False)) as read_pop_mock, \
             patch("script.units.villager.time.sleep"):
             result = villager.build_house()
         self.assertTrue(result)
@@ -97,7 +97,7 @@ class TestBuildHouseResourceRetry(TestCase):
         ) as read_mock, patch("script.input_utils._press_key_safe"), patch(
             "script.input_utils._click_norm"
         ), patch(
-            "script.hud.read_population_from_hud", return_value=(0, 8)
+            "script.hud.read_population_from_hud", return_value=(0, 8, False)
         ), patch("script.units.villager.time.sleep"), patch(
             "script.hud.wait_hud"
         ):
