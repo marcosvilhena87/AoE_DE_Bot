@@ -189,24 +189,29 @@ class TestComputeResourceROIs(TestCase):
             "idle_villager": (15, 0, 5, 5),
         }
         min_pop_width = 10
-        with patch.dict(resources.CFG, {"population_idle_padding": 6}, clear=False):
-            regions, _spans, narrow = resources.compute_resource_rois(
-                0,
-                40,
-                0,
-                10,
-                [0] * 6,
-                [0] * 6,
-                [0] * 6,
-                [999] * 6,
-                [0] * 6,
-                min_pop_width,
-                0,
-                [0] * 6,
-                detected=detected,
-            )
+        regions, _spans, narrow = resources.compute_resource_rois(
+            0,
+            40,
+            0,
+            10,
+            [0] * 6,
+            [0] * 6,
+            [0] * 6,
+            [999] * 6,
+            [0] * 6,
+            min_pop_width,
+            0,
+            [0] * 6,
+            detected=detected,
+        )
         roi = regions["population_limit"]
-        self.assertEqual(roi, (5, 0, 10, 5))
+        left, top, width, height = roi
+        idle_left = detected["idle_villager"][0]
+        self.assertEqual(left, 5)
+        self.assertEqual(top, 0)
+        self.assertEqual(width, 10)
+        self.assertEqual(height, 5)
+        self.assertEqual(left + width, idle_left)
         self.assertIn("population_limit", narrow)
         self.assertEqual(narrow["population_limit"], 20)
 

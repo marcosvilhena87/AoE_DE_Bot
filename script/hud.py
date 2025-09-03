@@ -91,7 +91,7 @@ def read_population_from_hud(retries=1, conf_threshold=None, save_failed_roi=Fal
     if idle_bounds and "population_limit" in regions:
         left, top, width, height = regions["population_limit"]
         idle_left = idle_bounds[0]
-        clamp_right = idle_left - CFG.get("population_idle_padding", 6)
+        clamp_right = idle_left - CFG.get("population_idle_padding", 0)
         if clamp_right < left + width:
             width = max(0, clamp_right - left)
             regions["population_limit"] = (left, top, width, height)
