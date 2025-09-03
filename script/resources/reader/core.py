@@ -311,6 +311,13 @@ def _handle_cache_and_fallback(
     low_conf_flag = False
     no_digit_flag = False
 
+    if (
+        name == "wood_stockpile"
+        and low_conf
+        and name not in cache_obj.last_resource_values
+    ):
+        return None, cache_hit, True, not bool(digits)
+
     if not digits:
         logger.warning(
             "OCR failed for %s; raw boxes=%s", name, data.get("text")
@@ -452,20 +459,6 @@ def _handle_cache_and_fallback(
             value = None
             no_digit_flag = False
         low_conf_flag = True
-        return value, cache_hit, low_conf_flag, no_digit_flag
-
-    if (
-        name == "wood_stockpile"
-        and low_conf
-        and name not in cache_obj.last_resource_values
-    ):
-        logger.warning(
-            "Discarding %s=%d due to low-confidence OCR", name, value
-        )
-        value = None
-        low_conf_flag = True
-        no_digit_flag = False
-        cache_obj.resource_failure_counts[name] = failure_count + 1
         return value, cache_hit, low_conf_flag, no_digit_flag
 
     if not low_conf:
