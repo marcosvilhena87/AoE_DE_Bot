@@ -118,3 +118,47 @@ class TestIdleVillagerROI(TestCase):
 
         self.assertEqual(regions["idle_villager"], detected["idle_villager"])
 
+    def test_idle_villager_extreme_inner_trim_not_negative(self):
+        detected = {
+            "idle_villager": (10, 0, 20, 10),
+        }
+        with patch.dict(resources.CFG, {"idle_icon_inner_trim": 999}, clear=False):
+            regions, spans, _ = resources.compute_resource_rois(
+                0,
+                100,
+                0,
+                10,
+                [0] * 6,
+                [0] * 6,
+                [0] * 6,
+                [999] * 6,
+                [0] * 6,
+                0,
+                0,
+                detected=detected,
+            )
+        self.assertEqual(regions["idle_villager"], (15, 0, 10, 10))
+        self.assertEqual(spans["idle_villager"], (15, 25))
+
+        with patch.dict(
+            resources.CFG,
+            {"idle_icon_inner_trim": None, "idle_icon_inner_pct": 0.9},
+            clear=False,
+        ):
+            regions, spans, _ = resources.compute_resource_rois(
+                0,
+                100,
+                0,
+                10,
+                [0] * 6,
+                [0] * 6,
+                [0] * 6,
+                [999] * 6,
+                [0] * 6,
+                0,
+                0,
+                detected=detected,
+            )
+        self.assertEqual(regions["idle_villager"], (15, 0, 10, 10))
+        self.assertEqual(spans["idle_villager"], (15, 25))
+
