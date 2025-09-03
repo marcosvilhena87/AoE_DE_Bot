@@ -237,3 +237,35 @@ class TestIdleVillagerOCR(TestCase):
 
         self.assertIsNone(result.get("idle_villager"))
         self.assertTrue(any("OCR failed for idle_villager" in m for m in cm.output))
+
+    def test_idle_villager_population_three_bounds(self):
+        def fake_detect(frame, required_icons, cache=None):
+            return {
+                "population_limit": (0, 0, 10, 10),
+                "idle_villager": (20, 0, 10, 10),
+            }
+
+        frame = np.zeros((50, 50, 3), dtype=np.uint8)
+
+        for val in range(4):
+            with self.subTest(val=val), patch(
+                "script.resources.reader.core.detect_resource_regions",
+                side_effect=fake_detect,
+            ), patch(
+                "script.screen_utils._grab_frame", return_value=frame
+            ), patch(
+                "script.resources.reader.pytesseract.image_to_data",
+                return_value={"text": [str(val)], "conf": ["95"]},
+            ), patch(
+                "script.resources.reader.core.execute_ocr"
+            ) as exec_mock, patch(
+                "script.resources.reader.core._extract_population",
+                return_value=(3, 3),
+            ):
+                result, pop = resources.read_resources_from_hud(
+                    ["population_limit", "idle_villager"]
+                )
+
+            self.assertEqual(pop, (3, 3))
+            self.assertEqual(result["idle_villager"], val)
+            exec_mock.assert_not_called()

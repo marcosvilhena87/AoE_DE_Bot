@@ -97,10 +97,7 @@ def _ocr_resource(
             ]
             if digit_confs and any(c >= res_conf_threshold for c in digit_confs):
                 digits = raw_digits
-            elif digit_confs and any(c > 0 for c in digit_confs):
-                digits = None
             else:
-                digits = raw_digits
                 low_conf = True
         mask = gray
         logger.info(
@@ -424,13 +421,11 @@ def _handle_cache_and_fallback(
                     True,
                     False,
                 )
-            cache_obj.last_resource_values[name] = value
-            cache_obj.last_resource_ts[name] = time.time()
-            low_conf_flag = True
-        else:
-            cache_obj.last_resource_values[name] = value
-            cache_obj.last_resource_ts[name] = time.time()
-            cache_obj.resource_failure_counts[name] = 0
+            cache_obj.resource_failure_counts[name] = failure_count + 1
+            return None, cache_hit, True, no_digit_flag
+        cache_obj.last_resource_values[name] = value
+        cache_obj.last_resource_ts[name] = time.time()
+        cache_obj.resource_failure_counts[name] = 0
         return value, cache_hit, low_conf_flag, no_digit_flag
 
     treat_low_conf_as_failure = (
