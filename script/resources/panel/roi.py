@@ -65,10 +65,26 @@ def compute_resource_rois(
                 inner_trim = int(inner_trim)
             max_trim = cur_w // 4
             inner_trim = max(0, min(inner_trim, max_trim))
-
             left = panel_left + cur_x + inner_trim
-            right = panel_left + cur_x + cur_w - inner_trim
-            width = max(0, right - left)
+            right = panel_left + cur_x + cur_w - inner_trim + idle_extra_width
+
+            # Keep span within panel bounds and prevent overlap with previous resource
+            prev_name = RESOURCE_ICON_ORDER[idx - 1] if idx > 0 else None
+            prev_span = spans.get(prev_name)
+            if prev_span:
+                left = max(left, prev_span[1])
+            right = min(right, panel_right)
+
+            if right <= left:
+                logger.warning(
+                    "Skipping ROI for icon '%s' due to non-positive span (left=%d, right=%d)",
+                    current,
+                    left,
+                    right,
+                )
+                continue
+
+            width = right - left
             spans[current] = (left, right)
 
             if CFG.get("ocr_debug"):

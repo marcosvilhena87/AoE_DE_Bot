@@ -167,3 +167,28 @@ class TestIdleVillagerROI(TestCase):
         self.assertEqual(regions["idle_villager"], (15, 3, 10, 10))
         self.assertEqual(spans["idle_villager"], (15, 25))
 
+    def test_idle_roi_extra_width_avoids_overlap(self):
+        detected = {
+            "population_limit": (0, 0, 20, 10),
+            "idle_villager": (25, 0, 10, 10),
+        }
+        regions, spans, _ = resources.compute_resource_rois(
+            0,
+            100,
+            0,
+            10,
+            [0] * 6,
+            [0] * 6,
+            [0] * 6,
+            [999] * 6,
+            [0] * 6,
+            0,
+            8,
+            detected=detected,
+        )
+        pop_right = spans["population_limit"][1]
+        idle_left, idle_right = spans["idle_villager"]
+        self.assertGreaterEqual(idle_left, pop_right)
+        self.assertEqual(regions["idle_villager"][2], 18)
+        self.assertEqual(idle_right, regions["idle_villager"][0] + regions["idle_villager"][2])
+
