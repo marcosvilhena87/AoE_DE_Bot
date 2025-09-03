@@ -75,9 +75,14 @@ def main() -> None:
     res_vals, (cur_pop, pop_cap) = pop_check
 
     # Validação dos recursos iniciais
+    tol_cfg = common.CFG.get("resource_validation_tolerance", {})
+    tolerance = tol_cfg.get("initial", 10)
     try:
         resources.validate_starting_resources(
-            res_vals, info.starting_resources, raise_on_error=True
+            res_vals,
+            info.starting_resources,
+            tolerance=tolerance,
+            raise_on_error=True,
         )
     except resources.ResourceValidationError as exc:
         logger.error("Erro na validação dos recursos iniciais: %s", exc)

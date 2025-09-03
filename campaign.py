@@ -100,9 +100,11 @@ def main():
             res_tolerances = common.CFG.get("resource_validation_tolerances", {})
             if non_zero and not skip_validation:
                 retry_limit = common.CFG.get("resource_validation_retries", 3)
-                tolerance = 10
-                max_tolerance = 15
-                relaxed_threshold = 20
+                tol_cfg = common.CFG.get("resource_validation_tolerance", {})
+                tolerance = tol_cfg.get("initial", 10)
+                increment = tol_cfg.get("increment", 5)
+                max_tolerance = tolerance + increment
+                relaxed_threshold = tolerance + 2 * increment
                 attempt = 1
                 while True:
                     frame = screen_utils._grab_frame()
@@ -156,7 +158,7 @@ def main():
                             else:
                                 raise
                         attempt += 1
-                        tolerance = min(max_tolerance, tolerance + 5)
+                        tolerance = min(max_tolerance, tolerance + increment)
                         low_conf = resources.RESOURCE_CACHE.last_low_confidence
                         no_digits = resources.RESOURCE_CACHE.last_no_digits
                         for k in e.failing_keys:
