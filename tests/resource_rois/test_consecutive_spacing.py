@@ -56,8 +56,8 @@ class TestConsecutiveIconSpacing(TestCase):
             cur_x, _cy, cur_w, _ch = detected[cur]
             cur_right = panel_left + cur_x + cur_w
             next_left = panel_left + detected[nxt][0]
-            self.assertGreaterEqual(span_left, cur_right)
-            self.assertLessEqual(span_right, next_left)
+            self.assertEqual(span_left, cur_right)
+            self.assertEqual(span_right, next_left)
 
         # idle villager span remains within its icon
         idle_left, idle_right = spans["idle_villager"]
