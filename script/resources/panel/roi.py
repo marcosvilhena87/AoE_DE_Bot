@@ -86,9 +86,16 @@ def compute_resource_rois(
             )
             continue
 
-        cur_right = panel_left + cur_x + cur_w
+        # Determine the icons that bound this span
+        left_bounds = cur_bounds
+        right_name = next_name
+        if current == "stone_stockpile":
+            left_bounds = detected.get("gold_stockpile", cur_bounds)
+            right_name = "population_limit"
 
-        next_bounds = detected.get(next_name) if next_name else None
+        cur_right = panel_left + left_bounds[0] + left_bounds[2]
+
+        next_bounds = detected.get(right_name) if right_name else None
         if next_bounds is not None:
             next_x, next_y, next_w, next_h = next_bounds
             next_left = panel_left + next_x
@@ -108,8 +115,8 @@ def compute_resource_rois(
         min_w = min_widths[idx] if idx < len(min_widths) else min_widths[-1]
         min_span = max(_THREE_DIGIT_SPAN, min_req, min_w)
 
-        pad_l = pad_left[idx] if idx < len(pad_left) else pad_left[-1]
-        pad_r = pad_right[idx] if idx < len(pad_right) else pad_right[-1]
+        pad_l = 0
+        pad_r = 0
 
         available_left = cur_right + pad_l
         available_right = next_left - pad_r
@@ -127,12 +134,15 @@ def compute_resource_rois(
             )
             continue
 
-        if available_width < min_span:
-            narrow[current] = min_span - available_width
+        effective_width = available_width
+        if current == "population_limit" and next_name == "idle_villager":
+            effective_width -= idle_padding
+        if effective_width < min_span:
+            narrow[current] = min_span - effective_width
             logger.warning(
                 "Narrow ROI for '%s': available=%d min=%d",
                 current,
-                available_width,
+                effective_width,
                 min_span,
             )
 
@@ -152,6 +162,12 @@ def compute_resource_rois(
             width = max(width, min_w)
 
         if current == "population_limit":
+            if roi_available < min_pop_width:
+                logger.warning(
+                    "Skipping ROI for icon '%s' due to span below minimum population width",
+                    current,
+                )
+                continue
             width = max(width, min_pop_width)
             extra = CFG.get("pop_roi_extra_width", 0)
             right = min(panel_right, right_limit, left + width + extra)

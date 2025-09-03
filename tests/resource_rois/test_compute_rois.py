@@ -19,8 +19,8 @@ class TestComputeResourceROIs(TestCase):
             100,
             0,
             10,
-            [2] * 6,
-            [2] * 6,
+            [0] * 6,
+            [0] * 6,
             [0.25] * 6,
             [999] * 6,
             [20] * 6,
@@ -36,20 +36,20 @@ class TestComputeResourceROIs(TestCase):
         self.assertGreaterEqual(roi[0], cur_right)
         self.assertLessEqual(right, next_left)
         self.assertIn("wood_stockpile", narrow)
-        self.assertEqual(narrow["wood_stockpile"], 24)
+        self.assertEqual(narrow["wood_stockpile"], 20)
 
     def test_ignores_non_positive_span(self):
         detected = {
             "wood_stockpile": (0, 0, 5, 5),
-            "food_stockpile": (6, 0, 5, 5),
+            "food_stockpile": (5, 0, 5, 5),
         }
         regions, spans, narrow = resources.compute_resource_rois(
             0,
             100,
             0,
             10,
-            [2] * 6,
-            [2] * 6,
+            [0] * 6,
+            [0] * 6,
             [0] * 6,
             [999] * 6,
             [0] * 6,
@@ -68,8 +68,8 @@ class TestComputeResourceROIs(TestCase):
 
         icons = ["wood_stockpile", "food_stockpile", "gold_stockpile"]
         positions = [0, 39, 78]
-        pad_left = 2
-        pad_right = 2
+        pad_left = 0
+        pad_right = 0
         min_widths = [40, 10, 0, 0, 0, 0]
         loc_iter = iter([(x, 0) for x in positions])
 
@@ -171,8 +171,8 @@ class TestComputeResourceROIs(TestCase):
             300,
             0,
             10,
-            [2] * 6,
-            [2] * 6,
+            [0] * 6,
+            [0] * 6,
             [0] * 6,
             [999] * 6,
             [0] * 6,
@@ -195,8 +195,8 @@ class TestComputeResourceROIs(TestCase):
                 40,
                 0,
                 10,
-                [2] * 6,
-                [2] * 6,
+                [0] * 6,
+                [0] * 6,
                 [0] * 6,
                 [999] * 6,
                 [0] * 6,
