@@ -139,38 +139,40 @@ def _ocr_digits_better(gray, color=None, resource=None, whitelist="0123456789"):
         whitelist=whitelist,
         resource=resource,
     )
-    if digits and (resource != "wood_stockpile" or len(digits) > 1):
+    if digits:
         confs = parse_confidences(data)
         threshold = CFG.get("ocr_conf_threshold", 60)
+        if (
+            resource == "wood_stockpile"
+            and CFG.get("wood_stockpile_color_pass")
+            and color is not None
+            and len(digits) == 1
+            and (not confs or max(confs) < threshold)
+        ):
+            hsv_ws = cv2.cvtColor(color, cv2.COLOR_BGR2HSV)
+            white = cv2.inRange(
+                hsv_ws, np.array([0, 0, 200]), np.array([180, 50, 255])
+            )
+            ws_kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, (3, 3))
+            white = cv2.morphologyEx(white, cv2.MORPH_CLOSE, ws_kernel, iterations=1)
+            if ws_should_dilate:
+                ws_dilate_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+                white = cv2.dilate(white, ws_dilate_kernel, iterations=1)
+            alt_digits, alt_data, alt_mask = _run_masks(
+                [white, cv2.bitwise_not(white)],
+                psms,
+                debug,
+                debug_dir,
+                ts,
+                4,
+                whitelist=whitelist,
+                resource=resource,
+            )
+            if alt_digits and alt_digits != digits:
+                alt_confs = parse_confidences(alt_data)
+                if alt_confs and max(alt_confs) >= threshold:
+                    return alt_digits, alt_data, alt_mask
         if confs and max(confs) >= threshold:
-            if (
-                resource == "wood_stockpile"
-                and CFG.get("wood_stockpile_color_pass")
-                and color is not None
-            ):
-                hsv_ws = cv2.cvtColor(color, cv2.COLOR_BGR2HSV)
-                white = cv2.inRange(
-                    hsv_ws, np.array([0, 0, 200]), np.array([180, 50, 255])
-                )
-                ws_kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, (3, 3))
-                white = cv2.morphologyEx(white, cv2.MORPH_CLOSE, ws_kernel, iterations=1)
-                if ws_should_dilate:
-                    ws_dilate_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
-                    white = cv2.dilate(white, ws_dilate_kernel, iterations=1)
-                alt_digits, alt_data, alt_mask = _run_masks(
-                    [white, cv2.bitwise_not(white)],
-                    psms,
-                    debug,
-                    debug_dir,
-                    ts,
-                    4,
-                    whitelist=whitelist,
-                    resource=resource,
-                )
-                if alt_digits and alt_digits != digits:
-                    alt_confs = parse_confidences(alt_data)
-                    if alt_confs and max(alt_confs) >= threshold:
-                        return alt_digits, alt_data, alt_mask
             return digits, data, mask
 
     block_size = 21 if resource == "population_limit" else 11
@@ -232,11 +234,8 @@ def _ocr_digits_better(gray, color=None, resource=None, whitelist="0123456789"):
         resource=resource,
     )
 
-    if (
-        not digits
-        or (resource == "wood_stockpile" and len(digits) <= 1)
-        or (parse_confidences(data) and max(parse_confidences(data)) < CFG.get("ocr_conf_threshold", 60))
-    ):
+    confs = parse_confidences(data)
+    if not digits or (confs and max(confs) < CFG.get("ocr_conf_threshold", 60)):
         if resource == "wood_stockpile" and color is not None:
             hsv_ws = cv2.cvtColor(color, cv2.COLOR_BGR2HSV)
             white = cv2.inRange(hsv_ws, np.array([0, 0, 200]), np.array([180, 50, 255]))

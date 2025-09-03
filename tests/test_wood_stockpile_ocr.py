@@ -42,6 +42,7 @@ from script.resources.ocr.confidence import parse_confidences
 from script.resources.reader.core import _ocr_resource
 from script.resources.reader.roi import prepare_roi
 from script.resources.cache import ResourceCache
+from script.resources.ocr.masks import _ocr_digits_better
 
 
 class TestWoodStockpileOCR(TestCase):
@@ -138,3 +139,18 @@ class TestWoodStockpileOCR(TestCase):
                 cache_obj,
             )
         self.assertEqual(digits, "80")
+
+    def test_single_digit_low_confidence_triggers_color_pass(self):
+        gray = np.zeros((10, 10), dtype=np.uint8)
+        gray[0, 0] = 255
+        color = np.zeros((10, 10, 3), dtype=np.uint8)
+        call_indices = []
+
+        def fake_run_masks(masks, psms, debug, debug_dir, ts, start_idx=0, whitelist="0123456789", resource=None):
+            call_indices.append(start_idx)
+            data = {"text": ["5"], "conf": ["50"]}
+            return "5", data, masks[0]
+
+        with patch("script.resources.ocr.masks._run_masks", side_effect=fake_run_masks):
+            _ocr_digits_better(gray, color=color, resource="wood_stockpile")
+        self.assertIn(4, call_indices)
