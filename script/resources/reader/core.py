@@ -112,8 +112,9 @@ def _ocr_resource(
         )
         return digits, data, mask, low_conf
 
+    _ret, gray_proc = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
     digits, data, mask, low_conf = execute_ocr(
-        gray,
+        gray_proc,
         color=roi,
         conf_threshold=res_conf_threshold,
         roi=roi_bbox,
@@ -550,6 +551,7 @@ def _process_resource(
         debug_dir.mkdir(exist_ok=True)
         ts = int(time.time() * 1000)
         cv2.imwrite(str(debug_dir / f"resource_{name}_roi_{ts}.png"), roi)
+        cv2.imwrite(str(debug_dir / f"resource_{name}_gray_{ts}.png"), gray)
         if mask is not None:
             cv2.imwrite(str(debug_dir / f"resource_{name}_thresh_{ts}.png"), mask)
     value, cache_hit, low_conf_flag, no_digit_flag = _handle_cache_and_fallback(
