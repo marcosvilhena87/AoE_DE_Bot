@@ -472,7 +472,11 @@ def _read_population_from_roi(roi, conf_threshold=None, roi_bbox=None, failure_c
 
     When ``CFG['allow_low_conf_population']`` is true, low-confidence OCR
     results are returned after logging a warning instead of raising
-    ``PopulationReadError`` immediately.
+    ``PopulationReadError`` immediately. If
+    ``CFG['allow_zero_confidence_digits']`` or
+    ``CFG['population_limit_low_conf_fallback']`` is enabled, ambiguous
+    digit pairs (e.g. ``"11"``) are also returned with low confidence instead
+    of raising an error.
 
     Raises:
         common.PopulationReadError: If the population cannot be parsed.
@@ -547,9 +551,12 @@ def _read_population_from_roi(roi, conf_threshold=None, roi_bbox=None, failure_c
             cur = int(raw_text[0])
             cap = int(raw_text[1])
             _validate_population(cur, cap)
-            if allow_low_conf:
+            allow_zero = CFG.get("allow_zero_confidence_digits")
+            if allow_zero or low_conf_fallback:
+                note = "zero-confidence" if zero_conf or allow_zero else "low-confidence"
                 logger.warning(
-                    "Returning low-confidence population %d/%d; conf=%s",
+                    "Returning ambiguous %s population %d/%d; conf=%s",
+                    note,
                     cur,
                     cap,
                     confidences,

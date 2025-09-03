@@ -101,18 +101,63 @@ class TestPopulationOcrConfidence(TestCase):
 
     def test_ambiguous_double_digits_raise_error(self):
         roi = np.zeros((10, 10, 3), dtype=np.uint8)
-        with patch.dict(resources.common.CFG, {"allow_low_conf_population": True}, clear=False), \
-            patch(
-                "script.resources.ocr.executor.execute_ocr",
-                return_value=(
-                    "77",
-                    {"text": ["7", "7"], "conf": ["40", "40"]},
-                    None,
-                    True,
-                ),
-            ):
+        with patch.dict(
+            resources.common.CFG,
+            {"allow_low_conf_population": True, "allow_zero_confidence_digits": False},
+            clear=False,
+        ), patch(
+            "script.resources.ocr.executor.execute_ocr",
+            return_value=(
+                "77",
+                {"text": ["7", "7"], "conf": ["40", "40"]},
+                None,
+                True,
+            ),
+        ):
             with self.assertRaises(resources.common.PopulationReadError):
                 resources._read_population_from_roi(roi, conf_threshold=60)
+
+    def test_ambiguous_double_digits_allowed_with_zero_conf_flag(self):
+        roi = np.zeros((10, 10, 3), dtype=np.uint8)
+        with patch.dict(
+            resources.common.CFG,
+            {"allow_low_conf_population": False, "allow_zero_confidence_digits": True},
+            clear=False,
+        ), patch(
+            "script.resources.ocr.executor.execute_ocr",
+            return_value=(
+                "77",
+                {"text": ["7", "7"], "conf": ["0", "0"], "zero_conf": True},
+                None,
+                True,
+            ),
+        ):
+            cur, cap, low_conf = resources._read_population_from_roi(roi, conf_threshold=60)
+        self.assertTrue(low_conf)
+        self.assertEqual((cur, cap), (7, 7))
+
+    def test_ambiguous_double_digits_allowed_with_fallback(self):
+        roi = np.zeros((10, 10, 3), dtype=np.uint8)
+        with patch.dict(
+            resources.common.CFG,
+            {
+                "allow_low_conf_population": False,
+                "allow_zero_confidence_digits": False,
+                "population_limit_low_conf_fallback": True,
+            },
+            clear=False,
+        ), patch(
+            "script.resources.ocr.executor.execute_ocr",
+            return_value=(
+                "77",
+                {"text": ["7", "7"], "conf": ["40", "40"]},
+                None,
+                True,
+            ),
+        ):
+            cur, cap, low_conf = resources._read_population_from_roi(roi, conf_threshold=60)
+        self.assertTrue(low_conf)
+        self.assertEqual((cur, cap), (7, 7))
 
     def test_low_confidence_fallback_after_attempts(self):
         roi = np.zeros((10, 10, 3), dtype=np.uint8)
@@ -171,7 +216,7 @@ class TestPopulationOcrConfidence(TestCase):
                 )
             msg = str(ctx.exception)
             self.assertIn("text='12/34'", msg)
-            self.assertIn("confs=[40.0, 40.0]", msg)
+            self.assertIn("confs=[40.0]", msg)
             cur, cap, low_conf = resources._read_population_from_roi(
                 roi, conf_threshold=60, failure_count=1
             )
