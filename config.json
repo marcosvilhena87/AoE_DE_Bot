@@ -33,6 +33,8 @@
     "wood_stockpile_ocr_conf_threshold": 45,
     "wood_stockpile_color_pass": true,
     "//wood_stockpile_color_pass": "Validate wood stockpile with a second color-mask OCR pass.",
+    "food_stockpile_color_pass": true,
+    "//food_stockpile_color_pass": "Validate food stockpile with a second color-mask OCR pass.",
     "food_stockpile_ocr_conf_threshold": 40,
     "gold_stockpile_ocr_conf_threshold": 45,
     "stone_stockpile_ocr_conf_threshold": 45,
