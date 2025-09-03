@@ -25,17 +25,12 @@ def compute_resource_rois(
     detected=None,
 ):
     """Compute resource ROIs from detected icon bounds."""
-    if not max_widths:
-        raise ValueError("max_widths must contain at least one element")
+    # ``pad_left``, ``pad_right`` and ``max_widths`` previously affected the
+    # computed span.  Width now always spans the full gap between consecutive
+    # icons so these parameters are effectively ignored but kept for backwards
+    # compatibility with callers.
     if not min_widths:
-        raise ValueError("min_widths must contain at least one element")
-    if not pad_left:
-        raise ValueError("pad_left must contain at least one element")
-    if not pad_right:
-        raise ValueError("pad_right must contain at least one element")
-    if not icon_trims:
-        raise ValueError("icon_trims must contain at least one element")
-
+        min_widths = [0] * len(RESOURCE_ICON_ORDER)
     if min_requireds is None:
         min_requireds = [0] * len(RESOURCE_ICON_ORDER)
     if detected is None:
@@ -44,7 +39,9 @@ def compute_resource_rois(
     if not detected:
         return {}, {}, {}
 
+    # Offset from icon-relative coordinates to absolute screen coordinates
     min_y = min(v[1] for v in detected.values())
+    panel_top = top - min_y
 
     regions = {}
     spans = {}
@@ -76,7 +73,7 @@ def compute_resource_rois(
             if CFG.get("ocr_debug"):
                 logger.info("Span for '%s': (%d, %d)", current, left, right)
 
-            regions[current] = (left, top + (cur_y - min_y), width, cur_h)
+            regions[current] = (left, panel_top + cur_y, width, cur_h)
             logger.debug(
                 "ROI for '%s': available=(%d,%d) width=%d",
                 current,
@@ -87,90 +84,45 @@ def compute_resource_rois(
             continue
 
         # Determine the icons that bound this span
-        left_bounds = cur_bounds
-        right_name = next_name
+        cur_right = panel_left + cur_x + cur_w
 
-        cur_right = panel_left + left_bounds[0] + left_bounds[2]
-
-        next_bounds = detected.get(right_name) if right_name else None
+        next_bounds = detected.get(next_name) if next_name else None
         if next_bounds is not None:
             next_x, next_y, next_w, next_h = next_bounds
             next_left = panel_left + next_x
         else:
             next_left = panel_right
-            next_w = 0
             next_y = cur_y
             next_h = cur_h
 
-        idle_padding = (
-            CFG.get("population_idle_padding", 6)
-            if current == "population_limit" and next_name == "idle_villager"
-            else 0
-        )
+        left = cur_right
+        right = next_left
 
-        min_req = min_requireds[idx] if idx < len(min_requireds) else min_requireds[-1]
-        min_w = min_widths[idx] if idx < len(min_widths) else min_widths[-1]
-        min_span = max(_THREE_DIGIT_SPAN, min_req, min_w)
-
-        pad_l = 0
-        pad_r = 0
-
-        available_left = cur_right + pad_l
-        available_right = next_left - pad_r
-        available_width = available_right - available_left
-
-        left = max(panel_left, available_left)
-        right_limit = min(panel_right, available_right - idle_padding)
-
-        if right_limit <= left:
+        if right <= left:
             logger.warning(
                 "Skipping ROI for icon '%s' due to non-positive span (left=%d, right=%d)",
                 current,
                 left,
-                right_limit,
+                right,
             )
             continue
 
-        effective_width = available_width
-        if current == "population_limit" and next_name == "idle_villager":
-            effective_width -= idle_padding
-        if effective_width < min_span:
-            narrow[current] = min_span - effective_width
+        width = right - left
+
+        min_req = min_requireds[idx] if idx < len(min_requireds) else min_requireds[-1]
+        min_w = min_widths[idx] if idx < len(min_widths) else min_widths[-1]
+        min_span = max(_THREE_DIGIT_SPAN, min_req, min_w)
+        if current == "population_limit":
+            min_span = max(min_span, min_pop_width)
+
+        if width < min_span:
+            narrow[current] = min_span - width
             logger.warning(
                 "Narrow ROI for '%s': available=%d min=%d",
                 current,
-                effective_width,
+                width,
                 min_span,
             )
-
-        roi_available = right_limit - left
-
-        max_w = max_widths[idx] if idx < len(max_widths) else max_widths[-1]
-        if current == "food_stockpile":
-            max_w = min(max_w, CFG.get("food_stockpile_max_width", max_w))
-        if current == "population_limit" and next_bounds is not None:
-            max_w = roi_available
-        width = min(max_w, roi_available)
-
-        if roi_available >= min_req:
-            width = max(width, min_req)
-
-        if roi_available >= min_w:
-            width = max(width, min_w)
-
-        if current == "population_limit":
-            if roi_available < min_pop_width:
-                logger.warning(
-                    "Skipping ROI for icon '%s' due to span below minimum population width",
-                    current,
-                )
-                continue
-            width = max(width, min_pop_width)
-            extra = CFG.get("pop_roi_extra_width", 0)
-            right = min(panel_right, right_limit, left + width + extra)
-            width = right - left
-        else:
-            right = left + width
 
         spans[current] = (left, right)
 
@@ -179,8 +131,8 @@ def compute_resource_rois(
 
         roi_y = min(cur_y, next_y)
         roi_bottom = max(cur_y + cur_h, next_y + next_h)
+        roi_top = panel_top + roi_y
         roi_height = roi_bottom - roi_y
-        roi_top = top + (roi_y - min_y)
 
         regions[current] = (left, roi_top, width, roi_height)
         logger.debug(

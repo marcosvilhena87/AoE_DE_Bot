@@ -33,8 +33,8 @@ class TestComputeResourceROIs(TestCase):
         next_left = detected["food_stockpile"][0]
         cur_right = cur_bounds[0] + cur_bounds[2]
         right = roi[0] + roi[2]
-        self.assertGreaterEqual(roi[0], cur_right)
-        self.assertLessEqual(right, next_left)
+        self.assertEqual(roi[0], cur_right)
+        self.assertEqual(right, next_left)
         self.assertIn("wood_stockpile", narrow)
         self.assertEqual(narrow["wood_stockpile"], 20)
 
@@ -183,14 +183,14 @@ class TestComputeResourceROIs(TestCase):
         )
         self.assertGreaterEqual(regions["population_limit"][2], min_pop_width)
 
-    def test_population_roi_excludes_nearby_idle_villager(self):
+    def test_population_roi_handles_nearby_idle_villager(self):
         detected = {
             "population_limit": (0, 0, 5, 5),
             "idle_villager": (15, 0, 5, 5),
         }
         min_pop_width = 10
         with patch.dict(resources.CFG, {"population_idle_padding": 6}, clear=False):
-            regions, _spans, _narrow = resources.compute_resource_rois(
+            regions, _spans, narrow = resources.compute_resource_rois(
                 0,
                 40,
                 0,
@@ -205,7 +205,10 @@ class TestComputeResourceROIs(TestCase):
                 [0] * 6,
                 detected=detected,
             )
-        self.assertNotIn("population_limit", regions)
+        roi = regions["population_limit"]
+        self.assertEqual(roi, (5, 0, 10, 5))
+        self.assertIn("population_limit", narrow)
+        self.assertEqual(narrow["population_limit"], 20)
 
     def test_population_roi_captures_three_four_digits(self):
         detected = {
@@ -231,38 +234,36 @@ class TestComputeResourceROIs(TestCase):
         right = left + width
         idle_left = detected["idle_villager"][0]
         self.assertGreaterEqual(width, 30)
-        self.assertLessEqual(
-            right, idle_left - common.CFG.get("population_idle_padding", 6)
-        )
+        self.assertEqual(right, idle_left)
 
-    def test_population_roi_narrow_records_deficit_and_respects_idle_padding(self):
+    def test_population_roi_narrow_records_deficit(self):
         detected = {
-            "population_limit": (0, 0, 10, 10),
-            "idle_villager": (40, 0, 10, 10),
+            "population_limit": (0, 2, 10, 10),
+            "idle_villager": (35, 0, 10, 14),
         }
-        with patch.dict(resources.CFG, {"population_idle_padding": 6}, clear=False):
-            regions, _spans, narrow = resources.compute_resource_rois(
-                0,
-                100,
-                0,
-                20,
-                [0] * 6,
-                [0] * 6,
-                [0] * 6,
-                [999] * 6,
-                [0] * 6,
-                0,
-                0,
-                detected=detected,
-            )
+        regions, _spans, narrow = resources.compute_resource_rois(
+            0,
+            100,
+            0,
+            20,
+            [0] * 6,
+            [0] * 6,
+            [0] * 6,
+            [999] * 6,
+            [0] * 6,
+            0,
+            0,
+            detected=detected,
+        )
         self.assertIn("population_limit", narrow)
         roi = regions["population_limit"]
         left, top, width, height = roi
         right = left + width
         idle_left = detected["idle_villager"][0]
-        self.assertLessEqual(right, idle_left - resources.CFG.get("population_idle_padding", 6))
-        self.assertEqual(top, detected["population_limit"][1])
-        self.assertEqual(height, detected["population_limit"][3])
+        self.assertEqual(right, idle_left)
+        self.assertEqual(top, 0)
+        self.assertEqual(height, 14)
+        self.assertEqual(narrow["population_limit"], 5)
 
     def test_idle_roi_uses_icon_bounds_when_span_non_positive(self):
         detected = {
