@@ -136,9 +136,10 @@ def compute_resource_rois(
                 min_w,
             )
 
-        if current == "population_limit" and width < min_pop_width:
-            width = min_pop_width
-            right = min(orig_right, left + width)
+        if current == "population_limit":
+            width = max(width, min_pop_width)
+            extra = CFG.get("pop_roi_extra_width", 0)
+            right = min(panel_right, next_left, left + width + extra)
             width = right - left
         else:
             right = left + width
