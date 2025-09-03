@@ -22,6 +22,7 @@ import script.input_utils as input_utils
 from script.units import villager
 from script.buildings.town_center import train_villagers
 from script.config_utils import parse_scenario_info
+import script.screen_utils as screen_utils
 
 logger = logging.getLogger(__name__)
 
@@ -68,21 +69,31 @@ def main() -> None:
         pop_cap,
         expected_cur=info.starting_villagers,
         expected_cap=info.population_limit,
-        retry_fn=resources.gather_hud_stats,
     )
     if pop_check is None:
+        logger.error(
+            "HUD population (%s/%s) does not match expected %s/%s; aborting scenario.",
+            cur_pop,
+            pop_cap,
+            info.starting_villagers,
+            info.population_limit,
+        )
         return
     res_vals, (cur_pop, pop_cap) = pop_check
 
     # Validação dos recursos iniciais
     tol_cfg = common.CFG.get("resource_validation_tolerance", {})
     tolerance = tol_cfg.get("initial", 10)
+    frame = screen_utils._grab_frame()
+    rois = getattr(resources, "_LAST_REGION_BOUNDS", {})
     try:
         resources.validate_starting_resources(
             res_vals,
             info.starting_resources,
             tolerance=tolerance,
             raise_on_error=True,
+            frame=frame,
+            rois=rois,
         )
     except resources.ResourceValidationError as exc:
         logger.error("Erro na validação dos recursos iniciais: %s", exc)
