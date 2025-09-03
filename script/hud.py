@@ -142,12 +142,18 @@ def read_population_from_hud(retries=1, conf_threshold=None, save_failed_roi=Fal
         roi_bbox["height"],
     )
     try:
-        return resources.read_population_from_roi(
+        cur, limit, low_conf = resources.read_population_from_roi(
             roi_bbox,
             retries=retries,
             conf_threshold=conf_threshold,
             save_failed_roi=save_failed_roi,
         )
+        if low_conf and CFG.get("treat_low_conf_as_failure", False):
+            err = common.PopulationReadError("Low-confidence population OCR")
+            err.low_conf = True
+            err.low_conf_digits = (cur, limit)
+            raise err
+        return cur, limit, low_conf
     except common.PopulationReadError as primary_exc:
         logger.info(
             "Triggering fallback to read population via resources.read_resources_from_hud after %s",
@@ -160,7 +166,7 @@ def read_population_from_hud(retries=1, conf_threshold=None, save_failed_roi=Fal
             )
             if cur is not None and limit is not None:
                 logger.info("Population fallback succeeded: %s/%s", cur, limit)
-                return cur, limit
+                return cur, limit, False
         except (common.ResourceReadError, common.PopulationReadError) as exc:
             # pragma: no cover - log but ignore expected OCR failures
             logger.debug("Fallback failed: %s", exc)

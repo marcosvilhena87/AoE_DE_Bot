@@ -77,7 +77,7 @@ class TestGatherHudStats(TestCase):
 
         def fake_pop(roi, conf_threshold=None, roi_bbox=None, failure_count=0):
             pop_shapes.append(roi.shape[:2])
-            return 123, 200
+            return 123, 200, False
 
         with patch("tools.campaign.locate_resource_panel", return_value={}), \
              patch("tools.campaign._grab_frame", side_effect=fake_grab_frame), \
@@ -134,7 +134,7 @@ class TestGatherHudStats(TestCase):
             return "600", {"text": ["600"]}, None
 
         def fake_pop(roi, conf_threshold=None, roi_bbox=None, failure_count=0):
-            return 123, 200
+            return 123, 200, False
 
         with patch("tools.campaign.locate_resource_panel", return_value={}), \
              patch("tools.campaign._grab_frame", side_effect=fake_grab_frame), \

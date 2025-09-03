@@ -61,7 +61,7 @@ class TestPopulationROIBounds(TestCase):
         results = {}
         cache = resources.cache.ResourceCache()
 
-        side_effects = [common.PopulationReadError("fail"), (80, 200)]
+        side_effects = [common.PopulationReadError("fail"), (80, 200, False)]
 
         def fake_read(roi, conf_threshold=None, roi_bbox=None, failure_count=0):
             res = side_effects.pop(0)

@@ -28,10 +28,10 @@ def test_read_resources_returns_none_on_empty_ocr():
              return_value={"text": [""], "conf": ["0"]},
          ), patch(
              "script.resources.reader.pytesseract.image_to_string", return_value="123"
-         ), patch(
-             "script.resources.ocr.executor._read_population_from_roi",
-             return_value=(0, 0),
-         ):
+        ), patch(
+            "script.resources.ocr.executor._read_population_from_roi",
+            return_value=(0, 0, False),
+        ):
         icons = resources.RESOURCE_ICON_ORDER[:-1]
         result, _ = resources._read_resources(frame, icons, icons)
     assert result["wood_stockpile"] is None

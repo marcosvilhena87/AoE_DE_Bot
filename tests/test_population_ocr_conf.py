@@ -75,9 +75,10 @@ class TestPopulationOcrConfidence(TestCase):
                 "script.resources.ocr.executor.execute_ocr",
                 return_value=(text, {"text": [text], "conf": ["95"]}, None, False),
             ):
-                cur, cap = resources._read_population_from_roi(
+                cur, cap, low_conf = resources._read_population_from_roi(
                     roi, conf_threshold=60
                 )
+                self.assertFalse(low_conf)
                 self.assertEqual((cur, cap), expected)
 
     def test_low_confidence_allowed(self):
@@ -92,9 +93,10 @@ class TestPopulationOcrConfidence(TestCase):
                     True,
                 ),
             ):
-            cur, cap = resources._read_population_from_roi(
+            cur, cap, low_conf = resources._read_population_from_roi(
                 roi, conf_threshold=60
             )
+            self.assertTrue(low_conf)
             self.assertEqual((cur, cap), (12, 34))
 
     def test_ambiguous_double_digits_raise_error(self):
@@ -137,9 +139,10 @@ class TestPopulationOcrConfidence(TestCase):
                     resources._read_population_from_roi(
                         roi, conf_threshold=60, failure_count=fc
                     )
-            cur, cap = resources._read_population_from_roi(
+            cur, cap, low_conf = resources._read_population_from_roi(
                 roi, conf_threshold=60, failure_count=2
             )
+            self.assertTrue(low_conf)
             self.assertEqual((cur, cap), (12, 34))
 
     def test_low_conf_message_and_fallback(self):
@@ -169,9 +172,10 @@ class TestPopulationOcrConfidence(TestCase):
             msg = str(ctx.exception)
             self.assertIn("text='12/34'", msg)
             self.assertIn("confs=[40.0, 40.0]", msg)
-            cur, cap = resources._read_population_from_roi(
+            cur, cap, low_conf = resources._read_population_from_roi(
                 roi, conf_threshold=60, failure_count=1
             )
+            self.assertTrue(low_conf)
             self.assertEqual((cur, cap), (12, 34))
 
     def test_zero_confidence_requires_flag(self):
@@ -206,5 +210,6 @@ class TestPopulationOcrConfidence(TestCase):
                 True,
             ),
         ):
-            cur, cap = resources._read_population_from_roi(roi, conf_threshold=60)
+            cur, cap, low_conf = resources._read_population_from_roi(roi, conf_threshold=60)
+        self.assertTrue(low_conf)
         self.assertEqual((cur, cap), (12, 34))

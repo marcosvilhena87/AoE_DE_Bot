@@ -74,7 +74,7 @@ class TestResourceDebugImages(TestCase):
                 return_value={"text": [""], "conf": ["0"]},
             ), \
             patch("script.resources.reader.pytesseract.image_to_string", return_value=""), \
-            patch("script.resources.reader._read_population_from_roi", return_value=(0, 0)), \
+            patch("script.resources.reader._read_population_from_roi", return_value=(0, 0, False)), \
             patch("script.resources.reader.cv2.imwrite") as imwrite_mock:
             with self.assertRaises(common.ResourceReadError):
                 resources.read_resources_from_hud()
@@ -131,7 +131,7 @@ class TestResourceDebugImages(TestCase):
                 + [{"text": ["0"], "conf": ["90"]}],
             ), \
             patch("script.resources.reader.pytesseract.image_to_string", return_value=""), \
-            patch("script.resources.reader._read_population_from_roi", return_value=(0, 0)), \
+            patch("script.resources.reader._read_population_from_roi", return_value=(0, 0, False)), \
             patch("script.resources.reader.cv2.imwrite") as imwrite_mock:
             with self.assertRaises(common.ResourceReadError) as ctx:
                 resources.read_resources_from_hud()
