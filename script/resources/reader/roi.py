@@ -192,14 +192,26 @@ def expand_population_roi_after_failure(
     expand_px = int(round(base_expand + step * ((failure_count + 1) ** growth - 1)))
     if expand_px <= 0:
         return None
-    x0 = max(0, x - expand_px)
+    frame_w = frame.shape[1]
+    right_bound = min(frame_w, max_right) if max_right is not None else frame_w
+    min_width = CFG.get("min_pop_width", 0) + CFG.get("pop_roi_extra_width", 0)
+    desired_w = max(w + 2 * expand_px, min_width)
+    if desired_w > right_bound:
+        desired_w = right_bound
+    center = x + w // 2
+    half = desired_w // 2
+    x0 = center - half
+    x1 = x0 + desired_w
+    if x0 < 0:
+        x1 = min(right_bound, x1 - x0)
+        x0 = 0
+    if x1 > right_bound:
+        shift = x1 - right_bound
+        x0 = max(0, x0 - shift)
+        x1 = right_bound
+    if x1 <= x0:
+        return None
     y0 = max(0, y - expand_px)
-    orig_right = x + w
-    x1 = min(frame.shape[1], orig_right + expand_px)
-    if max_right is not None:
-        x1 = min(max_right, x1)
-        if x1 <= x0:
-            return None
     y1 = min(frame.shape[0], y + h + expand_px)
     logger.debug(
         "Expanding population ROI after %d failures by %dpx to x=%d y=%d w=%d h=%d",

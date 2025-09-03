@@ -42,6 +42,7 @@ sys.modules.setdefault(
         THRESH_OTSU=0,
     ),
 )
+sys.modules.setdefault("pytesseract", types.SimpleNamespace(pytesseract=types.SimpleNamespace(tesseract_cmd="")))
 os.environ.setdefault("TESSERACT_CMD", "/usr/bin/true")
 
 # Ensure project root is importable
@@ -103,3 +104,63 @@ class TestPopulationROIBounds(TestCase):
         x0 = expansion["res"][3]
         width = expansion["res"][5]
         assert x0 + width <= regions["idle_villager"][0] - 6
+
+    def test_expansion_grows_equally_for_missing_slash(self):
+        frame = np.zeros((20, 200, 3), dtype=np.uint8)
+        regions = {"population_limit": (80, 0, 40, 10)}
+        results = {}
+        cache = resources.cache.ResourceCache()
+
+        side_effects = [common.PopulationReadError("fail"), (80, 200, False)]
+
+        def fake_read(roi, conf_threshold=None, roi_bbox=None, failure_count=0):
+            res = side_effects.pop(0)
+            if isinstance(res, Exception):
+                raise res
+            return res
+
+        expansion = {}
+        orig_expand = resources.reader.roi.expand_population_roi_after_failure
+
+        def wrapper(frame, x, y, w, h, r, failure_count, res_conf_threshold, max_right=None):
+            res = orig_expand(frame, x, y, w, h, r, failure_count, res_conf_threshold, max_right=max_right)
+            expansion["res"] = res
+            return res
+
+        with patch.dict(
+            resources.common.CFG,
+            {
+                "population_ocr_roi_expand_base": 1,
+                "population_ocr_roi_expand_step": 0,
+                "population_ocr_roi_expand_growth": 1.0,
+                "min_pop_width": 60,
+                "pop_roi_extra_width": 6,
+            },
+            clear=False,
+        ), patch(
+            "script.resources.ocr.executor._read_population_from_roi",
+            side_effect=fake_read,
+        ), patch(
+            "script.resources.reader.roi._read_population_from_roi",
+            side_effect=fake_read,
+        ), patch(
+            "script.resources.reader.roi.expand_population_roi_after_failure",
+            new=wrapper,
+        ):
+            resources._extract_population(
+                frame,
+                regions,
+                results,
+                True,
+                cache_obj=cache,
+            )
+
+        res = expansion["res"]
+        assert res is not None
+        x0 = res[3]
+        width = res[5]
+        orig_x, _oy, orig_w, _oh = regions["population_limit"]
+        left_expand = orig_x - x0
+        right_expand = x0 + width - (orig_x + orig_w)
+        assert abs(left_expand - right_expand) <= 1
+        assert width >= 66
