@@ -9,7 +9,7 @@ import script.screen_utils as screen_utils
 
 
 class TestComputeResourceROIs(TestCase):
-    def test_build_rois_reduce_width_when_gap_below_min(self):
+    def test_build_rois_reports_narrow_without_expansion(self):
         detected = {
             "wood_stockpile": (0, 0, 5, 5),
             "food_stockpile": (15, 0, 5, 5),
@@ -31,12 +31,11 @@ class TestComputeResourceROIs(TestCase):
         roi = regions["wood_stockpile"]
         span_left = 7  # icon_right + pad_left
         span_right = 13  # next_icon_left - pad_right
-        pad_extra = int(round(detected["wood_stockpile"][2] * 0.25))
-        self.assertEqual(roi[0], span_left - pad_extra)
-        self.assertEqual(roi[0] + roi[2], span_right + pad_extra)
-        self.assertEqual(roi[2], span_right - span_left + 2 * pad_extra)
+        self.assertEqual(roi[0], span_left)
+        self.assertEqual(roi[0] + roi[2], span_right)
+        self.assertEqual(roi[2], span_right - span_left)
         self.assertIn("wood_stockpile", narrow)
-        self.assertEqual(narrow["wood_stockpile"], 22)
+        self.assertEqual(narrow["wood_stockpile"], 24)
 
     def test_ignores_non_positive_span(self):
         detected = {
