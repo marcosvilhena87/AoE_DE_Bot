@@ -66,9 +66,9 @@
     "population_idle_padding": 6,
     "//population_idle_padding": "Pixels to keep between population ROI and idle villager icon.",
     "idle_icon_inner_trim": 0,
-    "//idle_icon_inner_trim": "Pixels to trim inside the idle villager icon ROI on each side.",
+    "//idle_icon_inner_trim": "Pixels to trim inside the idle villager icon ROI on each side; total trim is capped at 50% of the icon width.",
     "idle_icon_inner_pct": 0.0,
-    "//idle_icon_inner_pct": "Alternative percentage trim for the idle villager icon when inner_trim is null.",
+    "//idle_icon_inner_pct": "Alternative percentage-based trim for the idle villager icon when inner_trim is null; total trim is capped at 50% of the icon width.",
     "ocr_kernel_size": 1,
     "ocr_top_crop": 2,
     "ocr_top_crop_overrides": {

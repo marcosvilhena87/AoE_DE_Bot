@@ -51,7 +51,8 @@ def compute_resource_rois(
                 inner_trim = int(round(CFG.get("idle_icon_inner_pct", 0.0) * cur_w))
             else:
                 inner_trim = int(inner_trim)
-            inner_trim = max(0, min(inner_trim, cur_w // 2))
+            max_trim = cur_w // 4
+            inner_trim = max(0, min(inner_trim, max_trim))
 
             left = panel_left + cur_x + inner_trim
             right = panel_left + cur_x + cur_w - inner_trim
