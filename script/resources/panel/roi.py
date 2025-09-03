@@ -75,10 +75,11 @@ def compute_resource_rois(
 
         next_bounds = detected.get(next_name) if next_name else None
         if next_bounds is not None:
-            next_x, _ny, _nw, _nh = next_bounds
+            next_x, _ny, next_w, _nh = next_bounds
             next_left = panel_left + next_x
         else:
             next_left = panel_right
+            next_w = 0
 
         idle_padding = (
             CFG.get("population_idle_padding", 6)
@@ -89,10 +90,27 @@ def compute_resource_rois(
         min_req = min_requireds[idx] if idx < len(min_requireds) else min_requireds[-1]
         min_w = min_widths[idx] if idx < len(min_widths) else min_widths[-1]
         min_span = max(_THREE_DIGIT_SPAN, min_req, min_w)
-        available_width = next_left - cur_right
 
-        left = cur_right
-        right = next_left - idle_padding if idle_padding else next_left
+        pad_l = pad_left[idx] if idx < len(pad_left) else pad_left[-1]
+        pad_r = pad_right[idx] if idx < len(pad_right) else pad_right[-1]
+
+        left = cur_right + pad_l
+        right = next_left - pad_r - idle_padding
+
+        width = right - left
+        if width < min_span:
+            trim_l = icon_trims[idx] if idx < len(icon_trims) else icon_trims[-1]
+            expand_l = int(round(cur_w * trim_l))
+            left -= expand_l
+            if next_bounds is not None:
+                trim_r = (
+                    icon_trims[idx + 1]
+                    if idx + 1 < len(icon_trims)
+                    else icon_trims[-1]
+                )
+                expand_r = int(round(next_w * trim_r))
+                right += expand_r
+            width = right - left
 
         left = max(panel_left, left)
         right = min(panel_right, right)
@@ -107,6 +125,7 @@ def compute_resource_rois(
             continue
 
         available_width = right - left
+        right_limit = right
         if available_width < min_span:
             narrow[current] = min_span - available_width
             logger.warning(
@@ -132,8 +151,7 @@ def compute_resource_rois(
         if current == "population_limit":
             width = max(width, min_pop_width)
             extra = CFG.get("pop_roi_extra_width", 0)
-            max_right = next_left - idle_padding if idle_padding else next_left
-            right = min(panel_right, max_right, left + width + extra)
+            right = min(panel_right, right_limit, left + width + extra)
             width = right - left
         else:
             right = left + width
