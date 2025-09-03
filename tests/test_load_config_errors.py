@@ -76,7 +76,9 @@ class TestLoadConfigErrors(TestCase):
             os.remove(tmp_path)
 
     def test_allow_low_conf_population_enabled(self):
-        tmp_path = self._write_config({"allow_low_conf_population": True})
+        tmp_path = self._write_config(
+            {"allow_low_conf_population": True, "treat_low_conf_as_failure": False}
+        )
         try:
             with self.assertLogs(config_utils.logger, level="WARNING") as cm:
                 cfg = config_utils.load_config(tmp_path)
@@ -97,33 +99,28 @@ class TestLoadConfigErrors(TestCase):
             os.remove(tmp_path)
 
     def test_allow_low_conf_population_type_validation(self):
-        tmp_path = self._write_config({"allow_low_conf_population": "yes"})
+        tmp_path = self._write_config(
+            {"allow_low_conf_population": "yes", "treat_low_conf_as_failure": False}
+        )
         try:
             with self.assertRaises(RuntimeError):
                 config_utils.load_config(tmp_path)
         finally:
             os.remove(tmp_path)
 
-    def test_conflict_allow_low_conf_population_and_treat_as_failure_logs_warning(self):
+    def test_conflict_allow_low_conf_population_and_treat_as_failure_raises_error(self):
         tmp_path = self._write_config(
             {"allow_low_conf_population": True, "treat_low_conf_as_failure": True}
         )
         try:
-            with self.assertLogs(config_utils.logger, level="WARNING") as cm:
-                cfg = config_utils.load_config(tmp_path)
-            self.assertTrue(cfg["allow_low_conf_population"])
-            self.assertTrue(cfg["treat_low_conf_as_failure"])
-            self.assertTrue(
-                any(
-                    "treat_low_conf_as_failure" in msg and "allow_low_conf_population" in msg
-                    for msg in cm.output
-                ),
-                "Expected conflict warning when both allow_low_conf_population and treat_low_conf_as_failure are true",
-            )
+            with self.assertRaises(RuntimeError) as cm:
+                config_utils.load_config(tmp_path)
+            self.assertIn("allow_low_conf_population", str(cm.exception))
+            self.assertIn("treat_low_conf_as_failure", str(cm.exception))
         finally:
             os.remove(tmp_path)
 
-    def test_profile_conflict_logs_warning(self):
+    def test_profile_conflict_raises_error(self):
         tmp_path = self._write_config(
             {
                 "allow_low_conf_population": False,
@@ -137,18 +134,8 @@ class TestLoadConfigErrors(TestCase):
             }
         )
         try:
-            with self.assertLogs(config_utils.logger, level="WARNING") as cm:
-                cfg = config_utils.load_config(tmp_path)
-            profile_cfg = cfg["profiles"]["p1"]
-            self.assertTrue(profile_cfg["allow_low_conf_population"])
-            self.assertTrue(profile_cfg["treat_low_conf_as_failure"])
-            self.assertTrue(
-                any(
-                    "profile 'p1'" in msg.lower()
-                    and "treat_low_conf_as_failure" in msg
-                    for msg in cm.output
-                ),
-                "Expected conflict warning for profile when both options are true",
-            )
+            with self.assertRaises(RuntimeError) as cm:
+                config_utils.load_config(tmp_path)
+            self.assertIn("profile 'p1'", str(cm.exception).lower())
         finally:
             os.remove(tmp_path)

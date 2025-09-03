@@ -66,9 +66,13 @@ Configuration options in `config.json` allow adjusting how resource numbers are 
   meets the confidence threshold, the highest-confidence digits are returned with
   `low_conf=True` so callers can decide whether to accept or retry the value.
 * `allow_low_conf_population` – when `true`, population digits are returned even
-  when OCR confidence falls below the threshold. A warning is logged instead of
-  raising an immediate `PopulationReadError`. Enable this only if population OCR
-  is reliable (default `false`).
+  when OCR confidence falls below the threshold. Enable this only if population
+  OCR is reliable (default `false`). This option conflicts with
+  `treat_low_conf_as_failure`; if both are `true`, population values would still
+  be returned so the configuration loader rejects the combination.
+* `treat_low_conf_as_failure` – return `None` when OCR confidence is below the
+  threshold (default `true`). Population digits ignore this flag when
+  `allow_low_conf_population` is enabled.
 
 ## Capturing `assets/resources.png`
 
