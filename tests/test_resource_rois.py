@@ -130,8 +130,6 @@ class TestResourceROIs(TestCase):
                 "match_threshold": 0.5,
                 "max_width": 999,
                 "min_width": 0,
-                "top_pct": 0.0,
-                "height_pct": 1.0,
             },
         ), patch.dict(
             common.CFG["profiles"]["aoe1de"]["resource_panel"],
@@ -237,8 +235,6 @@ class TestResourceROIs(TestCase):
                 "match_threshold": 0.5,
                 "max_width": 999,
                 "min_width": 0,
-                "top_pct": 0.0,
-                "height_pct": 1.0,
             }), patch.dict(
                 common.CFG["profiles"]["aoe1de"]["resource_panel"],
                 {"icon_trim_pct": [0] * 6},
@@ -285,8 +281,6 @@ class TestResourceROIs(TestCase):
                 "match_threshold": 0.5,
                 "max_width": 999,
                 "min_width": min_width,
-                "top_pct": 0.0,
-                "height_pct": 1.0,
             }), patch.dict(
                 common.CFG["profiles"]["aoe1de"]["resource_panel"],
                 {"icon_trim_pct": [0] * 6},
@@ -336,8 +330,6 @@ class TestResourceROIs(TestCase):
                 "match_threshold": 0.5,
                 "max_width": max_widths,
                 "min_width": 0,
-                "top_pct": 0.0,
-                "height_pct": 1.0,
             }), patch.dict(
                 common.CFG["profiles"]["aoe1de"]["resource_panel"],
                 {"icon_trim_pct": [0] * 6},
@@ -427,8 +419,6 @@ class TestResourceROIs(TestCase):
                         "match_threshold": 0.5,
                         "max_width": 999,
                         "min_width": 0,
-                        "top_pct": 0.0,
-                        "height_pct": 1.0,
                     },
                 ), patch.dict(
                     common.CFG["profiles"]["aoe1de"]["resource_panel"],

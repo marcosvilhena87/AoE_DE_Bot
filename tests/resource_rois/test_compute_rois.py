@@ -93,8 +93,6 @@ class TestComputeResourceROIs(TestCase):
                 "match_threshold": 0.5,
                 "max_width": 999,
                 "min_width": min_widths,
-                "top_pct": 0.0,
-                "height_pct": 1.0,
             }), patch.dict(
                 common.CFG["profiles"]["aoe1de"]["resource_panel"],
                 {"icon_trim_pct": [0] * 6},
