@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import time
-from typing import Iterable
+from typing import Iterable, Callable
 
 import cv2
 import numpy as np
@@ -980,10 +980,75 @@ def validate_starting_resources(
     return failing
 
 
+def validate_population(
+    res_vals: dict[str, int],
+    cur_pop: int | None,
+    pop_cap: int | None,
+    *,
+    expected_cur: int,
+    expected_cap: int,
+    retry_fn: Callable[[], tuple[dict[str, int], tuple[int | None, int | None]]] | None = None,
+    max_attempts: int = 2,
+) -> tuple[dict[str, int], tuple[int | None, int | None]] | None:
+    """Validate population readings with optional OCR retries.
+
+    Parameters
+    ----------
+    cur_pop:
+        Current population read from the HUD.
+    pop_cap:
+        Population cap read from the HUD.
+    expected_cur:
+        Expected starting population for the scenario.
+    expected_cap:
+        Expected population cap for the scenario.
+    retry_fn:
+        Optional callable returning ``(cur_pop, pop_cap)`` for an OCR retry.
+    max_attempts:
+        Total number of attempts allowed including the initial read.
+
+    Returns
+    -------
+    tuple[dict[str, int], tuple[int | None, int | None]] | None
+        ``(res_vals, (cur_pop, pop_cap))`` if the readings match
+        expectations or ``None`` if validation fails after exhausting
+        retries.
+    """
+
+    attempt = 1
+    while True:
+        if cur_pop == expected_cur and pop_cap == expected_cap:
+            return res_vals, (cur_pop, pop_cap)
+        if (
+            cur_pop == pop_cap
+            and pop_cap is not None
+            and pop_cap != expected_cap
+            and retry_fn is not None
+            and attempt < max_attempts
+        ):
+            logger.warning(
+                "Population cap equals current population (%s) but expected %s; retrying OCR",
+                pop_cap,
+                expected_cap,
+            )
+            res_vals, (cur_pop, pop_cap) = retry_fn()
+            attempt += 1
+            continue
+        logger.error(
+            "HUD population (%s/%s) does not match expected %s/%s; aborting scenario.",
+            cur_pop,
+            pop_cap,
+            expected_cur,
+            expected_cap,
+        )
+        return None
+
+
 __all__ = [
     "_read_resources",
     "read_resources_from_hud",
     "gather_hud_stats",
     "validate_starting_resources",
+    "validate_population",
     "ResourceValidationError",
 ]

@@ -40,6 +40,7 @@ from .core import (
     read_resources_from_hud,
     gather_hud_stats,
     validate_starting_resources,
+    validate_population,
     ResourceValidationError,
 )
 
@@ -63,5 +64,6 @@ __all__ = [
     "read_resources_from_hud",
     "gather_hud_stats",
     "validate_starting_resources",
+    "validate_population",
     "ResourceValidationError",
 ]

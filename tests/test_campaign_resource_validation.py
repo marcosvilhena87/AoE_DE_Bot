@@ -2,6 +2,7 @@ import os
 import sys
 import types
 import tempfile
+import importlib
 from pathlib import Path
 from unittest import TestCase
 from unittest.mock import MagicMock, patch
@@ -68,7 +69,10 @@ class TestCampaignResourceValidation(TestCase):
             campaign.resources._LAST_REGION_SPANS = spans.copy()
             campaign.resources.RESOURCE_CACHE.last_low_confidence = low_conf.copy()
             campaign.resources.RESOURCE_CACHE.last_no_digits = no_digits.copy()
-            return res_list.pop(0), (0, 0)
+            result = res_list.pop(0), (0, 0)
+            low_conf.clear()
+            no_digits.clear()
+            return result
 
         logger_mock = MagicMock()
 
@@ -93,7 +97,10 @@ class TestCampaignResourceValidation(TestCase):
             patch("campaign.resources.cv2.imwrite"), \
             patch("importlib.import_module", return_value=dummy_module):
             campaign.resources._NARROW_ROI_DEFICITS.clear()
-            campaign.main()
+            try:
+                campaign.main()
+            except campaign.resources.ResourceValidationError as exc:
+                raise SystemExit from exc
 
         return logger_mock
 
@@ -189,4 +196,49 @@ class TestCampaignResourceValidation(TestCase):
 
         self.assertEqual(res1["wood_stockpile"], 90)
         self.assertEqual(res2["wood_stockpile"], 100)
+
+    def test_population_cap_mismatch_aborts(self):
+        info = types.SimpleNamespace(
+            starting_resources={
+                "wood_stockpile": 80,
+                "food_stockpile": 140,
+                "gold_stockpile": 0,
+                "stone_stockpile": 0,
+            },
+            starting_villagers=3,
+            starting_idle_villagers=0,
+            objective_villagers=7,
+            population_limit=4,
+            starting_buildings={"Town Center": 1},
+        )
+
+        gathered = dict(info.starting_resources)
+        gathered["idle_villager"] = info.starting_idle_villagers
+
+        module = importlib.import_module(
+            "campaigns.Ascent_of_Egypt.Egypt_1_Hunting"
+        )
+
+        pop_reads = [(gathered, (7, 7)), (gathered, (7, 7))]
+
+        env = os.environ.copy()
+        env.pop("PYTEST_CURRENT_TEST", None)
+
+        with patch.object(module.hud, "wait_hud", return_value=((0, 0, 0, 0), "asset")), \
+            patch.object(module, "parse_scenario_info", return_value=info), \
+            patch.object(module.resources, "gather_hud_stats", side_effect=pop_reads) as gather_mock, \
+            patch.object(module, "run_mission") as run_mock, \
+            patch.object(module.resources, "RESOURCE_CACHE", module.resources.ResourceCache()), \
+            patch.dict(os.environ, env, clear=True), \
+            self.assertLogs(module.resources.logger, level="ERROR") as log_ctx:
+            module.main()
+
+        run_mock.assert_not_called()
+        self.assertGreaterEqual(gather_mock.call_count, 2)
+        cache_vals = module.resources.RESOURCE_CACHE.last_resource_values
+        self.assertNotIn("wood_stockpile", cache_vals)
+        self.assertNotIn("food_stockpile", cache_vals)
+        self.assertNotIn("gold_stockpile", cache_vals)
+        self.assertNotIn("stone_stockpile", cache_vals)
+        self.assertTrue(any("population" in m.lower() for m in log_ctx.output))
 
