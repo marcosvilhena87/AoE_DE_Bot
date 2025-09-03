@@ -511,6 +511,17 @@ def _read_population_from_roi(roi, conf_threshold=None, roi_bbox=None, failure_c
         err.low_conf_digits = (cur, cap)
         raise err
 
+    if "/" not in raw_text:
+        if low_conf and raw_text.isdigit() and len(raw_text) == 2 and raw_text[0] == raw_text[1]:
+            cur = int(raw_text[0])
+            cap = int(raw_text[1])
+            err_msg = (
+                f"Ambiguous population OCR: text='{raw_text}', confs={confidences}"
+            )
+            err = common.PopulationReadError(err_msg)
+            err.low_conf = True
+            err.low_conf_digits = (cur, cap)
+            raise err
     if "/" not in raw_text and raw_text.isdigit():
         if len(raw_text) == 2:
             cur = int(raw_text[0])
