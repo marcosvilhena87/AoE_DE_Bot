@@ -211,7 +211,21 @@ class TestResourceROIs(TestCase):
     def test_food_stockpile_roi_vertical_bounds(self):
         y_positions = [0, 2, 4, 1, 3, 5]
         regions, _ = self._locate_regions(icon_y_positions=y_positions)
-        self._assert_vertical_bounds(regions, 1)
+        name = self.icons[1]
+        roi = regions[name]
+        top = roi[1]
+        height = roi[3]
+        bottom = top + height
+
+        icon_y = self.panel_box[1] + y_positions[1]
+        icon_bottom = icon_y + self.icon_height
+        next_icon_y = self.panel_box[1] + y_positions[2]
+        next_icon_bottom = next_icon_y + self.icon_height
+        expected_top = min(icon_y, next_icon_y)
+        expected_bottom = max(icon_bottom, next_icon_bottom)
+
+        self.assertLessEqual(top, expected_top)
+        self.assertGreaterEqual(bottom, expected_bottom)
 
     def test_gold_stockpile_roi_vertical_bounds(self):
         y_positions = [0, 2, 4, 1, 3, 5]

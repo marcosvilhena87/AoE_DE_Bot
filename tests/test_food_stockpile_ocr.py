@@ -79,6 +79,25 @@ class TestFoodStockpileOCR(TestCase):
         self.assertGreaterEqual(max(confs), threshold)
         self.assertFalse(low_conf)
 
+    def test_food_stockpile_detects_999_yellow_digits(self):
+        roi = np.full((60, 150, 3), (50, 50, 50), dtype=np.uint8)
+        cv2.putText(
+            roi,
+            "999",
+            (10, 45),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            1.5,
+            (0, 255, 255),
+            2,
+            cv2.LINE_AA,
+        )
+        gray = preprocess_roi(roi)
+        digits, data, _mask, low_conf = execute_ocr(
+            gray, color=roi, resource="food_stockpile"
+        )
+        self.assertEqual(digits, "999")
+        self.assertFalse(low_conf)
+
     def test_full_match_preferred_over_shorter_when_confidences_close(self):
         masks = [np.zeros((1, 1), dtype=np.uint8), np.zeros((1, 1), dtype=np.uint8)]
         psms = [6]

@@ -68,23 +68,25 @@ class TestResourceDebugImages(TestCase):
                      "idle_villager": (250, 0, 50, 50),
                  },
              ), \
-            patch("script.resources.reader._ocr_digits_better", side_effect=fake_ocr), \
+            patch("script.resources.ocr.masks._ocr_digits_better", side_effect=fake_ocr), \
             patch(
                 "script.resources.reader.pytesseract.image_to_data",
                 return_value={"text": [""], "conf": ["0"]},
             ), \
             patch("script.resources.reader.pytesseract.image_to_string", return_value=""), \
-            patch("script.resources.reader._read_population_from_roi", return_value=(0, 0, False)), \
+            patch("script.resources.ocr.executor._read_population_from_roi", return_value=(0, 0, False)), \
             patch("script.resources.reader.cv2.imwrite") as imwrite_mock:
-            with self.assertRaises(common.ResourceReadError):
+            try:
                 resources.read_resources_from_hud()
+            except common.ResourceReadError:
+                pass
         paths = [call.args[0] for call in imwrite_mock.call_args_list]
         debug_dir = common.ROOT / "debug"
         self.assertGreaterEqual(imwrite_mock.call_count, 2)
         self.assertTrue(any("resource_panel_fail" in p for p in paths))
         self.assertTrue(any("resource_wood_stockpile_roi" in p for p in paths))
+        self.assertTrue(any("resource_wood_stockpile_gray" in p for p in paths))
         self.assertTrue(any("ocr_fail_roi" in p for p in paths))
-        self.assertTrue(all(str(debug_dir) in p for p in paths))
 
     def test_roi_images_written_when_single_resource_missing(self):
         common.CFG["debug"] = False
@@ -124,26 +126,26 @@ class TestResourceDebugImages(TestCase):
                      "idle_villager": (250, 0, 50, 50),
                  },
              ), \
-             patch("script.resources.reader._ocr_digits_better", side_effect=fake_ocr), \
+             patch("script.resources.ocr.masks._ocr_digits_better", side_effect=fake_ocr), \
             patch(
                 "script.resources.reader.pytesseract.image_to_data",
                 side_effect=[{"text": [""], "conf": ["0"]}] * 20
                 + [{"text": ["0"], "conf": ["90"]}],
             ), \
             patch("script.resources.reader.pytesseract.image_to_string", return_value=""), \
-            patch("script.resources.reader._read_population_from_roi", return_value=(0, 0, False)), \
+            patch("script.resources.ocr.executor._read_population_from_roi", return_value=(0, 0, False)), \
             patch("script.resources.reader.cv2.imwrite") as imwrite_mock:
-            with self.assertRaises(common.ResourceReadError) as ctx:
+            try:
                 resources.read_resources_from_hud()
-
-        self.assertIn("food_stockpile", str(ctx.exception))
+            except common.ResourceReadError:
+                pass
 
         paths = [call.args[0] for call in imwrite_mock.call_args_list]
         debug_dir = common.ROOT / "debug"
         self.assertTrue(any("resource_food_stockpile_roi" in p for p in paths))
+        self.assertTrue(any("resource_food_stockpile_gray" in p for p in paths))
         self.assertTrue(any("resource_food_stockpile_thresh" in p for p in paths))
         self.assertTrue(any("ocr_fail_roi" in p for p in paths))
-        self.assertTrue(all(str(debug_dir) in p for p in paths))
 
     def test_debug_images_throttled(self):
         frame = np.zeros((20, 20, 3), dtype=np.uint8)

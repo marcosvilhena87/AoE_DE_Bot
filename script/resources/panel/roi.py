@@ -42,6 +42,7 @@ def compute_resource_rois(
     # Offset from icon-relative coordinates to absolute screen coordinates
     min_y = min(v[1] for v in detected.values())
     panel_top = top - min_y
+    panel_bottom = top + height
 
     regions = {}
     spans = {}
@@ -132,7 +133,11 @@ def compute_resource_rois(
         roi_y = min(cur_y, next_y)
         roi_bottom = max(cur_y + cur_h, next_y + next_h)
         roi_top = panel_top + roi_y
-        roi_height = roi_bottom - roi_y
+        abs_bottom = panel_top + roi_bottom
+        if current == "food_stockpile":
+            roi_top = max(top, roi_top - 1)
+            abs_bottom = min(panel_bottom, abs_bottom + 1)
+        roi_height = abs_bottom - roi_top
 
         regions[current] = (left, roi_top, width, roi_height)
         logger.debug(
