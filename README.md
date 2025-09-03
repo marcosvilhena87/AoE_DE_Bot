@@ -251,6 +251,15 @@ ROI is also saved to this folder with a filename like
 `resource_roi_<name>_<timestamp>.png`. The path to the snapshot is included in
 the error or warning message to aid troubleshooting.
 
+If validation errors persist:
+
+* Inspect the saved ROI, grayscale, and threshold images in `debug/` to ensure the
+  HUD regions are correctly detected.
+* Enable `ocr_debug` in `config.json` to capture additional intermediate masks
+  for deeper analysis.
+* Adjust ROI coordinates or tolerances in the configuration and rerun the
+  scenario once the HUD alignment is verified.
+
 Repeated OCR failures can flood this directory with images. To limit spam,
 the bot only writes new debug files if the set of failing resources changes or
 at least `ocr_debug_cooldown` seconds have elapsed since the last dump (default
