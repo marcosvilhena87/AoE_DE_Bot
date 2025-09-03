@@ -75,6 +75,26 @@ class TestWoodStockpileOCR(TestCase):
         )
         self.assertEqual(digits, "80")
 
+    def test_wood_stockpile_no_dilate_reads_80(self):
+        roi = np.full((60, 120, 3), (19, 69, 139), dtype=np.uint8)
+        cv2.putText(roi, "80", (5, 50), cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 255, 255), 3)
+        gray = preprocess_roi(roi)
+        calls = []
+        orig_dilate = cv2.dilate
+
+        def fake_dilate(src, kernel, iterations=1):
+            calls.append(kernel.shape)
+            return orig_dilate(src, kernel, iterations=iterations)
+
+        with patch.dict(
+            CFG, {"ocr_ws_dilate_var": 0, "wood_stockpile_dilate": False}, clear=False
+        ), patch("cv2.dilate", side_effect=fake_dilate):
+            digits, data, _mask, low_conf = execute_ocr(
+                gray, color=roi, resource="wood_stockpile"
+            )
+        self.assertEqual(digits, "80")
+        self.assertNotIn((3, 3), calls)
+
     def test_wood_stockpile_detects_300(self):
         roi = np.full((60, 150, 3), (19, 69, 139), dtype=np.uint8)
         cv2.putText(roi, "300", (10, 45), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (255, 255, 255), 2)
@@ -89,9 +109,10 @@ class TestWoodStockpileOCR(TestCase):
         roi = np.full((60, 120, 3), (19, 69, 139), dtype=np.uint8)
         cv2.putText(roi, "80", (5, 50), cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 255, 255), 1)
         gray = preprocess_roi(roi)
-        digits, data, _mask, low_conf = execute_ocr(
-            gray, color=roi, resource="wood_stockpile"
-        )
+        with patch.dict(CFG, {"wood_stockpile_dilate": True}, clear=False):
+            digits, data, _mask, low_conf = execute_ocr(
+                gray, color=roi, resource="wood_stockpile"
+            )
         self.assertEqual(digits, "80")
 
     def test_wood_stockpile_zero_conf_rejected(self):

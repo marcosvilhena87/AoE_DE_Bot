@@ -113,15 +113,18 @@ def _ocr_digits_better(gray, color=None, resource=None, whitelist="0123456789"):
     thresh = cv2.adaptiveThreshold(
         gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2
     )
-    ws_dilate_var = CFG.get("ocr_ws_dilate_var", 500)
-    ws_should_dilate = CFG.get("wood_stockpile_dilate", False) or (
-        ws_dilate_var > 0 and variance < ws_dilate_var
+    ws_dilate_var = CFG.get("ocr_ws_dilate_var", 50)
+    ws_should_dilate = (
+        resource == "wood_stockpile"
+        and (
+            CFG.get("wood_stockpile_dilate", False)
+            or (ws_dilate_var > 0 and variance < ws_dilate_var)
+        )
     )
-    if resource == "wood_stockpile":
+    if ws_should_dilate:
         # Avoid an aggressive cross-shaped close which can break digit loops.
-        if ws_should_dilate:
-            ws_dilate_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
-            thresh = cv2.dilate(thresh, ws_dilate_kernel, iterations=1)
+        ws_dilate_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+        thresh = cv2.dilate(thresh, ws_dilate_kernel, iterations=1)
     if _is_nearly_empty(thresh):
         _otsu_ret, thresh = cv2.threshold(
             gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU
@@ -158,7 +161,7 @@ def _ocr_digits_better(gray, color=None, resource=None, whitelist="0123456789"):
         mask_color = cv2.morphologyEx(
             mask_color, cv2.MORPH_CLOSE, color_kernel, iterations=1
         )
-        if resource == "wood_stockpile" and ws_should_dilate:
+        if ws_should_dilate:
             mask_color = cv2.dilate(mask_color, color_kernel, iterations=1)
         alt_digits, alt_data, alt_mask = _run_masks(
             [mask_color, cv2.bitwise_not(mask_color)],
