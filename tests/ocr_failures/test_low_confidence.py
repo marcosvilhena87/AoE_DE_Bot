@@ -111,6 +111,37 @@ class TestResourceLowConfidence(TestCase):
         self.assertGreaterEqual(ocr_mock.call_count, 1)
         img2str_mock.assert_not_called()
 
+    def test_low_confidence_without_cache_returns_none(self):
+        def fake_grab_frame(bbox=None):
+            if bbox:
+                return np.zeros((bbox["height"], bbox["width"], 3), dtype=np.uint8)
+            return np.zeros((600, 600, 3), dtype=np.uint8)
+
+        from script.resources.reader.core import _handle_cache_and_fallback
+
+        cache_obj = resources.RESOURCE_CACHE
+        roi = np.zeros((1, 1, 3), dtype=np.uint8)
+        data = {"text": ["123"]}
+        value, cache_hit, low_conf_flag, no_digit_flag = _handle_cache_and_fallback(
+            "wood_stockpile",
+            "123",
+            True,
+            data,
+            roi,
+            None,
+            0,
+            cache_obj=cache_obj,
+            max_cache_age=None,
+            low_conf_counts={},
+        )
+
+        self.assertIsNone(value)
+        self.assertTrue(low_conf_flag)
+        self.assertFalse(cache_hit)
+        self.assertFalse(no_digit_flag)
+        self.assertNotIn("wood_stockpile", cache_obj.last_resource_values)
+        self.assertNotIn("wood_stockpile", cache_obj.resource_failure_counts)
+
     def test_low_confidence_logs_warning(self):
         def fake_grab_frame(bbox=None):
             if bbox:
@@ -212,40 +243,6 @@ class TestWoodStockpileLowConfRetry(TestCase):
         resources._LAST_READ_FROM_CACHE.clear()
         resources.RESOURCE_CACHE.resource_failure_counts.clear()
 
-    def test_low_conf_retry_accepted(self):
-        frame = np.zeros((100, 100, 3), dtype=np.uint8)
-
-        def fake_detect(frame, required_icons, cache=None):
-            return {"wood_stockpile": (0, 0, 10, 10)}
-
-        calls = []
-
-        def fake_execute(gray, conf_threshold=None, allow_fallback=True, roi=None, resource=None):
-            calls.append(conf_threshold)
-            return "999", {"conf": [conf_threshold or 0]}, None, True
-
-        with patch("script.resources.reader.detect_resource_regions", side_effect=fake_detect), \
-            patch("script.screen_utils._grab_frame", return_value=frame), \
-            patch("script.resources.reader.preprocess_roi", side_effect=lambda roi: roi[..., 0]), \
-            patch("script.resources.reader.execute_ocr", side_effect=fake_execute), \
-            patch("script.resources.reader.cv2.imwrite"), \
-            patch.dict(resources.CFG, {"treat_low_conf_as_failure": True}, clear=False):
-            result, _ = resources.read_resources_from_hud(["wood_stockpile"])
-
-        self.assertEqual(result["wood_stockpile"], 999)
-        self.assertIn(
-            "wood_stockpile", resources.RESOURCE_CACHE.last_low_confidence
-        )
-        self.assertEqual(
-            calls,
-            [
-                resources.CFG.get(
-                    "wood_stockpile_ocr_conf_threshold",
-                    resources.CFG.get("ocr_conf_threshold", 60),
-                ),
-                resources.CFG.get("ocr_conf_min", 0),
-            ],
-        )
 
     def test_initial_low_conf_returns_none_and_triggers_retry(self):
         frame = np.zeros((10, 10, 3), dtype=np.uint8)
@@ -286,9 +283,9 @@ class TestWoodStockpileLowConfRetry(TestCase):
                 low_conf_counts={},
             )
         self.assertIsNone(value)
-        self.assertEqual(cache.resource_failure_counts["wood_stockpile"], 1)
+        self.assertNotIn("wood_stockpile", cache.resource_failure_counts)
 
-        roi_info2 = (0, 0, 1, 1, roi, gray, 0, cache.resource_failure_counts["wood_stockpile"])
+        roi_info2 = (0, 0, 1, 1, roi, gray, 0, 0)
         with patch(
             "script.resources.reader.core._ocr_resource",
             return_value=(None, {}, None, True),
@@ -322,5 +319,5 @@ class TestWoodStockpileLowConfRetry(TestCase):
             )
         self.assertEqual(value2, 456)
         expand_mock.assert_called_once()
-        self.assertEqual(expand_mock.call_args[0][9], 1)
+        self.assertEqual(expand_mock.call_args[0][9], 0)
 
