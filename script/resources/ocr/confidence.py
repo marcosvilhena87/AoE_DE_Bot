@@ -25,14 +25,11 @@ def parse_confidences(data):
     if not raw_conf:
         return None
 
-    texts = data.get("text") or []
     filtered_texts: list[str] = []
     filtered_conf: list[float] = []
-    conf_iter = iter(raw_conf)
-    for t in texts:
+    for t, c in zip(data.get("text") or [], raw_conf):
         if not str(t).strip():
             continue
-        c = next(conf_iter, "0")
         try:
             val = float(c)
         except (ValueError, TypeError):
@@ -43,6 +40,7 @@ def parse_confidences(data):
         filtered_conf.append(val)
 
     data["text"] = filtered_texts
+    data["conf"] = filtered_conf
     return filtered_conf
 
 
