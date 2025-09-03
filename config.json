@@ -126,42 +126,12 @@
     ],
     "optional": []
   },
-  "wood_stockpile_roi": {
-    "top_pct": 0.110,
-    "height_pct": 0.029,
-    "left_pct": 0.187,
-    "width_pct": 0.035
-  },
-  "food_stockpile_roi": {
-    "top_pct": 0.111,       
-    "height_pct": 0.027,    
-    "left_pct": 0.236,      
-    "width_pct": 0.03       
-  },
-  "gold_stockpile_roi": {
-    "top_pct": 0.111,
-    "height_pct": 0.027,
-    "left_pct": 0.282,
-    "width_pct": 0.03
-  },
-  "stone_stockpile_roi": {
-    "top_pct": 0.111,
-    "height_pct": 0.027,
-    "left_pct": 0.328,
-    "width_pct": 0.03
-  },
-  "population_limit_roi": {
-    "top_pct": 0.111,
-    "height_pct": 0.027,
-    "left_pct": 0.374,
-    "width_pct": 0.045
-  },
-  "idle_villager_roi": {
-    "top_pct": 0.10,
-    "height_pct": 0.06,
-    "left_pct": 0.84,
-    "width_pct": 0.04
-  },
+  "wood_stockpile_roi": { "top_pct": 0.12, "height_pct": 0.03, "left_pct": 0.2,   "width_pct": 0.03 },
+  "food_stockpile_roi": { "top_pct": 0.12, "height_pct": 0.03, "left_pct": 0.254, "width_pct": 0.03 },
+  "gold_stockpile_roi": { "top_pct": 0.12, "height_pct": 0.03, "left_pct": 0.308, "width_pct": 0.03 },
+  "stone_stockpile_roi":{ "top_pct": 0.12, "height_pct": 0.03, "left_pct": 0.362, "width_pct": 0.03 },
+  "population_limit_roi":{"top_pct": 0.12, "height_pct": 0.03, "left_pct": 0.416, "width_pct": 0.03 },
+  "idle_villager_roi":   { "top_pct": 0.12, "height_pct": 0.03, "left_pct": 0.47,  "width_pct": 0.03 },
   "profiles": {
       "aoe1de": {
         "resource_panel": {
