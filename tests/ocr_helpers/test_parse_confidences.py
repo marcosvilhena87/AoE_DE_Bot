@@ -23,6 +23,19 @@ def test_handles_missing_conf_key():
     assert parse_confidences(data) == [0.0, 0.0]
 
 
+def test_empty_text_entries_are_idempotent():
+    data = {
+        "text": ["", "foo", ""],
+        "conf": ["10", "20", "30"],
+    }
+    expected = [20.0]
+    assert parse_confidences(data) == expected
+    # second invocation should yield the same result and leave data consistent
+    assert parse_confidences(data) == expected
+    assert data["text"] == ["foo"]
+    assert data["conf"] == expected
+
+
 def test_read_resources_logs_sanitized_confidences(caplog):
     frame = np.zeros((10, 10, 3), dtype=np.uint8)
     gray = np.zeros((10, 10), dtype=np.uint8)
