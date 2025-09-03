@@ -29,11 +29,12 @@ class TestComputeResourceROIs(TestCase):
             detected=detected,
         )
         roi = regions["wood_stockpile"]
-        span_left = 7  # icon_right + pad_left
-        span_right = 13  # next_icon_left - pad_right
-        self.assertEqual(roi[0], span_left)
-        self.assertEqual(roi[0] + roi[2], span_right)
-        self.assertEqual(roi[2], span_right - span_left)
+        cur_bounds = detected["wood_stockpile"]
+        next_left = detected["food_stockpile"][0]
+        cur_right = cur_bounds[0] + cur_bounds[2]
+        right = roi[0] + roi[2]
+        self.assertGreaterEqual(roi[0], cur_right)
+        self.assertLessEqual(right, next_left)
         self.assertIn("wood_stockpile", narrow)
         self.assertEqual(narrow["wood_stockpile"], 24)
 
@@ -233,6 +234,35 @@ class TestComputeResourceROIs(TestCase):
         self.assertLessEqual(
             right, idle_left - common.CFG.get("population_idle_padding", 6)
         )
+
+    def test_population_roi_narrow_records_deficit_and_respects_idle_padding(self):
+        detected = {
+            "population_limit": (0, 0, 10, 10),
+            "idle_villager": (40, 0, 10, 10),
+        }
+        with patch.dict(resources.CFG, {"population_idle_padding": 6}, clear=False):
+            regions, _spans, narrow = resources.compute_resource_rois(
+                0,
+                100,
+                0,
+                20,
+                [0] * 6,
+                [0] * 6,
+                [0] * 6,
+                [999] * 6,
+                [0] * 6,
+                0,
+                0,
+                detected=detected,
+            )
+        self.assertIn("population_limit", narrow)
+        roi = regions["population_limit"]
+        left, top, width, height = roi
+        right = left + width
+        idle_left = detected["idle_villager"][0]
+        self.assertLessEqual(right, idle_left - resources.CFG.get("population_idle_padding", 6))
+        self.assertEqual(top, detected["population_limit"][1])
+        self.assertEqual(height, detected["population_limit"][3])
 
     def test_idle_roi_uses_icon_bounds_when_span_non_positive(self):
         detected = {

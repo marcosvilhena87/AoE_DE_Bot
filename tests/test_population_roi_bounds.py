@@ -113,8 +113,12 @@ class TestPopulationROIBounds(TestCase):
 
         assert expansion["res"] is not None
         x0 = expansion["res"][3]
+        y0 = expansion["res"][4]
         width = expansion["res"][5]
+        height = expansion["res"][6]
         assert x0 + width <= regions["idle_villager"][0] - 6
+        assert y0 == regions["population_limit"][1]
+        assert height == regions["population_limit"][3]
 
     def test_expansion_grows_equally_for_missing_slash(self):
         frame = np.zeros((20, 200, 3), dtype=np.uint8)
@@ -169,9 +173,13 @@ class TestPopulationROIBounds(TestCase):
         res = expansion["res"]
         assert res is not None
         x0 = res[3]
+        y0 = res[4]
         width = res[5]
-        orig_x, _oy, orig_w, _oh = regions["population_limit"]
+        height = res[6]
+        orig_x, orig_y, orig_w, orig_h = regions["population_limit"]
         left_expand = orig_x - x0
         right_expand = x0 + width - (orig_x + orig_w)
         assert abs(left_expand - right_expand) <= 1
         assert width >= 66
+        assert y0 == orig_y
+        assert height == orig_h
