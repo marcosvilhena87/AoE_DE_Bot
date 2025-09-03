@@ -36,9 +36,16 @@ def select_idle_villager(delay: float = 0.1) -> bool:
         cur_pop = common.CURRENT_POP
         try:
             cur_pop, _, low_conf = hud.read_population_from_hud()
-            if not low_conf:
-                common.CURRENT_POP = cur_pop
-        except (common.ResourceReadError, common.PopulationReadError) as exc:
+            if low_conf:
+                _last_idle_villager_count = 0
+                continue
+            common.CURRENT_POP = cur_pop
+        except common.PopulationReadError as exc:
+            logger.debug("Population read failed: %s", exc)
+            _last_idle_villager_count = 0
+            cur_pop = common.CURRENT_POP
+            continue
+        except common.ResourceReadError as exc:
             logger.debug("Population read failed: %s", exc)
             cur_pop = common.CURRENT_POP
 
