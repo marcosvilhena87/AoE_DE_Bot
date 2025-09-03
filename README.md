@@ -213,6 +213,19 @@ initial numbers, set `skip_starting_resource_validation` to `true` in
 resource readings, allowing you to troubleshoot without blocking mission
 progress.
 
+To loosen the check instead of skipping it, configure
+`resource_validation_tolerance` in `config.json`:
+
+```json
+"resource_validation_tolerance": {
+  "initial": 10,
+  "increment": 5
+}
+```
+
+Validation begins with a ±`initial` margin and expands by `increment` after
+each failed attempt, up to `initial + increment`.
+
 ### Manual ROI overrides
 
 Automatic ROI detection may fail on unusual HUD layouts. Optional sections in

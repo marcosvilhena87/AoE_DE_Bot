@@ -87,6 +87,7 @@
   "resource_cache_ttl": 1.5,
   "resource_cache_max_age": null,
   "resource_cache_tolerance": 100,
+  "resource_validation_tolerance": {"initial": 10, "increment": 5},
   "disable_roi_overrides_on_calibration": false,
   "roi_variance_threshold": 5,
   "keys": {
