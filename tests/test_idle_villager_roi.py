@@ -111,7 +111,9 @@ class TestIdleVillagerROI(TestCase):
             "width_pct": 0.04,
             "height_pct": 0.05,
         }
-        with patch("script.resources.panel.locate_resource_panel", return_value=detected), \
+        with patch.object(resources, "locate_resource_panel", return_value=detected), \
+            patch.object(resources.panel, "locate_resource_panel", return_value=detected), \
+            patch.object(resources.panel.detection, "locate_resource_panel", return_value=detected), \
             patch.dict(resources.CFG, {"idle_villager_roi": cfg}, clear=False), \
             patch.object(common, "HUD_ANCHOR", None):
             regions = resources.detect_resource_regions(frame, ["idle_villager"])

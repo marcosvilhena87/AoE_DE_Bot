@@ -49,8 +49,10 @@ def _auto_calibrate_from_icons(frame, cache_obj: cache.ResourceCache = cache.RES
         for name, (x, y, w, h) in detected.items()
     }
 
-    top = panel_top + int(cfg.top_pct * panel_height)
-    height = int(cfg.height_pct * panel_height)
+    min_y = min(y for _x, y, _w, _h in detected_rel.values())
+    max_y = max(y + h for _x, y, _w, h in detected_rel.values())
+    top = panel_top + min_y
+    height = max_y - min_y
 
     regions, spans, narrow = compute_resource_rois(
         panel_left,

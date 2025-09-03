@@ -29,21 +29,35 @@ def compute_resource_rois(
         raise ValueError("max_widths must contain at least one element")
     if not min_widths:
         raise ValueError("min_widths must contain at least one element")
+    if not pad_left:
+        raise ValueError("pad_left must contain at least one element")
+    if not pad_right:
+        raise ValueError("pad_right must contain at least one element")
+    if not icon_trims:
+        raise ValueError("icon_trims must contain at least one element")
 
     if min_requireds is None:
         min_requireds = [0] * len(RESOURCE_ICON_ORDER)
     if detected is None:
         detected = {}
+
+    if not detected:
+        return {}, {}, {}
+
+    min_y = min(v[1] for v in detected.values())
+
     regions = {}
     spans = {}
     narrow = {}
 
     for idx, current in enumerate(RESOURCE_ICON_ORDER):
-        next_name = RESOURCE_ICON_ORDER[idx + 1] if idx + 1 < len(RESOURCE_ICON_ORDER) else None
+        next_name = (
+            RESOURCE_ICON_ORDER[idx + 1] if idx + 1 < len(RESOURCE_ICON_ORDER) else None
+        )
         cur_bounds = detected.get(current)
         if cur_bounds is None:
             continue
-        cur_x, _cy, cur_w, _ch = cur_bounds
+        cur_x, cur_y, cur_w, cur_h = cur_bounds
 
         if current == "idle_villager":
             inner_trim = CFG.get("idle_icon_inner_trim")
@@ -59,10 +73,13 @@ def compute_resource_rois(
             width = max(0, right - left)
             spans[current] = (left, right)
 
+            roi_top = top + (cur_y - min_y)
+            roi_height = cur_h
+
             if CFG.get("ocr_debug"):
                 logger.info("Span for '%s': (%d, %d)", current, left, right)
 
-            regions[current] = (left, top, width, height)
+            regions[current] = (left, roi_top, width, roi_height)
             logger.debug(
                 "ROI for '%s': available=(%d,%d) width=%d",
                 current,
@@ -76,11 +93,13 @@ def compute_resource_rois(
 
         next_bounds = detected.get(next_name) if next_name else None
         if next_bounds is not None:
-            next_x, _ny, next_w, _nh = next_bounds
+            next_x, next_y, next_w, next_h = next_bounds
             next_left = panel_left + next_x
         else:
             next_left = panel_right
             next_w = 0
+            next_y = cur_y
+            next_h = cur_h
 
         idle_padding = (
             CFG.get("population_idle_padding", 6)
@@ -148,7 +167,12 @@ def compute_resource_rois(
         if CFG.get("ocr_debug"):
             logger.info("Span for '%s': (%d, %d)", current, left, right)
 
-        regions[current] = (left, top, width, height)
+        roi_y = min(cur_y, next_y)
+        roi_bottom = max(cur_y + cur_h, next_y + next_h)
+        roi_height = roi_bottom - roi_y
+        roi_top = top + (roi_y - min_y)
+
+        regions[current] = (left, roi_top, width, roi_height)
         logger.debug(
             "ROI for '%s': available=(%d,%d) width=%d",
             current,
@@ -172,7 +196,7 @@ def _fallback_rois_from_slice(
 
     slice_w = width / len(RESOURCE_ICON_ORDER)
     detected = {
-        name: (int(idx * slice_w), 0, 0, 0)
+        name: (int(idx * slice_w), 0, 0, height)
         for idx, name in enumerate(RESOURCE_ICON_ORDER)
     }
 
