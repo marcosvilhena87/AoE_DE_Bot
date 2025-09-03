@@ -1,0 +1,270 @@
+# AoE DE Bot
+
+## Setup
+
+1. Install [Tesseract OCR](https://github.com/tesseract-ocr/tesseract).
+2. Copy `config.sample.json` to `config.json` if needed.
+3. Configure the Tesseract executable path by either:
+   - setting the `tesseract_path` value in `config.json`, or
+   - setting the `TESSERACT_CMD` environment variable to the executable path.
+
+If the supplied path is missing or invalid, the bot searches for `tesseract` on the system `PATH`. A warning is logged when
+falling back to the `PATH` entry. Only when no executable can be located will an error be raised.
+
+## Configuration notes
+
+The bot detects the HUD by matching a single template of the resource bar
+(`assets/resources.png`). This image is also used to read the individual
+resource icons. Frames are captured from the whole screen unless a different
+region is explicitly requested.
+
+HUD-related coordinates, such as `areas.pop_box`, use ``[x, y, width, height]``
+fractions of the entire screen. The default values in `config.json` are
+placeholders and should be calibrated for your setup.
+
+Configuration sections like `resource_panel` provide shared defaults at the
+root level. Each entry under `profiles` only needs to include values that
+differ from these defaults; missing keys automatically fall back to the root
+settings when the configuration is loaded.
+
+The `resource_panel` uses a span-based ROI builder that measures the gap between consecutive icons. `max_width` caps the width of each region when the gap is wide. If the gap is smaller than `min_width`, the ROI shrinks to fit the available space. Both `max_width` and `min_width` accept either a single value applied to all icons or a list of six per-icon values.
+
+### OCR tuning
+
+Configuration options in `config.json` allow adjusting how resource numbers are read:
+
+* `ocr_conf_threshold` – global minimum confidence (0–100) required to accept OCR
+  digits. The default is `60`; when regions of interest are especially tight,
+  consider lowering this to `45–50`.
+* `<resource>_ocr_conf_threshold` – optional per-resource overrides (for example,
+  `wood_stockpile_ocr_conf_threshold`) applied before falling back to the global
+  threshold.
+* When display scaling, non-native resolutions, or streaming artifacts lower OCR
+  accuracy, reduce the relevant `<resource>_ocr_conf_threshold` values in small
+  steps (e.g., `58` → `50` → `45`). After each change, inspect `execute_ocr`
+  debug output to ensure obviously incorrect digits are still flagged.
+* `ocr_conf_min` / `ocr_conf_decay` – after a failed OCR attempt, the confidence
+  threshold is multiplied by `ocr_conf_decay` (default `0.8`) until it reaches
+  `ocr_conf_min` (default `25–30`). This adaptive decay allows accepting digits
+  that repeatedly fail the initial threshold.
+* `ocr_conf_max_attempts` – number of full OCR retries performed while lowering
+  the confidence threshold. After this cap is reached the threshold continues
+  to decay toward `ocr_conf_min` without additional OCR passes.
+* `ocr_roi_expand_base` – minimum pixel margin to immediately add around a
+  region of interest after an OCR miss. `population_ocr_roi_expand_base` applies
+  the same logic to the population panel. Combine with
+  `*_ocr_roi_expand_step` and `*_ocr_roi_expand_growth` to progressively widen
+  stubborn ROIs after repeated failures.
+* `ocr_kernel_size` – size of the square kernel used for morphological dilation
+  before running OCR (default `2`).
+* `ocr_contrast_stretch` – rescale grayscale intensities before thresholding;
+  set `true` for default min–max stretching or provide an object with
+  `alpha`/`beta` limits (default `false`).
+* `ocr_psm_list` – list of Tesseract [page segmentation modes](https://tesseract-ocr.github.io/tessdoc/ImproveQuality.html#page-segmentation-method)
+  tried in order when extracting digits (default `[6, 7, 8, 10, 13]`).
+* `execute_ocr` returns a `(digits, data, mask, low_conf)` tuple. When no attempt
+  meets the confidence threshold, the highest-confidence digits are returned with
+  `low_conf=True` so callers can decide whether to accept or retry the value.
+* `allow_low_conf_digits` – when `true`, OCR results that resemble digits are
+  returned even if their confidence falls below the threshold (default
+  `false`).
+* `allow_low_conf_population` – when `true`, population digits are returned even
+  when OCR confidence falls below the threshold. Enable this only if population
+  OCR is reliable (default `false`). This option conflicts with
+  `treat_low_conf_as_failure`; if both are `true`, population values would still
+  be returned so the configuration loader rejects the combination.
+* `treat_low_conf_as_failure` – return `None` when OCR confidence is below the
+  threshold (default `true`). Population digits ignore this flag when
+  `allow_low_conf_population` is enabled.
+
+## Capturing `assets/resources.png`
+
+`assets/resources.png` is the only template needed for HUD detection and
+resource icon recognition. The previous `hud_resources.png` file is no longer
+used.
+
+1. Set the game's UI scale to 100%.
+2. Take a screenshot of the in-game HUD.
+3. Crop a tight image around the resource bar and save it as
+   `assets/resources.png`.
+4. If your layout differs between profiles, capture and replace this template
+   for each one to ensure `wait_hud()` can anchor correctly.
+
+## Resource Icons
+
+The HUD displays resource icons from left to right in the following order:
+
+`wood → food → gold → stone → population → idle villager`
+
+`assets/resources.png` must follow this arrangement so the bot can correctly
+locate each value.
+
+### ROI padding and spacing
+
+ROIs are generated by the `compute_resource_rois` utility, which fills the span
+between each pair of icons after applying the padding values
+described below. Regions with non-positive spans are skipped, preventing
+overlapping or invalid ROIs. When a span falls below the minimum
+configured width, the deficit is tracked and the OCR routine will expand the
+region horizontally by the missing pixels before reading its value.
+The region of interest (ROI) used to read each number sits
+between two icons. Three configuration options define the valid horizontal
+  area. Each option accepts a list of six values corresponding to the icons in
+  the order `wood`, `food`, `gold`, `stone`, `population` and `idle villager`:
+
+* `roi_padding_left` – pixels added to the right edge of the current icon.
+* `roi_padding_right` – pixels subtracted from the left edge of the next icon.
+* `icon_trim_pct` – fraction of the icon slot to skip when estimating ROIs
+  from the HUD anchor.
+* `min_pop_width` – minimum width reserved for the population readout when
+  the icon cannot be detected.
+* `pop_roi_extra_width` – extra pixels appended to the right of the population
+  span to include the `/` separator and large numbers.
+
+Adjust individual entries in the padding arrays when a specific resource needs
+more or less space. Increasing `roi_padding_left` or decreasing
+`roi_padding_right` widens the available span; the opposite values tighten it.
+
+For a given resource the horizontal bounds are computed as:
+
+```
+available_left = icon_right + roi_padding_left[i]
+available_right = next_icon_left - roi_padding_right[i]
+```
+
+With icon positions `0, 30, 60, 90, 120, 150`, icon width `5` and paddings
+`left=2` and `right=2`, the calculations look like:
+
+| Resource       | icon_right | next_icon_left | available_left | available_right |
+|----------------|-----------:|---------------:|---------------:|----------------:|
+| wood           | 5          | 30             | 7              | 28              |
+| food           | 35         | 60             | 37              | 58              |
+| gold           | 65         | 90             | 67              | 88              |
+| stone          | 95         | 120            | 97              | 118             |
+| population     | 125        | 150            | 127            | 148             |
+
+#### Calibrating per-icon offsets
+
+| Icon              | `roi_padding_left[i]` measurement                               | `roi_padding_right[i]` measurement                              | `icon_trim_pct[i]` measurement                                                                 |
+|-------------------|----------------------------------------------------------------|-----------------------------------------------------------------|------------------------------------------------------------------------------------------------|
+| wood_stockpile    | pixels from wood icon's right edge to first digit              | pixels from last digit to food icon's left edge                 | width of wood icon and left spacing divided by total slot width                               |
+| food_stockpile    | pixels from food icon's right edge to first digit              | pixels from last digit to gold icon's left edge                 | width of food icon and left spacing divided by slot width                                      |
+| gold_stockpile    | pixels from gold icon's right edge to first digit              | pixels from last digit to stone icon's left edge                | width of gold icon and left spacing divided by slot width                                      |
+| stone_stockpile   | pixels from stone icon's right edge to first digit             | pixels from last digit to population icon's left edge           | width of stone icon and left spacing divided by slot width                                     |
+| population_limit  | pixels from population icon's right edge to first digit        | pixels from last digit to idle villager icon's left edge        | width of population icon and left spacing divided by slot width                               |
+| idle_villager     | not used (ROI extends past icon)                              | not used                                                       | width of idle villager icon and left spacing divided by slot width (used only for HUD fallback) |
+
+Use a screenshot editor to count pixels or run `python tools/roi_calibrator.py`
+to compute the `icon_trim_pct` values interactively.
+
+### Customizing required icons
+
+The bot determines which HUD icons must be read through the `hud_icons`
+section in `config.json`:
+
+```json
+"hud_icons": {
+  "required": ["wood_stockpile", "food_stockpile", "gold_stockpile", "stone_stockpile", "population_limit", "idle_villager"],
+  "optional": []
+}
+```
+
+Entries in `required` cause the bot to raise an error when any of those icons
+cannot be detected or read. Icons listed under `optional` are attempted but do
+not stop execution if they are missing. Adjust these lists to match the
+resources shown in your game profile.
+
+Campaign missions can override these lists either under `profiles` in
+`config.json` or directly when invoking `gather_hud_stats` from a scenario:
+
+```json
+"profiles": {
+  "tutorial": {
+    "hud_icons": {
+      "required": ["wood_stockpile", "food_stockpile"],
+      "optional": ["idle_villager"]
+    }
+  }
+}
+```
+
+```python
+# inside a scenario module
+res, pop = cb.gather_hud_stats(
+    required_icons=["wood_stockpile", "food_stockpile"],
+    optional_icons=["idle_villager"],
+)
+```
+
+When neither list is supplied, `gather_hud_stats` detects which icons are
+present and automatically treats missing ones as optional.
+
+Scenario definitions that specify starting resources omit any resource with an
+expected value of `0` from the optional list passed to `gather_hud_stats` to
+avoid spurious OCR readings. Explicitly provide such icons in
+`optional_icons` if they still need to be read.
+
+### Skipping starting resource validation
+
+The campaign launcher compares the resources read from the HUD with the
+expected values defined in each scenario. When OCR repeatedly misreads the
+initial numbers, set `skip_starting_resource_validation` to `true` in
+`config.json` to bypass this check. The script will still log the initial
+resource readings, allowing you to troubleshoot without blocking mission
+progress.
+
+### Manual ROI overrides
+
+Automatic ROI detection may fail on unusual HUD layouts. Optional sections in
+`config.json` let you override the detected rectangles with percentages of the
+screen size. Each entry supplies at least `left_pct` and `width_pct` and may
+also include `top_pct` and `height_pct`:
+
+```json
+"wood_stockpile_roi": {"left_pct": 0.05, "width_pct": 0.05},
+"food_stockpile_roi": {"left_pct": 0.15, "width_pct": 0.05},
+"gold_stockpile_roi": {"left_pct": 0.25, "width_pct": 0.05},
+"stone_stockpile_roi": {"left_pct": 0.35, "width_pct": 0.05},
+"population_limit_roi": {"left_pct": 0.45, "width_pct": 0.05},
+"idle_villager_roi": {"left_pct": 0.84, "width_pct": 0.05}
+```
+
+When present, these overrides take precedence and allow OCR to proceed even
+when the resource bar cannot be located automatically.
+
+### Automatic calibration and debug images
+
+If no custom ROIs are supplied, the bot attempts to calibrate them
+automatically. It locates the resource icons on the screen and derives the
+numeric regions from the gaps between icons. This allows the same
+configuration to operate at different resolutions.
+
+Whenever icon detection or OCR fails, diagnostic images are written to the
+`debug/` directory in the project root. Files like
+`resource_panel_fail_<timestamp>.png` contain the annotated HUD and can be
+reviewed to tune template and padding values. Enable the optional
+`ocr_debug` flag in `config.json` to dump the intermediate masks used during
+OCR. Remove the images once calibration succeeds to keep the folder tidy.
+
+When `validate_starting_resources` flags a mismatch, the offending resource's
+ROI is also saved to this folder with a filename like
+`resource_roi_<name>_<timestamp>.png`. The path to the snapshot is included in
+the error or warning message to aid troubleshooting.
+
+Repeated OCR failures can flood this directory with images. To limit spam,
+the bot only writes new debug files if the set of failing resources changes or
+at least `ocr_debug_cooldown` seconds have elapsed since the last dump (default
+2s).
+
+## Calibration helper
+
+To calibrate the `areas.pop_box` fractions interactively, run:
+
+```
+python tools/calibrate_pop_box.py
+```
+
+The script waits for the HUD to be detected, shows a screenshot, and lets you
+draw the population box. The normalized `[x, y, width, height]` values are
+printed and you can choose to write them back to `config.json` automatically.
+
