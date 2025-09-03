@@ -122,18 +122,32 @@ def load_config(path: str | Path | None = None) -> dict[str, Any]:
 
     # Merge profile overrides with base settings
     allow_low_conf_pop = cfg.setdefault("allow_low_conf_population", False)
+    treat_low_conf = cfg.get("treat_low_conf_as_failure", True)
     if allow_low_conf_pop:
         logger.warning(
             "'allow_low_conf_population' enabled in base config; ensure population OCR is reliable"
         )
+        if treat_low_conf:
+            logger.warning(
+                "'allow_low_conf_population' and 'treat_low_conf_as_failure' both enabled; "
+                "population OCR low confidence will not be treated as failure"
+            )
 
     profiles = cfg.get("profiles", {})
     base_cfg = {k: v for k, v in cfg.items() if k != "profiles"}
     for name, override in profiles.items():
         profiles[name] = _deep_merge(base_cfg, override)
-        if profiles[name].get("allow_low_conf_population") and not allow_low_conf_pop:
+        profile_allow = profiles[name].get("allow_low_conf_population")
+        profile_treat = profiles[name].get("treat_low_conf_as_failure", treat_low_conf)
+        if profile_allow and not allow_low_conf_pop:
             logger.warning(
                 "'allow_low_conf_population' enabled for profile '%s'; ensure population OCR is reliable",
+                name,
+            )
+        if profile_allow and profile_treat:
+            logger.warning(
+                "Profile '%s' has 'allow_low_conf_population' and 'treat_low_conf_as_failure' enabled; "
+                "population OCR low confidence will not be treated as failure",
                 name,
             )
     cfg["profiles"] = profiles

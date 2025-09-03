@@ -103,3 +103,52 @@ class TestLoadConfigErrors(TestCase):
                 config_utils.load_config(tmp_path)
         finally:
             os.remove(tmp_path)
+
+    def test_conflict_allow_low_conf_population_and_treat_as_failure_logs_warning(self):
+        tmp_path = self._write_config(
+            {"allow_low_conf_population": True, "treat_low_conf_as_failure": True}
+        )
+        try:
+            with self.assertLogs(config_utils.logger, level="WARNING") as cm:
+                cfg = config_utils.load_config(tmp_path)
+            self.assertTrue(cfg["allow_low_conf_population"])
+            self.assertTrue(cfg["treat_low_conf_as_failure"])
+            self.assertTrue(
+                any(
+                    "treat_low_conf_as_failure" in msg and "allow_low_conf_population" in msg
+                    for msg in cm.output
+                ),
+                "Expected conflict warning when both allow_low_conf_population and treat_low_conf_as_failure are true",
+            )
+        finally:
+            os.remove(tmp_path)
+
+    def test_profile_conflict_logs_warning(self):
+        tmp_path = self._write_config(
+            {
+                "allow_low_conf_population": False,
+                "treat_low_conf_as_failure": True,
+                "profiles": {
+                    "p1": {
+                        "allow_low_conf_population": True,
+                        "treat_low_conf_as_failure": True,
+                    }
+                },
+            }
+        )
+        try:
+            with self.assertLogs(config_utils.logger, level="WARNING") as cm:
+                cfg = config_utils.load_config(tmp_path)
+            profile_cfg = cfg["profiles"]["p1"]
+            self.assertTrue(profile_cfg["allow_low_conf_population"])
+            self.assertTrue(profile_cfg["treat_low_conf_as_failure"])
+            self.assertTrue(
+                any(
+                    "profile 'p1'" in msg.lower()
+                    and "treat_low_conf_as_failure" in msg
+                    for msg in cm.output
+                ),
+                "Expected conflict warning for profile when both options are true",
+            )
+        finally:
+            os.remove(tmp_path)
