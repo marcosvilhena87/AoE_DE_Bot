@@ -4,46 +4,46 @@ from __future__ import annotations
 
 
 def parse_confidences(data):
-    """Return OCR confidences aligned with the ``text`` output.
+    """Return OCR confidences for non-empty OCR ``text`` entries.
 
     ``pytesseract.image_to_data`` returns separate ``text`` and ``conf`` lists
-    that are expected to have matching lengths.  Earlier implementations of
-    this helper filtered out non-positive or unparsable confidence values which
-    could lead to misalignment between the two lists.  The executor would then
-    zip the shortened confidence list with the full ``text`` list, causing
-    confidences to be associated with the wrong text entries.
+    that ideally have matching lengths.  Some Tesseract versions, however,
+    omit confidence values for boxes where the recognised text is empty or
+    whitespace.  When this happens the lists become misaligned, which can in
+    turn cause confidences to be associated with the wrong text entries.
 
-    This function now preserves list alignment by returning a list of the same
-    length as ``data['text']`` (when present).  Invalid confidence values are
-    converted to ``0`` and non-positive values are also normalised to ``0`` so
-    callers can easily filter them out while maintaining positional alignment.
-    If the ``conf`` key is missing or empty, ``None`` is returned to signal
-    that no confidence information is available.
+    This helper resolves the issue by first filtering out any boxes whose
+    corresponding ``text`` value is empty or only whitespace.  The remaining
+    ``text`` entries are written back to ``data['text']`` so callers operating
+    on ``data`` remain in sync with the returned confidence list.  Invalid or
+    non-positive confidence values are normalised to ``0`` so callers can
+    easily ignore them.  If the ``conf`` key is missing or empty, ``None`` is
+    returned to signal that no confidence information is available.
     """
 
-    raw = data.get("conf")
-    if not raw:
+    raw_conf = data.get("conf")
+    if not raw_conf:
         return None
 
-    texts = data.get("text")
-    confs = []
-    for c in raw:
+    texts = data.get("text") or []
+    filtered_texts: list[str] = []
+    filtered_conf: list[float] = []
+    conf_iter = iter(raw_conf)
+    for t in texts:
+        if not str(t).strip():
+            continue
+        c = next(conf_iter, "0")
         try:
             val = float(c)
         except (ValueError, TypeError):
             val = 0.0
         if val <= 0:
             val = 0.0
-        confs.append(val)
+        filtered_texts.append(t)
+        filtered_conf.append(val)
 
-    if texts is not None:
-        text_len = len(texts)
-        if len(confs) < text_len:
-            confs.extend([0.0] * (text_len - len(confs)))
-        elif len(confs) > text_len:
-            confs = confs[:text_len]
-
-    return confs
+    data["text"] = filtered_texts
+    return filtered_conf
 
 
 def _sanitize_digits(digits: str) -> str:

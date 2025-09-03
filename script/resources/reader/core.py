@@ -86,15 +86,18 @@ def _ocr_resource(
             config="--psm 7 -c tessedit_char_whitelist=0123456789",
             output_type=pytesseract.Output.DICT,
         )
-        texts = [t for t in data.get("text", []) if t.strip()]
-        raw_digits = "".join(filter(str.isdigit, "".join(texts))) if texts else None
         confidences = parse_confidences(data)
+        texts = data.get("text", [])
+        raw_digits = "".join(filter(str.isdigit, "".join(texts))) if texts else None
         digits = None
         low_conf = False
         if raw_digits:
-            if confidences and any(c >= res_conf_threshold for c in confidences):
+            digit_confs = [
+                c for t, c in zip(texts, confidences or []) if any(ch.isdigit() for ch in t)
+            ]
+            if digit_confs and any(c >= res_conf_threshold for c in digit_confs):
                 digits = raw_digits
-            elif confidences and any(c > 0 for c in confidences):
+            elif digit_confs and any(c > 0 for c in digit_confs):
                 digits = None
             else:
                 digits = raw_digits

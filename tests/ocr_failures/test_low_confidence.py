@@ -229,6 +229,24 @@ class TestResourceLowConfidence(TestCase):
         self.assertIsNone(result["wood_stockpile"])
         img2str_mock.assert_not_called()
 
+    def test_blank_boxes_do_not_flag_low_confidence(self):
+        from script.resources.ocr.executor import execute_ocr
+
+        gray = np.zeros((1, 1), dtype=np.uint8)
+
+        def fake_ocr(gray, color=None, resource=None, whitelist=None):
+            data = {"text": ["", "7"], "conf": ["90"]}
+            return "7", data, np.zeros((1, 1), dtype=np.uint8)
+
+        with patch(
+            "script.resources.ocr.executor.masks._ocr_digits_better",
+            side_effect=fake_ocr,
+        ):
+            digits, _data, _mask, low_conf = execute_ocr(gray, conf_threshold=60)
+
+        self.assertEqual(digits, "7")
+        self.assertFalse(low_conf)
+
 
 class TestWoodStockpileLowConfRetry(TestCase):
     def setUp(self):
