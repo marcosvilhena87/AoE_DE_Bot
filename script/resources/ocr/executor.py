@@ -542,6 +542,14 @@ def _read_population_from_roi(roi, conf_threshold=None, roi_bbox=None, failure_c
             cur = int(raw_text[0])
             cap = int(raw_text[1])
             _validate_population(cur, cap)
+            if allow_low_conf:
+                logger.warning(
+                    "Returning low-confidence population %d/%d; conf=%s",
+                    cur,
+                    cap,
+                    confidences,
+                )
+                return cur, cap, True
             err_msg = (
                 f"Ambiguous population OCR: text='{raw_text}', confs={confidences}"
             )

@@ -333,10 +333,10 @@ class TestPopulationROI(TestCase):
         _, kwargs = ocr_mock.call_args
         self.assertEqual(kwargs.get("whitelist"), "0123456789/")
 
-    def test_low_confidence_duplicate_digits_raise_error(self):
+    def test_low_confidence_duplicate_digits_raises_error_when_disallowed(self):
         roi = np.zeros((10, 10, 3), dtype=np.uint8)
         gray = np.zeros((10, 10), dtype=np.uint8)
-        with patch.dict(common.CFG, {"allow_low_conf_population": True}, clear=False), patch(
+        with patch.dict(common.CFG, {"allow_low_conf_population": False}, clear=False), patch(
             "script.resources.ocr.executor.preprocess_roi", return_value=gray
         ), patch(
             "script.resources.ocr.executor.execute_ocr",
@@ -351,6 +351,27 @@ class TestPopulationROI(TestCase):
                 resources._read_population_from_roi(roi, conf_threshold=60)
             err = ctx.exception
             self.assertTrue(getattr(err, "low_conf", False))
+
+    def test_low_confidence_duplicate_digits_returns_value_when_allowed(self):
+        roi = np.zeros((10, 10, 3), dtype=np.uint8)
+        gray = np.zeros((10, 10), dtype=np.uint8)
+        with patch.dict(common.CFG, {"allow_low_conf_population": True}, clear=False), patch(
+            "script.resources.ocr.executor.preprocess_roi", return_value=gray
+        ), patch(
+            "script.resources.ocr.executor.execute_ocr",
+            return_value=(
+                "77",
+                {"text": ["7", "7"], "conf": ["40", "40"]},
+                None,
+                True,
+            ),
+        ):
+            cur, cap, low_conf = resources._read_population_from_roi(
+                roi, conf_threshold=60
+            )
+
+        self.assertTrue(low_conf)
+        self.assertEqual((cur, cap), (7, 7))
 
     def test_allow_low_conf_population_returns_digits(self):
         roi = np.zeros((10, 10, 3), dtype=np.uint8)
