@@ -89,9 +89,6 @@ def compute_resource_rois(
         # Determine the icons that bound this span
         left_bounds = cur_bounds
         right_name = next_name
-        if current == "stone_stockpile":
-            left_bounds = detected.get("gold_stockpile", cur_bounds)
-            right_name = "population_limit"
 
         cur_right = panel_left + left_bounds[0] + left_bounds[2]
 

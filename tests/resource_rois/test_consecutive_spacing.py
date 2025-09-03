@@ -53,12 +53,8 @@ class TestConsecutiveIconSpacing(TestCase):
         # spans stay between consecutive icons
         for cur, nxt in icon_pairs:
             span_left, span_right = spans[cur]
-            if cur == "stone_stockpile":
-                prev_x, _py, prev_w, _ph = detected["gold_stockpile"]
-                cur_right = panel_left + prev_x + prev_w
-            else:
-                cur_x, _cy, cur_w, _ch = detected[cur]
-                cur_right = panel_left + cur_x + cur_w
+            cur_x, _cy, cur_w, _ch = detected[cur]
+            cur_right = panel_left + cur_x + cur_w
             next_left = panel_left + detected[nxt][0]
             self.assertGreaterEqual(span_left, cur_right)
             self.assertLessEqual(span_right, next_left)
@@ -73,12 +69,8 @@ class TestConsecutiveIconSpacing(TestCase):
         min_span = 30
         expected_narrow = set()
         for cur, nxt in icon_pairs:
-            if cur == "stone_stockpile":
-                prev_x, _py, prev_w, _ph = detected["gold_stockpile"]
-                cur_right = panel_left + prev_x + prev_w
-            else:
-                cur_x, _cy, cur_w, _ch = detected[cur]
-                cur_right = panel_left + cur_x + cur_w
+            cur_x, _cy, cur_w, _ch = detected[cur]
+            cur_right = panel_left + cur_x + cur_w
             next_left = panel_left + detected[nxt][0]
             available = next_left - cur_right
             if available < min_span:
