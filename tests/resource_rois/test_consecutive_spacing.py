@@ -1,6 +1,7 @@
-import script.resources as resources
 from unittest import TestCase
 from unittest.mock import patch
+
+import script.resources as resources
 
 
 class TestConsecutiveIconSpacing(TestCase):
@@ -71,8 +72,8 @@ class TestConsecutiveIconSpacing(TestCase):
             cur_x, _cy, cur_w, _ch = detected[cur]
             cur_right = panel_left + cur_x + cur_w
             next_left = panel_left + detected[nxt][0]
-            idle_pad = 6 if cur == "population_limit" and nxt == "idle_villager" else 0
-            available = (next_left - pad[0] - idle_pad) - (cur_right + pad[0])
+            available = (next_left - pad[0]) - (cur_right + pad[0])
             if available < min_span:
                 expected_narrow.add(cur)
         self.assertEqual(set(narrow.keys()), expected_narrow)
+

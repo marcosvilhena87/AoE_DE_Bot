@@ -95,38 +95,22 @@ def compute_resource_rois(
         pad_l = pad_left[idx] if idx < len(pad_left) else pad_left[-1]
         pad_r = pad_right[idx] if idx < len(pad_right) else pad_right[-1]
 
-        left = cur_right + pad_l
-        right = next_left - pad_r - idle_padding
+        available_left = cur_right + pad_l
+        available_right = next_left - pad_r
+        available_width = available_right - available_left
 
-        width = right - left
-        if width < min_span:
-            trim_l = icon_trims[idx] if idx < len(icon_trims) else icon_trims[-1]
-            expand_l = int(round(cur_w * trim_l))
-            left -= expand_l
-            if next_bounds is not None:
-                trim_r = (
-                    icon_trims[idx + 1]
-                    if idx + 1 < len(icon_trims)
-                    else icon_trims[-1]
-                )
-                expand_r = int(round(next_w * trim_r))
-                right += expand_r
-            width = right - left
+        left = max(panel_left, available_left)
+        right_limit = min(panel_right, available_right - idle_padding)
 
-        left = max(panel_left, left)
-        right = min(panel_right, right)
-
-        if right <= left:
+        if right_limit <= left:
             logger.warning(
                 "Skipping ROI for icon '%s' due to non-positive span (left=%d, right=%d)",
                 current,
                 left,
-                right,
+                right_limit,
             )
             continue
 
-        available_width = right - left
-        right_limit = right
         if available_width < min_span:
             narrow[current] = min_span - available_width
             logger.warning(
@@ -136,17 +120,19 @@ def compute_resource_rois(
                 min_span,
             )
 
+        roi_available = right_limit - left
+
         max_w = max_widths[idx] if idx < len(max_widths) else max_widths[-1]
         if current == "food_stockpile":
             max_w = min(max_w, CFG.get("food_stockpile_max_width", max_w))
         if current == "population_limit" and next_bounds is not None:
-            max_w = available_width
-        width = min(max_w, available_width)
+            max_w = roi_available
+        width = min(max_w, roi_available)
 
-        if available_width >= min_req:
+        if roi_available >= min_req:
             width = max(width, min_req)
 
-        if available_width >= min_w:
+        if roi_available >= min_w:
             width = max(width, min_w)
 
         if current == "population_limit":
@@ -190,24 +176,14 @@ def _fallback_rois_from_slice(
         for idx, name in enumerate(RESOURCE_ICON_ORDER)
     }
 
-    pad_left_fallback = [
-        int(
-            round(
-                (icon_trims[idx] if idx < len(icon_trims) else icon_trims[-1])
-                * slice_w
-            )
-        )
-        for idx in range(len(RESOURCE_ICON_ORDER))
-    ]
-    pad_right_fallback = [
-        int(round(right_trim * slice_w))
-    ] * len(RESOURCE_ICON_ORDER)
+    pad_left_fallback = [0] * len(RESOURCE_ICON_ORDER)
+    pad_right_fallback = [int(round(right_trim * slice_w))] * len(RESOURCE_ICON_ORDER)
     icon_trims_zero = [0] * len(RESOURCE_ICON_ORDER)
 
     cfg = _get_resource_panel_cfg()
     max_widths = cfg.max_widths
     min_widths = cfg.min_widths
-    regions, spans, narrow = compute_resource_rois(
+    regions, spans, _narrow = compute_resource_rois(
         left,
         left + width,
         top,
@@ -223,9 +199,7 @@ def _fallback_rois_from_slice(
     )
 
     cache._NARROW_ROIS.clear()
-    cache._NARROW_ROIS.update(narrow.keys())
     cache._NARROW_ROI_DEFICITS.clear()
-    cache._NARROW_ROI_DEFICITS.update(narrow)
 
     for name in list(regions.keys()):
         l, t, w, hgt = regions[name]
