@@ -25,12 +25,6 @@ def compute_resource_rois(
     detected=None,
 ):
     """Compute resource ROIs from detected icon bounds."""
-    if not pad_left:
-        raise ValueError("pad_left must contain at least one element")
-    if not pad_right:
-        raise ValueError("pad_right must contain at least one element")
-    if not icon_trims:
-        raise ValueError("icon_trims must contain at least one element")
     if not max_widths:
         raise ValueError("max_widths must contain at least one element")
     if not min_widths:
@@ -50,34 +44,13 @@ def compute_resource_rois(
         if cur_bounds is None:
             continue
 
-        pad_l = pad_left[idx] if idx < len(pad_left) else pad_left[-1]
-        pad_r = pad_right[idx] if idx < len(pad_right) else pad_right[-1]
-
         cur_x, _cy, cur_w, _ch = cur_bounds
-        pad_extra = 0
-        if current in ("wood_stockpile", "food_stockpile"):
-            pad_extra = max(1, int(round(cur_w * 0.25)))
-        if current in ("food_stockpile", "idle_villager"):
-            pad_l = max(pad_l, 3)
-            pad_r = max(pad_r, 3)
-        if current == "population_limit":
-            pad_l = max(pad_l, 4)
-            pad_r = max(pad_r, 4)
-
-        cur_trim_val = icon_trims[idx] if idx < len(icon_trims) else icon_trims[-1]
-        cur_trim = int(round(cur_trim_val * cur_w)) if 0 <= cur_trim_val <= 1 else int(
-            round(cur_trim_val)
-        )
-        cur_right = panel_left + cur_x + cur_w - cur_trim
+        cur_right = panel_left + cur_x + cur_w
 
         next_bounds = detected.get(next_name) if next_name else None
         if next_bounds is not None:
-            next_x, _ny, next_w, _nh = next_bounds
-            next_trim_val = icon_trims[idx + 1] if idx + 1 < len(icon_trims) else icon_trims[-1]
-            next_trim = (
-                int(round(next_trim_val * next_w)) if 0 <= next_trim_val <= 1 else int(round(next_trim_val))
-            )
-            next_left = panel_left + next_x - next_trim
+            next_x, _ny, _nw, _nh = next_bounds
+            next_left = panel_left + next_x
         else:
             next_left = panel_right
 
@@ -90,25 +63,13 @@ def compute_resource_rois(
         min_req = min_requireds[idx] if idx < len(min_requireds) else min_requireds[-1]
         min_w = min_widths[idx] if idx < len(min_widths) else min_widths[-1]
         min_span = max(_THREE_DIGIT_SPAN, min_req, min_w)
-        gap = next_left - cur_right
-        if gap - pad_l - pad_r < min_span:
-            deficit = min_span - (gap - pad_l - pad_r)
-            reduce_l = (
-                min(pad_l - pad_extra, deficit // 2) if pad_l > pad_extra else 0
-            )
-            reduce_r = min(pad_r, deficit - reduce_l)
-            pad_l -= reduce_l
-            pad_r -= reduce_r
+        available_width = next_left - cur_right
 
-        left = cur_right + pad_l
-        right = next_left - pad_r
-        if idle_padding:
-            right = min(right, next_left - idle_padding)
+        left = cur_right
+        right = next_left - idle_padding if idle_padding else next_left
 
-        # Clamp ROI boundaries to the panel limits after applying padding
         left = max(panel_left, left)
         right = min(panel_right, right)
-        orig_right = right
 
         if right <= left:
             logger.warning(
@@ -120,6 +81,15 @@ def compute_resource_rois(
             continue
 
         available_width = right - left
+        if available_width < min_span:
+            narrow[current] = min_span - available_width
+            logger.warning(
+                "Narrow ROI for '%s': available=%d min=%d",
+                current,
+                available_width,
+                min_span,
+            )
+
         max_w = max_widths[idx] if idx < len(max_widths) else max_widths[-1]
         if current == "food_stockpile":
             max_w = min(max_w, CFG.get("food_stockpile_max_width", max_w))
@@ -127,22 +97,11 @@ def compute_resource_rois(
             max_w = available_width
         width = min(max_w, available_width)
 
-        min_req = min_requireds[idx] if idx < len(min_requireds) else min_requireds[-1]
         if available_width >= min_req:
             width = max(width, min_req)
 
-        min_w = min_widths[idx] if idx < len(min_widths) else min_widths[-1]
         if available_width >= min_w:
             width = max(width, min_w)
-        else:
-            width = available_width
-            narrow[current] = min_w - available_width
-            logger.warning(
-                "Narrow ROI for '%s': available=%d min=%d",
-                current,
-                available_width,
-                min_w,
-            )
 
         if current == "population_limit":
             width = max(width, min_pop_width)
@@ -152,11 +111,6 @@ def compute_resource_rois(
             width = right - left
         else:
             right = left + width
-        if current in ("wood_stockpile", "food_stockpile"):
-            pad = max(1, int(round(cur_w * 0.25)))
-            left = max(panel_left, left - pad)
-            right = min(panel_right, right + pad)
-            width = right - left
 
         spans[current] = (left, right)
 

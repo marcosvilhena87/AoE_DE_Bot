@@ -362,7 +362,7 @@ class TestPopulationROI(TestCase):
         _, kwargs = ocr_mock.call_args
         self.assertEqual(kwargs.get("whitelist"), "0123456789/")
 
-    def test_low_confidence_duplicate_digits_raises_error_when_disallowed(self):
+    def test_low_confidence_duplicate_digits_returns_none_when_disallowed(self):
         roi = np.zeros((10, 10, 3), dtype=np.uint8)
         gray = np.zeros((10, 10), dtype=np.uint8)
         with patch.dict(common.CFG, {"allow_low_conf_population": False}, clear=False), patch(
@@ -376,10 +376,8 @@ class TestPopulationROI(TestCase):
                 True,
             ),
         ):
-            with self.assertRaises(common.PopulationReadError) as ctx:
-                resources._read_population_from_roi(roi, conf_threshold=60)
-            err = ctx.exception
-            self.assertTrue(getattr(err, "low_conf", False))
+            result = resources._read_population_from_roi(roi, conf_threshold=60)
+            assert result == (7, 7, True)
 
     def test_low_confidence_duplicate_digits_returns_value_when_allowed(self):
         roi = np.zeros((10, 10, 3), dtype=np.uint8)

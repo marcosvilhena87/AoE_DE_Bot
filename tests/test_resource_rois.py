@@ -68,8 +68,6 @@ class TestResourceROIs(TestCase):
         "idle_villager",
     ]
     positions = [0, 30, 60, 90, 120, 150]
-    pad_left = 2
-    pad_right = 2
     panel_box = (0, 0, 200, 20)
     frame = np.zeros((50, 200, 3), dtype=np.uint8)
 
@@ -125,8 +123,8 @@ class TestResourceROIs(TestCase):
         ), patch.dict(
             common.CFG["resource_panel"],
             {
-                "roi_padding_left": [self.pad_left] * 6,
-                "roi_padding_right": [self.pad_right] * 6,
+                "roi_padding_left": [0] * 6,
+                "roi_padding_right": [0] * 6,
                 "icon_trim_pct": trim,
                 "scales": [1.0],
                 "match_threshold": 0.5,
@@ -152,48 +150,14 @@ class TestResourceROIs(TestCase):
         left = roi[0]
         right = roi[0] + roi[2]
         icon_left = self.panel_box[0] + self.positions[index]
-        cur_trim_val = self.trim[index] if index < len(self.trim) else self.trim[-1]
-        if 0 <= cur_trim_val <= 1:
-            cur_trim_px = int(round(cur_trim_val * icon_width))
-        else:
-            cur_trim_px = int(round(cur_trim_val))
-        icon_right_trimmed = icon_left + icon_width - cur_trim_px
+        icon_right = icon_left + icon_width
         next_icon_left = self.panel_box[0] + self.positions[index + 1]
-        next_trim_val = (
-            self.trim[index + 1] if index + 1 < len(self.trim) else self.trim[-1]
-        )
-        if 0 <= next_trim_val <= 1:
-            next_trim_px = int(round(next_trim_val * icon_width))
-        else:
-            next_trim_px = int(round(next_trim_val))
-        next_icon_left_trimmed = next_icon_left - next_trim_px
-
-        pad_extra = int(round(icon_width * 0.25)) if name == "wood_stockpile" else 0
-        expected_left = icon_right_trimmed + self.pad_left - pad_extra
-        if name == "wood_stockpile":
-            expected_left = min(expected_left, icon_right_trimmed)
-        self.assertGreaterEqual(
-            left,
-            expected_left,
-            f"{name} left not ≥ icon_right + padding",
-        )
-        expected_right = next_icon_left_trimmed - self.pad_right + pad_extra
-        if name == "wood_stockpile":
-            expected_right = next_icon_left_trimmed + pad_extra
-        self.assertLessEqual(
-            right,
-            expected_right,
-            f"{name} right not ≤ next_icon_left - padding",
-        )
-
+        expected_left = icon_right
+        expected_right = next_icon_left
         if name == "population_limit":
-            idle_left = regions["idle_villager"][0]
-            self.assertLess(right, idle_left, "population right not < idle villager left")
-            self.assertLessEqual(
-                right,
-                idle_left - self.pad_right,
-                "population right not ≤ idle villager left - padding",
-            )
+            expected_right = next_icon_left - common.CFG.get("population_idle_padding", 6)
+        self.assertEqual(left, expected_left, f"{name} left not at icon boundary")
+        self.assertEqual(right, expected_right, f"{name} right not at next icon boundary")
 
     def test_wood_stockpile_roi_bounds(self):
         regions, icon_width = self._locate_regions()
@@ -251,8 +215,6 @@ class TestResourceROIs(TestCase):
 
         icons = ["wood_stockpile", "food_stockpile"]
         positions = [0, 20]
-        pad_left = 2
-        pad_right = 2
         loc_iter = iter([(x, 0) for x in positions])
 
         def fake_minmax(res):
@@ -268,8 +230,8 @@ class TestResourceROIs(TestCase):
             patch.object(screen_utils, "HUD_TEMPLATE", np.zeros((1, 1), dtype=np.uint8)), \
             patch.dict(screen_utils.ICON_TEMPLATES, {name: np.zeros((5, 5), dtype=np.uint8) for name in icons}, clear=True), \
             patch.dict(common.CFG["resource_panel"], {
-                "roi_padding_left": [pad_left] * 6,
-                "roi_padding_right": [pad_right] * 6,
+                "roi_padding_left": [0] * 6,
+                "roi_padding_right": [0] * 6,
                 "icon_trim_pct": [0] * 6,
                 "scales": [1.0],
                 "match_threshold": 0.5,
@@ -289,13 +251,10 @@ class TestResourceROIs(TestCase):
         right = left + width
         icon_right = positions[0] + icon_width
         next_icon_left = positions[1]
-        pad_extra = int(round(icon_width * 0.25))
-        available_left = icon_right + pad_left
-        available_right = next_icon_left - pad_right
-        expected_width = available_right - available_left + 2 * pad_extra
+        expected_width = next_icon_left - icon_right
         self.assertEqual(width, expected_width)
-        self.assertEqual(left, available_left - pad_extra)
-        self.assertEqual(right, available_right + pad_extra)
+        self.assertEqual(left, icon_right)
+        self.assertEqual(right, next_icon_left)
 
     def test_rois_clamp_with_min_width(self):
         frame = np.zeros((50, 100, 3), dtype=np.uint8)
@@ -303,8 +262,6 @@ class TestResourceROIs(TestCase):
 
         icons = ["wood_stockpile", "food_stockpile"]
         positions = [0, 20]
-        pad_left = 2
-        pad_right = 2
         min_width = 20
         loc_iter = iter([(x, 0) for x in positions])
 
@@ -321,8 +278,8 @@ class TestResourceROIs(TestCase):
             patch.object(screen_utils, "HUD_TEMPLATE", np.zeros((1, 1), dtype=np.uint8)), \
             patch.dict(screen_utils.ICON_TEMPLATES, {name: np.zeros((5, 5), dtype=np.uint8) for name in icons}, clear=True), \
             patch.dict(common.CFG["resource_panel"], {
-                "roi_padding_left": [pad_left] * 6,
-                "roi_padding_right": [pad_right] * 6,
+                "roi_padding_left": [0] * 6,
+                "roi_padding_right": [0] * 6,
                 "icon_trim_pct": [0] * 6,
                 "scales": [1.0],
                 "match_threshold": 0.5,
@@ -343,9 +300,12 @@ class TestResourceROIs(TestCase):
         icon_right = positions[0] + icon_width
         next_icon_left = positions[1]
 
-        pad_extra = int(round(icon_width * 0.25))
-        self.assertGreaterEqual(left, icon_right + pad_left - pad_extra)
-        self.assertLessEqual(right, next_icon_left - pad_right + pad_extra)
+        expected_left = icon_right
+        expected_right = next_icon_left
+        expected_width = expected_right - expected_left
+        self.assertEqual(width, expected_width)
+        self.assertEqual(left, expected_left)
+        self.assertEqual(right, expected_right)
 
     def test_roi_limited_by_max_width(self):
         frame = np.zeros((50, 200, 3), dtype=np.uint8)
@@ -353,8 +313,6 @@ class TestResourceROIs(TestCase):
 
         icons = ["wood_stockpile", "food_stockpile"]
         positions = [0, 120]
-        pad_left = 2
-        pad_right = 2
         max_widths = [50, 30, 999, 999, 999, 999]
         loc_iter = iter([(x, 0) for x in positions])
 
@@ -371,8 +329,8 @@ class TestResourceROIs(TestCase):
             patch.object(screen_utils, "HUD_TEMPLATE", np.zeros((1, 1), dtype=np.uint8)), \
             patch.dict(screen_utils.ICON_TEMPLATES, {name: np.zeros((5, 5), dtype=np.uint8) for name in icons}, clear=True), \
             patch.dict(common.CFG["resource_panel"], {
-                "roi_padding_left": [pad_left] * 6,
-                "roi_padding_right": [pad_right] * 6,
+                "roi_padding_left": [0] * 6,
+                "roi_padding_right": [0] * 6,
                 "icon_trim_pct": [0] * 6,
                 "scales": [1.0],
                 "match_threshold": 0.5,
@@ -392,32 +350,24 @@ class TestResourceROIs(TestCase):
         right1 = left1 + width1
         icon_right1 = positions[0] + icon_width
         next_icon_left1 = positions[1]
-        pad_extra = int(round(icon_width * 0.25))
-        avail_left1 = icon_right1 + pad_left
-        avail_right1 = next_icon_left1 - pad_right
-        avail_width1 = avail_right1 - avail_left1
-        width_before = min(avail_width1, max_widths[0])
-        expected_width1 = width_before + 2 * pad_extra
-        expected_left1 = avail_left1 - pad_extra
+        avail_width1 = next_icon_left1 - icon_right1
+        expected_width1 = min(avail_width1, max_widths[0])
+        expected_left1 = icon_right1
         expected_right1 = expected_left1 + expected_width1
-        if expected_right1 > avail_right1 + pad_extra:
-            expected_left1 = avail_right1 + pad_extra - expected_width1
-            expected_right1 = avail_right1 + pad_extra
 
-        self.assertEqual(width1, expected_width1, "width not limited by max_width[0]")
-        self.assertEqual(left1, expected_left1, "ROI not anchored within bounds")
-        self.assertEqual(right1, expected_right1, "ROI exceeds available space")
+        self.assertEqual(width1, expected_width1)
+        self.assertEqual(left1, expected_left1)
+        self.assertEqual(right1, expected_right1)
 
         roi2 = regions[icons[1]]
         left2, _, width2, _ = roi2
         icon_right2 = positions[1] + icon_width
-        avail_left2 = icon_right2 + pad_left
-        avail_right2 = panel_box[2] - pad_right
-        avail_width2 = avail_right2 - avail_left2
+        avail_width2 = panel_box[2] - icon_right2
         expected_width2 = min(avail_width2, max_widths[1])
+        expected_left2 = icon_right2
 
-        self.assertEqual(width2, expected_width2, "width not limited by max_width[1]")
-        self.assertEqual(left2, avail_left2)
+        self.assertEqual(width2, expected_width2)
+        self.assertEqual(left2, expected_left2)
 
 
     def test_cache_cleared_on_region_change(self):
@@ -470,8 +420,8 @@ class TestResourceROIs(TestCase):
                 ), patch.dict(
                     common.CFG["resource_panel"],
                     {
-                        "roi_padding_left": [self.pad_left] * 6,
-                        "roi_padding_right": [self.pad_right] * 6,
+                        "roi_padding_left": [0] * 6,
+                        "roi_padding_right": [0] * 6,
                         "icon_trim_pct": [0] * 6,
                         "scales": [1.0],
                         "match_threshold": 0.5,
