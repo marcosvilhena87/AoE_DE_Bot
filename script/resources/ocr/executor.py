@@ -58,11 +58,12 @@ def execute_ocr(
     max_attempts = CFG.get("ocr_conf_max_attempts", 10)
     while digits:
         confs = parse_confidences(data)
-        if confs is None:
-            if data.get("conf"):
-                zero_conf = True
-                if not allow_zero:
-                    low_conf = True
+        if confs is None or not any(c > 0 for c in confs):
+            zero_conf = True
+            if allow_zero:
+                low_conf = False
+            else:
+                low_conf = True
             break
         texts = data.get("text", [])
         digit_confs = [
@@ -117,11 +118,12 @@ def execute_ocr(
     # Re-evaluate confidence using the chosen metric after any decay loop
     if digits:
         confs = parse_confidences(data)
-        if confs is None:
-            if data.get("conf"):
-                zero_conf = True
-                if not allow_zero:
-                    low_conf = True
+        if confs is None or not any(c > 0 for c in confs):
+            zero_conf = True
+            if allow_zero:
+                low_conf = False
+            else:
+                low_conf = True
         else:
             texts = data.get("text", [])
             digit_confs = [
@@ -155,7 +157,8 @@ def execute_ocr(
             conf_threshold,
             metric,
         )
-        return best_digits, best_data, best_mask, True
+        low_ret = not (zero_conf and allow_zero)
+        return best_digits, best_data, best_mask, low_ret
     if not digits:
         debug_dir = ROOT / "debug"
         debug_dir.mkdir(exist_ok=True)
@@ -220,6 +223,8 @@ def execute_ocr(
         digits = _sanitize_digits(digits)
         if zero_conf:
             data["zero_conf"] = True
+    if zero_conf and allow_zero:
+        low_conf = False
     logger.debug(
         "Final OCR confidence threshold %d, median confidence %.2f",
         conf_threshold,
