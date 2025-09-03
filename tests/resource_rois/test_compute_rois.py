@@ -216,6 +216,34 @@ class TestComputeResourceROIs(TestCase):
         self.assertLessEqual(right, idle_left - 6)
         self.assertLess(width, min_pop_width)
 
+    def test_population_roi_captures_three_four_digits(self):
+        detected = {
+            "population_limit": (0, 0, 10, 10),
+            "idle_villager": (100, 0, 10, 10),
+        }
+        regions, _spans, _narrow = resources.compute_resource_rois(
+            0,
+            200,
+            0,
+            20,
+            [0] * 6,
+            [0] * 6,
+            [0] * 6,
+            [999] * 6,
+            [0] * 6,
+            0,
+            0,
+            detected=detected,
+        )
+        roi = regions["population_limit"]
+        left, _, width, _ = roi
+        right = left + width
+        idle_left = detected["idle_villager"][0]
+        self.assertGreaterEqual(width, 30)
+        self.assertLessEqual(
+            right, idle_left - common.CFG.get("population_idle_padding", 6)
+        )
+
     def test_idle_roi_generated_when_span_non_positive(self):
         detected = {
             "population_limit": (0, 0, 5, 5),

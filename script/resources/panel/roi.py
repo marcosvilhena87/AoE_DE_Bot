@@ -60,6 +60,9 @@ def compute_resource_rois(
         if current in ("food_stockpile", "idle_villager"):
             pad_l = max(pad_l, 3)
             pad_r = max(pad_r, 3)
+        if current == "population_limit":
+            pad_l = max(pad_l, 4)
+            pad_r = max(pad_r, 4)
 
         cur_trim_val = icon_trims[idx] if idx < len(icon_trims) else icon_trims[-1]
         cur_trim = int(round(cur_trim_val * cur_w)) if 0 <= cur_trim_val <= 1 else int(
@@ -78,6 +81,12 @@ def compute_resource_rois(
         else:
             next_left = panel_right
 
+        idle_padding = (
+            CFG.get("population_idle_padding", 6)
+            if current == "population_limit" and next_name == "idle_villager"
+            else 0
+        )
+
         min_req = min_requireds[idx] if idx < len(min_requireds) else min_requireds[-1]
         min_w = min_widths[idx] if idx < len(min_widths) else min_widths[-1]
         min_span = max(_THREE_DIGIT_SPAN, min_req, min_w)
@@ -93,9 +102,8 @@ def compute_resource_rois(
 
         left = cur_right + pad_l
         right = next_left - pad_r
-        if current == "population_limit" and next_name == "idle_villager":
-            padding = CFG.get("population_idle_padding", 6)
-            right = min(right, next_left - padding)
+        if idle_padding:
+            right = min(right, next_left - idle_padding)
 
         # Clamp ROI boundaries to the panel limits after applying padding
         left = max(panel_left, left)
@@ -139,7 +147,8 @@ def compute_resource_rois(
         if current == "population_limit":
             width = max(width, min_pop_width)
             extra = CFG.get("pop_roi_extra_width", 0)
-            right = min(panel_right, next_left, left + width + extra)
+            max_right = next_left - idle_padding if idle_padding else next_left
+            right = min(panel_right, max_right, left + width + extra)
             width = right - left
         else:
             right = left + width
