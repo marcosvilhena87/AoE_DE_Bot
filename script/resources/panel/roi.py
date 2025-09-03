@@ -43,8 +43,34 @@ def compute_resource_rois(
         cur_bounds = detected.get(current)
         if cur_bounds is None:
             continue
-
         cur_x, _cy, cur_w, _ch = cur_bounds
+
+        if current == "idle_villager":
+            inner_trim = CFG.get("idle_icon_inner_trim")
+            if inner_trim is None:
+                inner_trim = int(round(CFG.get("idle_icon_inner_pct", 0.0) * cur_w))
+            else:
+                inner_trim = int(inner_trim)
+            inner_trim = max(0, min(inner_trim, cur_w // 2))
+
+            left = panel_left + cur_x + inner_trim
+            right = panel_left + cur_x + cur_w - inner_trim
+            width = max(0, right - left)
+            spans[current] = (left, right)
+
+            if CFG.get("ocr_debug"):
+                logger.info("Span for '%s': (%d, %d)", current, left, right)
+
+            regions[current] = (left, top, width, height)
+            logger.debug(
+                "ROI for '%s': available=(%d,%d) width=%d",
+                current,
+                left,
+                right,
+                width,
+            )
+            continue
+
         cur_right = panel_left + cur_x + cur_w
 
         next_bounds = detected.get(next_name) if next_name else None
@@ -125,23 +151,6 @@ def compute_resource_rois(
             right,
             width,
         )
-    if (
-        "idle_villager" in detected
-        and "idle_villager" not in regions
-        and idle_extra_width > 0
-    ):
-        xi, _yi, wi, _hi = detected["idle_villager"]
-        left = panel_left + xi + wi
-        right = left + idle_extra_width
-        pop_span = spans.get("population_limit")
-        if pop_span and pop_span[0] > left and right > pop_span[0]:
-            right = pop_span[0]
-        if right > panel_right:
-            right = panel_right
-        width = max(0, right - left)
-        regions["idle_villager"] = (left, top, width, height)
-        spans["idle_villager"] = (left, right)
-
     return regions, spans, narrow
 
 

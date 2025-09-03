@@ -114,7 +114,7 @@ class TestComputeResourceROIs(TestCase):
 
         self.assertEqual(result, {"wood_stockpile"})
 
-    def test_food_and_idle_rois_accommodate_three_digits(self):
+    def test_food_roi_accommodates_three_digits(self):
         detected = {
             "wood_stockpile": (0, 0, 10, 10),
             "food_stockpile": (50, 0, 10, 10),
@@ -138,9 +138,7 @@ class TestComputeResourceROIs(TestCase):
             detected=detected,
         )
         self.assertGreaterEqual(regions["food_stockpile"][2], 30)
-        self.assertGreaterEqual(regions["idle_villager"][2], 30)
         self.assertNotIn("food_stockpile", narrow)
-        self.assertNotIn("idle_villager", narrow)
 
     def test_food_roi_width_can_exceed_60_when_configured(self):
         detected = {
@@ -244,7 +242,7 @@ class TestComputeResourceROIs(TestCase):
             right, idle_left - common.CFG.get("population_idle_padding", 6)
         )
 
-    def test_idle_roi_generated_when_span_non_positive(self):
+    def test_idle_roi_uses_icon_bounds_when_span_non_positive(self):
         detected = {
             "population_limit": (0, 0, 5, 5),
             "idle_villager": (10, 0, 5, 5),
@@ -264,8 +262,8 @@ class TestComputeResourceROIs(TestCase):
             detected=detected,
         )
         self.assertIn("idle_villager", regions)
-        self.assertEqual(regions["idle_villager"], (15, 0, 10, 10))
-        self.assertEqual(spans["idle_villager"], (15, 25))
+        self.assertEqual(regions["idle_villager"], (10, 0, 5, 10))
+        self.assertEqual(spans["idle_villager"], (10, 15))
 
 
 class TestNarrowROIExpansion(TestCase):

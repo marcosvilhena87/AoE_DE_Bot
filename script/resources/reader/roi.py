@@ -29,23 +29,9 @@ def prepare_roi(
     """
     x, y, w, h = regions[name]
 
-    # Keep idle-villager ROI from encroaching on the population area
-    if name == "idle_villager" and "population_limit" in regions:
-        pop_x, _py, pop_w, _ph = regions["population_limit"]
-        pop_right = pop_x + pop_w
-        if x < pop_right:
-            # Trim any overlap on the left side
-            shift = pop_right - x
-            x = pop_right
-            w = max(0, w - shift)
-            regions[name] = (x, y, w, h)
-
     deficit = get_narrow_roi_deficit(name)
     if deficit:
-        if name == "idle_villager":
-            expand_left = 0
-            expand_right = deficit
-        elif name == "population_limit":
+        if name == "population_limit":
             expand_left = deficit
             expand_right = 0
         else:
@@ -55,10 +41,6 @@ def prepare_roi(
         orig_w = w
         x = max(0, orig_x - expand_left)
         right = min(frame.shape[1], orig_x + orig_w + expand_right)
-        if name == "idle_villager" and "population_limit" in regions:
-            pop_right = regions["population_limit"][0] + regions["population_limit"][2]
-            if x < pop_right:
-                x = pop_right
         w = max(0, right - x)
         regions[name] = (x, y, w, h)
         logger.debug(
