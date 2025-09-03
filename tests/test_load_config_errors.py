@@ -78,8 +78,13 @@ class TestLoadConfigErrors(TestCase):
     def test_allow_low_conf_population_enabled(self):
         tmp_path = self._write_config({"allow_low_conf_population": True})
         try:
-            cfg = config_utils.load_config(tmp_path)
+            with self.assertLogs(config_utils.logger, level="WARNING") as cm:
+                cfg = config_utils.load_config(tmp_path)
             self.assertTrue(cfg["allow_low_conf_population"])
+            self.assertTrue(
+                any("allow_low_conf_population" in msg for msg in cm.output),
+                "Expected warning log when allow_low_conf_population is true",
+            )
         finally:
             os.remove(tmp_path)
 

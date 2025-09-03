@@ -121,10 +121,21 @@ def load_config(path: str | Path | None = None) -> dict[str, Any]:
         ) from exc
 
     # Merge profile overrides with base settings
+    allow_low_conf_pop = cfg.setdefault("allow_low_conf_population", False)
+    if allow_low_conf_pop:
+        logger.warning(
+            "'allow_low_conf_population' enabled in base config; ensure population OCR is reliable"
+        )
+
     profiles = cfg.get("profiles", {})
     base_cfg = {k: v for k, v in cfg.items() if k != "profiles"}
     for name, override in profiles.items():
         profiles[name] = _deep_merge(base_cfg, override)
+        if profiles[name].get("allow_low_conf_population") and not allow_low_conf_pop:
+            logger.warning(
+                "'allow_low_conf_population' enabled for profile '%s'; ensure population OCR is reliable",
+                name,
+            )
     cfg["profiles"] = profiles
 
     validate_config(cfg)
