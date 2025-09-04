@@ -9,6 +9,7 @@ utilities from :mod:`screen_utils` and configuration values from
 import logging
 import time
 from pathlib import Path
+from dataclasses import dataclass
 
 import cv2
 
@@ -22,6 +23,66 @@ CFG = STATE.config
 ROOT = Path(__file__).resolve().parent.parent
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class BoundingBox:
+    """Simple bounding box container."""
+
+    left: int
+    top: int
+    width: int
+    height: int
+
+    @property
+    def right(self) -> int:
+        return self.left + self.width
+
+    @property
+    def bottom(self) -> int:
+        return self.top + self.height
+
+    def to_dict(self) -> dict:
+        return {
+            "left": self.left,
+            "top": self.top,
+            "width": self.width,
+            "height": self.height,
+        }
+
+
+def apply_population_roi_override(regions: dict[str, BoundingBox]) -> None:
+    """Apply config overrides for the population ROI."""
+
+    pop_cfg = CFG.get("population_limit_roi")
+    if not pop_cfg:
+        return
+    W, H = screen_utils.get_screen_size()
+    regions["population_limit"] = BoundingBox(
+        int(pop_cfg.get("left_pct", 0) * W),
+        int(pop_cfg.get("top_pct", 0) * H),
+        int(pop_cfg.get("width_pct", 0) * W),
+        int(pop_cfg.get("height_pct", 0) * H),
+    )
+
+
+def clamp_population_roi(regions: dict[str, BoundingBox]) -> None:
+    """Clamp the population ROI against the idle villager icon."""
+
+    idle_bounds = regions.get("idle_villager")
+    pop_box = regions.get("population_limit")
+    if not idle_bounds or not pop_box:
+        return
+    clamp_right = idle_bounds.left - CFG.get("population_idle_padding", 0)
+    if clamp_right < pop_box.right:
+        pop_box.width = max(0, clamp_right - pop_box.left)
+        logger.debug(
+            "Population ROI after clamp: x=%d y=%d w=%d h=%d",
+            pop_box.left,
+            pop_box.top,
+            pop_box.width,
+            pop_box.height,
+        )
 
 
 def wait_hud(timeout=60):
@@ -92,34 +153,11 @@ def calculate_population_roi(frame_full) -> dict:
     """
 
     regions = resources.locate_resource_panel(frame_full)
-    pop_cfg = CFG.get("population_limit_roi")
-    if pop_cfg:
-        W, H = screen_utils.get_screen_size()
-        left = int(pop_cfg.get("left_pct", 0) * W)
-        top = int(pop_cfg.get("top_pct", 0) * H)
-        width = int(pop_cfg.get("width_pct", 0) * W)
-        height = int(pop_cfg.get("height_pct", 0) * H)
-        regions["population_limit"] = (left, top, width, height)
-    idle_bounds = regions.get("idle_villager")
-    if idle_bounds and "population_limit" in regions:
-        left, top, width, height = regions["population_limit"]
-        idle_left = idle_bounds[0]
-        clamp_right = idle_left - CFG.get("population_idle_padding", 0)
-        if clamp_right < left + width:
-            width = max(0, clamp_right - left)
-            regions["population_limit"] = (left, top, width, height)
-        logger.debug(
-            "Population ROI after clamp: x=%d y=%d w=%d h=%d",
-            left,
-            top,
-            width,
-            height,
-        )
-    roi_bbox = None
-    if "population_limit" in regions:
-        x, y, w, h = regions["population_limit"]
-        roi_bbox = {"left": x, "top": y, "width": w, "height": h}
-    else:
+    regions = {k: BoundingBox(*v) for k, v in regions.items()}
+    apply_population_roi_override(regions)
+    clamp_population_roi(regions)
+    roi_bbox = regions.get("population_limit")
+    if roi_bbox is None:
         x, y, w, h = CFG["areas"]["pop_box"]
         screen_width, screen_height = screen_utils.get_screen_size()
         abs_left = int(x * screen_width)
@@ -145,16 +183,16 @@ def calculate_population_roi(frame_full) -> dict:
                 f"screen={screen_width}x{screen_height}. "
                 "Recalibrate areas.pop_box in config.json or use template anchoring."
             )
-        roi_bbox = {"left": abs_left, "top": abs_top, "width": pw, "height": ph}
+        roi_bbox = BoundingBox(abs_left, abs_top, pw, ph)
 
     logger.info(
         "Population limit ROI for OCR: left=%d top=%d width=%d height=%d",
-        roi_bbox["left"],
-        roi_bbox["top"],
-        roi_bbox["width"],
-        roi_bbox["height"],
+        roi_bbox.left,
+        roi_bbox.top,
+        roi_bbox.width,
+        roi_bbox.height,
     )
-    return roi_bbox
+    return roi_bbox.to_dict()
 
 
 def read_population_from_hud(retries=1, conf_threshold=None, save_failed_roi=False):
