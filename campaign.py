@@ -251,7 +251,7 @@ def main(config_path: str | Path | None = None) -> None:
         None
     """
 
-    common.init_common(config_path, state)
+    state = common.init_common(config_path)
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--scenario",
