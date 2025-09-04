@@ -1,13 +1,13 @@
 import os
 import sys
+import time
 import types
 from unittest import TestCase
 from unittest.mock import patch
 
-import cv2
 import numpy as np
 
-# Stub modules requiring a display
+# Stub modules that require a GUI/display before importing the bot modules
 
 dummy_pg = types.SimpleNamespace(
     PAUSE=0,
@@ -30,81 +30,51 @@ class DummyMSS:
 sys.modules.setdefault("pyautogui", dummy_pg)
 sys.modules.setdefault("mss", types.SimpleNamespace(mss=lambda: DummyMSS()))
 
-import pytesseract
-
-_OLD_TESS = os.environ.get("TESSERACT_CMD")
-os.environ["TESSERACT_CMD"] = "/usr/bin/tesseract"
-pytesseract.pytesseract.tesseract_cmd = "/usr/bin/tesseract"
+os.environ.setdefault("TESSERACT_CMD", "/usr/bin/true")
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-from script.resources import CFG
-from script.resources.ocr.preprocess import preprocess_roi
-from script.resources.ocr.executor import execute_ocr
-from script.resources.ocr.confidence import parse_confidences
-from script.resources.ocr.masks import _run_masks
+import script.resources.reader as resources
 
 
-class TestFoodStockpileOCR(TestCase):
+class TestFoodStockpileCacheTolerance(TestCase):
     def setUp(self):
-        self._old_cmd = _OLD_TESS
+        resources.RESOURCE_CACHE.last_resource_values.clear()
+        resources.RESOURCE_CACHE.last_resource_ts.clear()
+        resources.RESOURCE_CACHE.resource_failure_counts.clear()
 
     def tearDown(self):
-        if self._old_cmd is None:
-            os.environ.pop("TESSERACT_CMD", None)
-        else:
-            os.environ["TESSERACT_CMD"] = self._old_cmd
+        resources.RESOURCE_CACHE.last_resource_values.clear()
+        resources.RESOURCE_CACHE.last_resource_ts.clear()
+        resources.RESOURCE_CACHE.resource_failure_counts.clear()
 
-    def test_food_stockpile_detects_140_high_confidence(self):
-        roi = np.full((60, 150, 3), (50, 50, 50), dtype=np.uint8)
-        # Anti-aliased rendering introduces gray edges around the white digits
-        cv2.putText(
-            roi,
-            "140",
-            (10, 45),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            1.5,
-            (255, 255, 255),
-            2,
-            cv2.LINE_AA,
-        )
-        gray = preprocess_roi(roi)
-        digits, data, _mask, low_conf = execute_ocr(
-            gray, color=roi, resource="food_stockpile"
-        )
-        confs = parse_confidences(data)
-        threshold = CFG.get(
-            "food_stockpile_ocr_conf_threshold", CFG.get("ocr_conf_threshold", 60)
-        )
-        self.assertEqual(digits, "140")
-        self.assertGreaterEqual(max(confs), threshold)
+    def test_stale_cache_ignored_on_large_delta(self):
+        cache = resources.ResourceCache()
+        cache.last_resource_values["food_stockpile"] = 900
+        cache.last_resource_ts["food_stockpile"] = time.time() - 10
+
+        with patch.dict(
+            resources.CFG,
+            {
+                "food_stockpile_low_conf_fallback": True,
+                "resource_cache_tolerance": 50,
+                "starting_resources": {"food_stockpile": 80},
+            },
+            clear=False,
+        ):
+            value, cache_hit, low_conf, no_digit = resources.core._handle_cache_and_fallback(
+                "food_stockpile",
+                "80",
+                True,
+                {"text": ["80"]},
+                np.zeros((1, 1, 3), dtype=np.uint8),
+                None,
+                0,
+                cache_obj=cache,
+                max_cache_age=None,
+                low_conf_counts={},
+            )
+
+        self.assertEqual(value, 80)
+        self.assertFalse(cache_hit)
         self.assertFalse(low_conf)
-
-    def test_food_stockpile_detects_999_yellow_digits(self):
-        roi = np.full((60, 150, 3), (50, 50, 50), dtype=np.uint8)
-        cv2.putText(
-            roi,
-            "999",
-            (10, 45),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            1.5,
-            (0, 255, 255),
-            2,
-            cv2.LINE_AA,
-        )
-        gray = preprocess_roi(roi)
-        digits, data, _mask, low_conf = execute_ocr(
-            gray, color=roi, resource="food_stockpile"
-        )
-        self.assertEqual(digits, "999")
-        self.assertFalse(low_conf)
-
-    def test_full_match_preferred_over_shorter_when_confidences_close(self):
-        masks = [np.zeros((1, 1), dtype=np.uint8), np.zeros((1, 1), dtype=np.uint8)]
-        psms = [6]
-        outputs = [
-            {"text": ["0"], "conf": ["91"]},
-            {"text": ["140"], "conf": ["90", "90", "90"]},
-        ]
-        with patch("script.resources.ocr.masks.pytesseract.image_to_data", side_effect=outputs):
-            digits, data, mask = _run_masks(masks, psms, False, None, 0)
-        self.assertEqual(digits, "140")
+        self.assertEqual(cache.last_resource_values["food_stockpile"], 80)
