@@ -14,6 +14,79 @@ import script.screen_utils as screen_utils
 from script.config_utils import parse_scenario_info
 
 
+def _calculate_next_tolerance(tolerance: int, increment: int, max_tolerance: int) -> int:
+    """Increment the tolerance while capping it at ``max_tolerance``.
+
+    Args:
+        tolerance (int): Current tolerance value.
+        increment (int): Amount to increase the tolerance per attempt.
+        max_tolerance (int): Upper bound for the tolerance.
+
+    Returns:
+        int: The next tolerance value respecting the maximum limit.
+    """
+
+    return min(max_tolerance, tolerance + increment)
+
+
+def _retry_ocr(resources_module, attempt: int, required, optional):
+    """Retry OCR gathering with an incremental delay.
+
+    Args:
+        resources_module: Module providing ``gather_hud_stats``.
+        attempt (int): Attempt number for calculating the delay.
+        required (list[str]): Required HUD icons to read.
+        optional (list[str]): Optional HUD icons to read.
+
+    Returns:
+        tuple[dict, tuple[int, int]]: Resource readings and population tuple.
+    """
+
+    return resources_module.gather_hud_stats(
+        force_delay=0.1 * attempt,
+        required_icons=required,
+        optional_icons=optional,
+    )
+
+
+def _update_rois(resources_module, failing_keys):
+    """Update ROI deficits for keys failing OCR with low confidence.
+
+    Args:
+        resources_module: Module maintaining ROI state.
+        failing_keys (Iterable[str]): Resource keys that failed validation.
+    """
+
+    low_conf = resources_module.RESOURCE_CACHE.last_low_confidence
+    no_digits = resources_module.RESOURCE_CACHE.last_no_digits
+    for key in failing_keys:
+        if key in low_conf or key in no_digits:
+            resources_module._NARROW_ROI_DEFICITS[key] = (
+                resources_module._NARROW_ROI_DEFICITS.get(key, 0) + 2
+            )
+
+
+def _within_relaxed_threshold(res, expected, threshold):
+    """Check if ``res`` deviates from ``expected`` within ``threshold``.
+
+    Args:
+        res (dict): Actual resource values.
+        expected (dict): Expected resource values.
+        threshold (int): Maximum allowed absolute deviation.
+
+    Returns:
+        bool: ``True`` if all deviations are within ``threshold``.
+    """
+
+    max_dev = 0
+    for key, val in expected.items():
+        actual = res.get(key)
+        if actual is None:
+            return False
+        max_dev = max(max_dev, abs(actual - val))
+    return max_dev <= threshold
+
+
 def validate_resources_with_retry(
     res,
     expected,
@@ -55,8 +128,7 @@ def validate_resources_with_retry(
         increment = tol_cfg.get("increment", 5)
         max_tolerance = tolerance + increment
         relaxed_threshold = tolerance + 2 * increment
-        attempt = 1
-        while True:
+        for attempt in range(1, retry_limit + 1):
             frame = screen_utils_module.grab_frame()
             rois = getattr(resources_module, "_LAST_REGION_BOUNDS", {})
             logger.info(
@@ -82,15 +154,8 @@ def validate_resources_with_retry(
                     attempt,
                     e,
                 )
-                if attempt >= retry_limit:
-                    max_dev = 0
-                    for k, v in expected.items():
-                        actual = res.get(k)
-                        if actual is None:
-                            max_dev = float("inf")
-                            break
-                        max_dev = max(max_dev, abs(actual - v))
-                    if max_dev <= relaxed_threshold:
+                if attempt == retry_limit:
+                    if _within_relaxed_threshold(res, expected, relaxed_threshold):
                         logger.warning(
                             "Resource readings within ±%d; continuing.",
                             relaxed_threshold,
@@ -106,19 +171,12 @@ def validate_resources_with_retry(
                         )
                         break
                     raise
-                attempt += 1
-                tolerance = min(max_tolerance, tolerance + increment)
-                low_conf = resources_module.RESOURCE_CACHE.last_low_confidence
-                no_digits = resources_module.RESOURCE_CACHE.last_no_digits
-                for k in e.failing_keys:
-                    if k in low_conf or k in no_digits:
-                        resources_module._NARROW_ROI_DEFICITS[k] = (
-                            resources_module._NARROW_ROI_DEFICITS.get(k, 0) + 2
-                        )
-                res, (cur_pop, pop_cap) = resources_module.gather_hud_stats(
-                    force_delay=0.1 * attempt,
-                    required_icons=required,
-                    optional_icons=optional,
+                tolerance = _calculate_next_tolerance(
+                    tolerance, increment, max_tolerance
+                )
+                _update_rois(resources_module, e.failing_keys)
+                res, (cur_pop, pop_cap) = _retry_ocr(
+                    resources_module, attempt + 1, required, optional
                 )
     elif expected and skip_validation:
         logger.info(
