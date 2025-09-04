@@ -73,11 +73,24 @@ def wait_hud(timeout=60):
     )
 
 
-def read_population_from_hud(retries=1, conf_threshold=None, save_failed_roi=False):
-    if conf_threshold is None:
-        conf_threshold = CFG.get("ocr_conf_threshold", 60)
+def calculate_population_roi(frame_full) -> dict:
+    """Compute the population ROI from the given frame.
 
-    frame_full = screen_utils._grab_frame()
+    This routine encapsulates all logic for determining the region of interest
+    for population OCR. It considers configured overrides, detected icons and
+    clamps the ROI to avoid overlapping with other HUD elements.
+
+    Parameters
+    ----------
+    frame_full:
+        Full screen capture used for locating HUD elements.
+
+    Returns
+    -------
+    dict
+        Bounding box with ``left``, ``top``, ``width`` and ``height`` keys.
+    """
+
     regions = resources.locate_resource_panel(frame_full)
     pop_cfg = CFG.get("population_limit_roi")
     if pop_cfg:
@@ -141,6 +154,15 @@ def read_population_from_hud(retries=1, conf_threshold=None, save_failed_roi=Fal
         roi_bbox["width"],
         roi_bbox["height"],
     )
+    return roi_bbox
+
+
+def read_population_from_hud(retries=1, conf_threshold=None, save_failed_roi=False):
+    if conf_threshold is None:
+        conf_threshold = CFG.get("ocr_conf_threshold", 60)
+
+    frame_full = screen_utils._grab_frame()
+    roi_bbox = calculate_population_roi(frame_full)
     try:
         cur, limit, low_conf = resources.read_population_from_roi(
             roi_bbox,
