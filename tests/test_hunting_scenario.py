@@ -256,6 +256,49 @@ class TestHuntingScenario(TestCase):
         self.assertEqual(module.resources.RESOURCE_CACHE.last_resource_values, {})
         self.assertTrue(any("population" in m.lower() for m in log_ctx.output))
 
+    def test_build_house_precedes_hunting_assignments(self):
+        info = config_utils.ScenarioInfo(
+            starting_villagers=3,
+            starting_idle_villagers=3,
+            population_limit=4,
+            starting_resources=None,
+            objective_villagers=0,
+            starting_buildings={"Town Center": 1},
+        )
+
+        call_order = []
+
+        def fake_select(*a, **k):
+            call_order.append("select")
+            return True
+
+        def fake_build(*a, **k):
+            call_order.append("build")
+            return True
+
+        def fake_hunt(*a, **k):
+            call_order.append("hunt")
+
+        import importlib
+
+        module = importlib.import_module(
+            "campaigns.Ascent_of_Egypt.Egypt_1_Hunting"
+        )
+
+        state.current_pop = state.target_pop = 0
+
+        with patch.object(module.villager, "select_idle_villager", side_effect=fake_select), \
+            patch.object(module.villager, "build_house", side_effect=fake_build), \
+            patch.object(module.input_utils, "_click_norm", side_effect=fake_hunt):
+            module.run_mission(info, state=state)
+
+        self.assertGreater(call_order.count("hunt"), 0)
+        self.assertEqual(call_order[0], "build")
+        build_idx = call_order.index("build")
+        for idx, name in enumerate(call_order):
+            if name == "hunt":
+                self.assertGreater(idx, build_idx)
+
     def test_aborts_on_pop_cap_mismatch(self):
         info = config_utils.ScenarioInfo(
             starting_villagers=3,
