@@ -118,7 +118,7 @@ class TestResourceROIs(TestCase):
         ), patch(
             "script.resources.cv2.minMaxLoc", side_effect=fake_minmax
         ), patch.object(
-            screen_utils, "_load_icon_templates", lambda: None
+            screen_utils, "load_icon_templates", lambda: None
         ), patch.object(
             screen_utils, "HUD_TEMPLATE", np.zeros((1, 1), dtype=np.uint8)
         ), patch.dict(
@@ -289,7 +289,7 @@ class TestResourceROIs(TestCase):
             patch("script.resources.cv2.resize", lambda img, *a, **k: img), \
             patch("script.resources.cv2.matchTemplate", lambda *a, **k: np.zeros((100, 200), dtype=np.float32)), \
             patch("script.resources.cv2.minMaxLoc", side_effect=fake_minmax), \
-            patch.object(screen_utils, "_load_icon_templates", lambda: None), \
+            patch.object(screen_utils, "load_icon_templates", lambda: None), \
             patch.object(screen_utils, "HUD_TEMPLATE", np.zeros((1, 1), dtype=np.uint8)), \
             patch.dict(screen_utils.ICON_TEMPLATES, {name: np.zeros((5, 5), dtype=np.uint8) for name in icons}, clear=True), \
             patch.dict(common.CFG["resource_panel"], {
@@ -335,7 +335,7 @@ class TestResourceROIs(TestCase):
             patch("script.resources.cv2.resize", lambda img, *a, **k: img), \
             patch("script.resources.cv2.matchTemplate", lambda *a, **k: np.zeros((100, 200), dtype=np.float32)), \
             patch("script.resources.cv2.minMaxLoc", side_effect=fake_minmax), \
-            patch.object(screen_utils, "_load_icon_templates", lambda: None), \
+              patch.object(screen_utils, "load_icon_templates", lambda: None), \
             patch.object(screen_utils, "HUD_TEMPLATE", np.zeros((1, 1), dtype=np.uint8)), \
             patch.dict(screen_utils.ICON_TEMPLATES, {name: np.zeros((5, 5), dtype=np.uint8) for name in icons}, clear=True), \
             patch.dict(common.CFG["resource_panel"], {
@@ -384,7 +384,7 @@ class TestResourceROIs(TestCase):
             patch("script.resources.cv2.resize", lambda img, *a, **k: img), \
             patch("script.resources.cv2.matchTemplate", lambda *a, **k: np.zeros((100, 200), dtype=np.float32)), \
             patch("script.resources.cv2.minMaxLoc", side_effect=fake_minmax), \
-            patch.object(screen_utils, "_load_icon_templates", lambda: None), \
+              patch.object(screen_utils, "load_icon_templates", lambda: None), \
             patch.object(screen_utils, "HUD_TEMPLATE", np.zeros((1, 1), dtype=np.uint8)), \
             patch.dict(screen_utils.ICON_TEMPLATES, {name: np.zeros((5, 5), dtype=np.uint8) for name in icons}, clear=True), \
             patch.dict(common.CFG["resource_panel"], {
@@ -469,7 +469,7 @@ class TestResourceROIs(TestCase):
                 patch("script.resources.cv2.resize", lambda img, *a, **k: img), \
                 patch("script.resources.cv2.matchTemplate", lambda *a, **k: np.zeros((100, 200), dtype=np.float32)), \
                 patch("script.resources.cv2.minMaxLoc", side_effect=fake_minmax), \
-                patch.object(screen_utils, "_load_icon_templates", lambda: None), \
+                patch.object(screen_utils, "load_icon_templates", lambda: None), \
                 patch.dict(
                     screen_utils.ICON_TEMPLATES,
                     {name: np.zeros((icon_size, icon_size), dtype=np.uint8) for name in self.icons},

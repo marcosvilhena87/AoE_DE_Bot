@@ -69,7 +69,7 @@ def test_population_limit_fallback_estimates_width_with_padding():
     cfg = _make_cfg()
 
     with patch.object(detection, "detect_hud", return_value=((0, 0, 200, 20), 1.0)), \
-        patch.object(resources.screen_utils, "_load_icon_templates", lambda: None), \
+        patch.object(resources.screen_utils, "load_icon_templates", lambda: None), \
         patch.dict(resources.screen_utils.ICON_TEMPLATES, {"idle_villager": np.zeros((hi, wi), dtype=np.uint8)}, clear=True), \
         patch.object(resources.cv2, "cvtColor", lambda src, code: np.zeros(src.shape[:2], dtype=np.uint8)), \
         patch.object(resources.cv2, "resize", lambda img, *a, **k: img), \
