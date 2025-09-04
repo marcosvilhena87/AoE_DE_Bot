@@ -74,7 +74,7 @@ class TestClickAndBuildHouse(TestCase):
             return_value=np.zeros((200, 200, 3), dtype=np.uint8),
         ), patch(
             "script.input_utils._press_key_safe"
-        ), patch(
+        ) as press_mock, patch(
             "script.input_utils._click_norm"
         ) as click_mock, patch(
             "script.units.villager.time.sleep"
@@ -83,10 +83,12 @@ class TestClickAndBuildHouse(TestCase):
 
         self.assertTrue(result)
         self.assertEqual(state.pop_cap, 8)
-        self.assertEqual(click_mock.call_count, 2)
-        self.assertEqual(click_mock.call_args_list[0].args, expected_coords)
-        self.assertEqual(click_mock.call_args_list[1].args, expected_coords)
-        self.assertEqual(click_mock.call_args_list[1].kwargs["button"], "right")
+        self.assertEqual(click_mock.call_count, 1)
+        self.assertEqual(click_mock.call_args[0], expected_coords)
+        self.assertEqual(click_mock.call_args[1]["button"], "right")
+        self.assertEqual(press_mock.call_count, 2)
+        self.assertEqual(press_mock.call_args_list[0].args[0], state.config["keys"]["idle_vill"])
+        self.assertEqual(press_mock.call_args_list[1].args[0], state.config["keys"]["house"])
         self.assertGreaterEqual(read_mock.call_count, 2)
         self.assertGreaterEqual(read_pop_mock.call_count, 1)
         tmpl_mock.assert_called()
