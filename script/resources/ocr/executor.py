@@ -498,10 +498,7 @@ def _read_population_from_roi(roi, conf_threshold=None, roi_bbox=None, failure_c
     """
 
     if conf_threshold is None:
-        conf_threshold = CFG.get(
-            "population_limit_ocr_conf_threshold",
-            CFG.get("ocr_conf_threshold", 60),
-        )
+        conf_threshold = CFG.get("ocr_conf_threshold", 60)
 
     if roi.size == 0:
         msg = "Population ROI has zero size"
@@ -832,9 +829,7 @@ def _extract_population(
         cache_obj.resource_low_conf_counts = low_conf_counts
         low_conf_count = low_conf_counts.get("population_limit", 0)
         max_right = (
-            regions["idle_villager"][0] - CFG.get("population_idle_padding", 0)
-            if "idle_villager" in regions
-            else None
+            regions["idle_villager"][0] if "idle_villager" in regions else None
         )
         low_conf = False
         low_conf_digits = None

@@ -56,9 +56,9 @@ def test_population_fraction_high_confidence():
 
     with patch.object(masks, "cv2", cv2_stub), \
          patch("script.resources.ocr.masks._run_masks", side_effect=side_effects), \
-         patch.dict(masks.CFG, {"population_morph_close": {"kernel": [1, 2]}, "population_limit_ocr_conf_threshold": 45}, clear=False):
+         patch.dict(masks.CFG, {"population_morph_close": {"kernel": [1, 2]}, "ocr_conf_threshold": 45}, clear=False):
         digits, data, _mask = masks._ocr_digits_better(gray, resource="population_limit")
 
     assert digits == "34"
-    assert int(data["conf"][0]) >= masks.CFG["population_limit_ocr_conf_threshold"]
+    assert int(data["conf"][0]) >= masks.CFG["ocr_conf_threshold"]
     assert (1, 2) in k_sizes

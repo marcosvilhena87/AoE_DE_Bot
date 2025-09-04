@@ -24,7 +24,7 @@ class TestConsecutiveIconSpacing(TestCase):
 
         with patch.dict(
             resources.CFG,
-            {"idle_icon_inner_trim": 2, "population_idle_padding": 6},
+            {"idle_icon_inner_trim": 2},
             clear=False,
         ):
             regions, spans, narrow = resources.compute_resource_rois(

@@ -197,7 +197,7 @@ def test_population_roi_expansion_respects_idle_villager_boundary():
     mock_read_fn = patch("script.resources.ocr.executor._read_population_from_roi", side_effect=fake_read)
     with patch.dict(
         resources.common.CFG,
-        {"population_ocr_roi_expand_base": 50, "population_idle_padding": 6},
+        {"population_ocr_roi_expand_base": 50},
         clear=False,
     ), mock_read_fn as mock_exec, patch(
         "script.resources.reader.roi._read_population_from_roi",

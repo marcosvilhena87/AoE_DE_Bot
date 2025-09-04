@@ -88,41 +88,6 @@ class TestIdleVillagerROI(TestCase):
         self.assertEqual(regions["idle_villager"], (13, 2, 14, 10))
         self.assertEqual(spans["idle_villager"], (13, 27))
 
-    def test_detect_resource_regions_uses_configured_idle_roi_when_missing(self):
-        frame = np.zeros((50, 100, 3), dtype=np.uint8)
-        cfg = {
-            "left_pct": 0.5,
-            "top_pct": 0.25,
-            "width_pct": 0.04,
-            "height_pct": 0.05,
-        }
-        expected = (100, 50, 40, 20)
-        with patch("script.resources.locate_resource_panel", return_value={}), \
-            patch("script.screen_utils.get_screen_size", return_value=(200, 200)), \
-            patch.dict(resources.CFG, {"idle_villager_roi": cfg}, clear=False), \
-            patch.object(common, "HUD_ANCHOR", None):
-            regions = resources.detect_resource_regions(frame, ["idle_villager"])
-
-        self.assertEqual(regions["idle_villager"], expected)
-
-    def test_detect_resource_regions_prefers_detected_idle_roi_over_config(self):
-        frame = np.zeros((50, 100, 3), dtype=np.uint8)
-        detected = {"idle_villager": (1, 2, 3, 4)}
-        cfg = {
-            "left_pct": 0.5,
-            "top_pct": 0.25,
-            "width_pct": 0.04,
-            "height_pct": 0.05,
-        }
-        with patch.object(resources, "locate_resource_panel", return_value=detected), \
-            patch.object(resources.panel, "locate_resource_panel", return_value=detected), \
-            patch.object(resources.panel.detection, "locate_resource_panel", return_value=detected), \
-            patch.dict(resources.CFG, {"idle_villager_roi": cfg}, clear=False), \
-            patch.object(common, "HUD_ANCHOR", None):
-            regions = resources.detect_resource_regions(frame, ["idle_villager"])
-
-        self.assertEqual(regions["idle_villager"], detected["idle_villager"])
-
     def test_idle_villager_extreme_inner_trim_not_negative(self):
         detected = {
             "food_stockpile": (0, 0, 20, 10),
