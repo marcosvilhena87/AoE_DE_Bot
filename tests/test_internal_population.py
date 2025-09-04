@@ -98,3 +98,42 @@ class TestInternalPopulation(TestCase):
             read_mock.assert_not_called()
             self.assertEqual(pop_mock.call_count, 4)
 
+    def test_run_mission_builds_house_before_training(self):
+        from campaigns.Ascent_of_Egypt import Egypt_1_Hunting as hunt
+
+        info = config_utils.ScenarioInfo(
+            starting_villagers=3,
+            starting_idle_villagers=3,
+            population_limit=4,
+            starting_resources={},
+            objective_villagers=4,
+            starting_buildings={"Town Center": 1},
+        )
+
+        state.current_pop = 3
+        state.pop_cap = 4
+        state.target_pop = 4
+
+        resources = hunt.resources
+        resources.RESOURCE_CACHE.last_resource_values["food_stockpile"] = 0
+
+        call_order = []
+
+        def fake_build_house(state=state):
+            call_order.append("build_house")
+            state.pop_cap += 4
+            return True
+
+        def fake_train(target, state=state):
+            call_order.append("train_villagers")
+            state.current_pop += 1
+
+        with patch("script.units.villager.select_idle_villager", return_value=True), \
+             patch("script.units.villager.build_house", side_effect=fake_build_house), \
+             patch("campaigns.Ascent_of_Egypt.Egypt_1_Hunting.train_villagers", side_effect=fake_train), \
+             patch("script.resources.reader.read_resources_from_hud", return_value=({"food_stockpile": 100}, None)):
+            hunt.run_mission(info, state=state)
+
+        self.assertEqual(call_order[0], "build_house")
+        self.assertIn("train_villagers", call_order)
+
