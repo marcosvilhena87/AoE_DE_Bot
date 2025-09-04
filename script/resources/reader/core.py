@@ -4,6 +4,7 @@ import time
 from typing import Iterable, Callable
 from pathlib import Path
 from dataclasses import dataclass
+from typing import Iterator
 
 import cv2
 import numpy as np
@@ -204,6 +205,70 @@ def _ocr_resource(
     return result.digits, result.data, result.mask, result.low_conf
 
 
+def iter_candidate_rois(
+    frame: np.ndarray,
+    span_left: int,
+    span_right: int,
+    y: int,
+    h: int,
+    w: int,
+    top_crop: int,
+) -> Iterator[tuple[int, int, np.ndarray, np.ndarray]]:
+    """Yield candidate ROIs within a span for follow-up OCR attempts.
+
+    Parameters
+    ----------
+    frame:
+        Full screenshot frame.
+    span_left, span_right:
+        Inclusive bounds of the resource span on the X axis.
+    y, h:
+        Top coordinate and height of the ROI.
+    w:
+        Width of the last attempted ROI.
+    top_crop:
+        Pixels trimmed from the top of each grayscale ROI.
+
+    Yields
+    ------
+    tuple[int, int, np.ndarray, np.ndarray]
+        ``(x, width, roi, gray)`` for each candidate.
+
+    Notes
+    -----
+    The generator does not modify ``frame``.
+    """
+
+    span_width = span_right - span_left
+    widths = [min(w, span_width)]
+    widths += [min(span_width, cw) for cw in CFG.get("ocr_candidate_widths", (64, 56, 48))]
+    widths = list(dict.fromkeys(widths))
+    for idx, cand_w in enumerate(widths):
+        for anchor in ("left", "center", "right"):
+            if anchor == "left":
+                cand_x = span_left
+            elif anchor == "center":
+                cand_x = span_left + (span_width - cand_w) // 2
+            else:
+                cand_x = span_right - cand_w
+            cand_x = max(span_left, min(cand_x, span_right - cand_w))
+            roi_retry = frame[y : y + h, cand_x : cand_x + cand_w]
+            gray_retry = preprocess_roi(roi_retry)
+            if top_crop > 0 and gray_retry.shape[0] > top_crop:
+                gray_retry = gray_retry[top_crop:, :]
+            yield cand_x, cand_w, roi_retry, gray_retry
+        if idx == 0:
+            expanded_w = min(span_width, cand_w + 10)
+            if expanded_w > cand_w:
+                cand_x = span_left
+                cand_x = max(span_left, min(cand_x, span_right - expanded_w))
+                roi_retry = frame[y : y + h, cand_x : cand_x + expanded_w]
+                gray_retry = preprocess_roi(roi_retry)
+                if top_crop > 0 and gray_retry.shape[0] > top_crop:
+                    gray_retry = gray_retry[top_crop:, :]
+                yield cand_x, expanded_w, roi_retry, gray_retry
+
+
 def _retry_ocr(
     frame: np.ndarray,
     name: str,
@@ -223,7 +288,19 @@ def _retry_ocr(
 ) -> tuple[str | None, dict, np.ndarray | None, np.ndarray, np.ndarray, int, int, int, int, bool]:
     """Retry OCR with ROI expansion and alternative widths.
 
-    Returns updated OCR results and ROI information.
+    Returns
+    -------
+    tuple
+        ``(digits, data, mask, roi, gray, x, y, w, h, low_conf)`` where
+        ``roi`` and ``gray`` are the color and grayscale regions used for
+        the final successful attempt. ``x``, ``y``, ``w`` and ``h`` describe
+        the bounding box of that ROI. ``low_conf`` indicates whether the
+        final OCR pass was below the confidence threshold.
+
+    Notes
+    -----
+    The function does not modify ``frame`` but may return new ROI arrays
+    when expansion or candidate scanning succeeds.
     """
 
     if not digits:
@@ -257,78 +334,37 @@ def _retry_ocr(
                 low_conf = True
     if not digits:
         span_left, span_right = cache._LAST_REGION_SPANS.get(name, (x, x + w))
-        span_width = span_right - span_left
-        cand_widths = [min(w, span_width)]
-        cand_widths += [min(span_width, cw) for cw in (64, 56, 48)]
-        cand_widths = list(dict.fromkeys(cand_widths))
-        for idx, cand_w in enumerate(cand_widths):
-            for anchor in ("left", "center", "right"):
-                if anchor == "left":
-                    cand_x = span_left
-                elif anchor == "center":
-                    cand_x = span_left + (span_width - cand_w) // 2
-                else:
-                    cand_x = span_right - cand_w
-                cand_x = max(span_left, min(cand_x, span_right - cand_w))
-                roi_retry = frame[y : y + h, cand_x : cand_x + cand_w]
-                gray_retry = preprocess_roi(roi_retry)
-                if top_crop > 0 and gray_retry.shape[0] > top_crop:
-                    gray_retry = gray_retry[top_crop:, :]
-                digits_retry, data_retry, mask_retry, low_conf = execute_ocr(
-                    gray_retry,
-                    color=roi_retry,
-                    conf_threshold=res_conf_threshold,
-                    allow_fallback=False,
-                    roi=(cand_x, y, cand_w, h),
-                    resource=name,
-                )
-                if data_retry.get("zero_conf") and not CFG.get("allow_zero_confidence_digits"):
-                    low_conf = True
-                logger.info(
-                    "OCR %s: digits=%s conf=%s low_conf=%s",
-                    name,
-                    digits_retry,
-                    parse_confidences(data_retry),
-                    low_conf,
-                )
-                if digits_retry:
-                    digits, data, mask = digits_retry, data_retry, mask_retry
-                    roi, gray = roi_retry, gray_retry
-                    x, w = cand_x, cand_w
-                    break
-            if digits:
+        for cand_x, cand_w, roi_retry, gray_retry in iter_candidate_rois(
+            frame,
+            span_left,
+            span_right,
+            y,
+            h,
+            w,
+            top_crop,
+        ):
+            digits_retry, data_retry, mask_retry, low_conf = execute_ocr(
+                gray_retry,
+                color=roi_retry,
+                conf_threshold=res_conf_threshold,
+                allow_fallback=False,
+                roi=(cand_x, y, cand_w, h),
+                resource=name,
+            )
+            if data_retry.get("zero_conf") and not CFG.get("allow_zero_confidence_digits"):
+                low_conf = True
+            logger.info(
+                "OCR %s: digits=%s conf=%s low_conf=%s",
+                name,
+                digits_retry,
+                parse_confidences(data_retry),
+                low_conf,
+            )
+            if digits_retry:
+                digits, data, mask = digits_retry, data_retry, mask_retry
+                roi, gray = roi_retry, gray_retry
+                x, w = cand_x, cand_w
                 break
-            if idx == 0 and not digits:
-                expanded_w = min(span_width, cand_w + 10)
-                if expanded_w > cand_w:
-                    cand_x = span_left
-                    cand_x = max(span_left, min(cand_x, span_right - expanded_w))
-                    roi_retry = frame[y : y + h, cand_x : cand_x + expanded_w]
-                    gray_retry = preprocess_roi(roi_retry)
-                    if top_crop > 0 and gray_retry.shape[0] > top_crop:
-                        gray_retry = gray_retry[top_crop:, :]
-                    digits_retry, data_retry, mask_retry, low_conf = execute_ocr(
-                        gray_retry,
-                        color=roi_retry,
-                        conf_threshold=res_conf_threshold,
-                        allow_fallback=False,
-                        roi=(cand_x, y, expanded_w, h),
-                        resource=name,
-                    )
-                    if data_retry.get("zero_conf") and not CFG.get("allow_zero_confidence_digits"):
-                        low_conf = True
-                    logger.info(
-                        "OCR %s: digits=%s conf=%s low_conf=%s",
-                        name,
-                        digits_retry,
-                        parse_confidences(data_retry),
-                        low_conf,
-                    )
-                    if digits_retry:
-                        digits, data, mask = digits_retry, data_retry, mask_retry
-                        roi, gray = roi_retry, gray_retry
-                        x, w = cand_x, expanded_w
-                        break
     return digits, data, mask, roi, gray, x, y, w, h, low_conf
 
 
