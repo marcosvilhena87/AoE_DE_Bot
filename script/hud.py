@@ -11,6 +11,8 @@ import time
 from pathlib import Path
 from dataclasses import dataclass
 
+from config import Config
+
 import cv2
 
 from .template_utils import find_template
@@ -18,7 +20,7 @@ from . import screen_utils, common, resources
 from .resources import reader as resource_reader
 from .common import STATE
 
-CFG = STATE.config
+CFG: Config = STATE.config
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -51,10 +53,10 @@ class BoundingBox:
         }
 
 
-def apply_population_roi_override(regions: dict[str, BoundingBox]) -> None:
+def apply_population_roi_override(regions: dict[str, BoundingBox], cfg: Config = CFG) -> None:
     """Apply config overrides for the population ROI."""
 
-    pop_cfg = CFG.get("population_limit_roi")
+    pop_cfg = cfg.get("population_limit_roi")
     if not pop_cfg:
         return
     W, H = screen_utils.get_screen_size()
@@ -66,14 +68,14 @@ def apply_population_roi_override(regions: dict[str, BoundingBox]) -> None:
     )
 
 
-def clamp_population_roi(regions: dict[str, BoundingBox]) -> None:
+def clamp_population_roi(regions: dict[str, BoundingBox], cfg: Config = CFG) -> None:
     """Clamp the population ROI against the idle villager icon."""
 
     idle_bounds = regions.get("idle_villager")
     pop_box = regions.get("population_limit")
     if not idle_bounds or not pop_box:
         return
-    clamp_right = idle_bounds.left - CFG.get("population_idle_padding", 0)
+    clamp_right = idle_bounds.left - cfg.get("population_idle_padding", 0)
     if clamp_right < pop_box.right:
         pop_box.width = max(0, clamp_right - pop_box.left)
         logger.debug(
@@ -85,7 +87,7 @@ def clamp_population_roi(regions: dict[str, BoundingBox]) -> None:
         )
 
 
-def wait_hud(timeout=60):
+def wait_hud(cfg: Config = CFG, timeout=60):
     logger.info("Waiting for HUD for up to %ss...", timeout)
     t0 = time.time()
     tmpl = screen_utils.HUD_TEMPLATE
@@ -98,10 +100,10 @@ def wait_hud(timeout=60):
     while time.time() - t0 < timeout:
         frame = screen_utils.screen_capture.grab_frame()
         box, score, heat = find_template(
-            frame, tmpl, threshold=CFG["threshold"], scales=CFG["scales"]
+            frame, tmpl, threshold=cfg["threshold"], scales=cfg["scales"]
         )
         if box:
-            if CFG["debug"]:
+            if cfg["debug"]:
                 cv2.imwrite(f"debug_hud_{asset}.png", frame)
             x, y, w, h = box
             logger.info("HUD detected with template '%s'", asset)
@@ -134,7 +136,7 @@ def wait_hud(timeout=60):
     )
 
 
-def calculate_population_roi(frame_full) -> dict:
+def calculate_population_roi(frame_full, cfg: Config = CFG) -> dict:
     """Compute the population ROI from the given frame.
 
     This routine encapsulates all logic for determining the region of interest
@@ -152,13 +154,13 @@ def calculate_population_roi(frame_full) -> dict:
         Bounding box with ``left``, ``top``, ``width`` and ``height`` keys.
     """
 
-    regions = resources.locate_resource_panel(frame_full)
+    regions = resources.locate_resource_panel(frame_full, cfg=cfg)
     regions = {k: BoundingBox(*v) for k, v in regions.items()}
-    apply_population_roi_override(regions)
-    clamp_population_roi(regions)
+    apply_population_roi_override(regions, cfg)
+    clamp_population_roi(regions, cfg)
     roi_bbox = regions.get("population_limit")
     if roi_bbox is None:
-        x, y, w, h = CFG["areas"]["pop_box"]
+        x, y, w, h = cfg["areas"]["pop_box"]
         screen_width, screen_height = screen_utils.get_screen_size()
         abs_left = int(x * screen_width)
         abs_top = int(y * screen_height)
@@ -195,12 +197,17 @@ def calculate_population_roi(frame_full) -> dict:
     return roi_bbox.to_dict()
 
 
-def read_population_from_hud(retries=1, conf_threshold=None, save_failed_roi=False):
+def read_population_from_hud(
+    cfg: Config = CFG,
+    retries: int = 1,
+    conf_threshold: int | None = None,
+    save_failed_roi: bool = False,
+):
     if conf_threshold is None:
-        conf_threshold = CFG.get("ocr_conf_threshold", 60)
+        conf_threshold = cfg.get("ocr_conf_threshold", 60)
 
     frame_full = screen_utils.screen_capture.grab_frame()
-    roi_bbox = calculate_population_roi(frame_full)
+    roi_bbox = calculate_population_roi(frame_full, cfg)
     try:
         cur, limit, low_conf = resources.read_population_from_roi(
             roi_bbox,
@@ -208,7 +215,7 @@ def read_population_from_hud(retries=1, conf_threshold=None, save_failed_roi=Fal
             conf_threshold=conf_threshold,
             save_failed_roi=save_failed_roi,
         )
-        if low_conf and CFG.get("treat_low_conf_as_failure", False):
+        if low_conf and cfg.get("treat_low_conf_as_failure", False):
             err = common.PopulationReadError("Low-confidence population OCR")
             err.low_conf = True
             err.low_conf_digits = (cur, limit)

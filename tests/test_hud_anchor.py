@@ -51,7 +51,7 @@ class TestHudAnchor(TestCase):
         with patch.object(hud.screen_utils, "HUD_TEMPLATE", None), \
             patch("script.screen_utils.screen_capture.grab_frame") as grab_mock:
             with self.assertRaises(RuntimeError) as ctx:
-                hud.wait_hud(timeout=1)
+                hud.wait_hud(common.STATE.config, timeout=1)
         grab_mock.assert_not_called()
         self.assertIn(ASSET, str(ctx.exception))
 
@@ -60,7 +60,7 @@ class TestHudAnchor(TestCase):
         fake_frame = np.zeros((100, 100, 3), dtype=np.uint8)
         with patch("script.screen_utils.screen_capture.grab_frame", return_value=fake_frame), \
              patch("script.hud.find_template", return_value=((10, 20, 30, 40), 0.9, None)):
-            anchor, asset = hud.wait_hud(timeout=1)
+            anchor, asset = hud.wait_hud(common.STATE.config, timeout=1)
         self.assertEqual(asset, ASSET)
         self.assertEqual(anchor["asset"], ASSET)
         self.assertEqual(common.HUD_ANCHOR["asset"], ASSET)
@@ -129,7 +129,7 @@ class TestHudAnchorTools(TestCase):
         fake_frame = np.zeros((100, 100, 3), dtype=np.uint8)
         with patch("tools.campaign.grab_frame", return_value=fake_frame), \
              patch("tools.campaign.find_template", return_value=((10, 20, 30, 40), 0.9, None)):
-            anchor, asset = cb.wait_hud(timeout=1)
+            anchor, asset = cb.wait_hud(common.STATE.config, timeout=1)
         self.assertEqual(asset, ASSET)
         self.assertEqual(anchor["asset"], ASSET)
         self.assertEqual(cb.HUD_ANCHOR["asset"], ASSET)

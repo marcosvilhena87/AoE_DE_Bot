@@ -3,6 +3,7 @@ import logging
 from dataclasses import dataclass
 from typing import Iterable
 
+from config import Config
 from .. import CFG, common, RESOURCE_ICON_ORDER, cache
 from ... import screen_utils
 
@@ -26,18 +27,19 @@ class ResourcePanelCfg:
     pop_roi_extra_width: int
 
 
-def _get_resource_panel_cfg():
+def _get_resource_panel_cfg(cfg: Config | None = None):
     """Return processed configuration values for the resource panel."""
 
-    res_cfg = CFG.get("resource_panel", {})
-    profile = CFG.get("profile")
-    profile_cfg = CFG.get("profiles", {}).get(profile, {})
+    cfg = cfg or CFG
+    res_cfg = cfg.get("resource_panel", {})
+    profile = cfg.get("profile")
+    profile_cfg = cfg.get("profiles", {}).get(profile, {})
     profile_res = profile_cfg.get("resource_panel", {})
 
     match_threshold = profile_res.get(
         "match_threshold", res_cfg.get("match_threshold", 0.8)
     )
-    scales = res_cfg.get("scales", CFG.get("scales", [1.0]))
+    scales = res_cfg.get("scales", cfg.get("scales", [1.0]))
 
     pad_left = res_cfg.get("roi_padding_left", 2)
     pad_right = res_cfg.get("roi_padding_right", 2)

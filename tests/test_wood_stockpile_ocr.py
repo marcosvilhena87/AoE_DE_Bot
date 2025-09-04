@@ -40,6 +40,7 @@ from script.resources.ocr.preprocess import preprocess_roi
 from script.resources.ocr.executor import execute_ocr
 from script.resources.ocr.confidence import parse_confidences
 from script.resources.reader.core import _ocr_resource
+from config import Config
 from script.resources.reader.roi import prepare_roi
 from script.resources.cache import ResourceCache
 from script.resources.ocr.masks import _ocr_digits_better
@@ -128,14 +129,17 @@ class TestWoodStockpileOCR(TestCase):
         with patch(
             "script.resources.ocr.executor.masks._ocr_digits_better",
             side_effect=fake_ocr_digits_better,
-        ), patch.dict(CFG, {"treat_low_conf_as_failure": True, "allow_zero_confidence_digits": False}, clear=False):
+        ):
+            cfg = Config(dict(CFG))
+            cfg.update({"treat_low_conf_as_failure": True, "allow_zero_confidence_digits": False})
             digits, data, _mask, low_conf = _ocr_resource(
                 "wood_stockpile",
                 roi,
                 gray,
-                CFG.get("ocr_conf_threshold", 60),
+                cfg.get("ocr_conf_threshold", 60),
                 (0, 0, roi.shape[1], roi.shape[0]),
                 cache_obj,
+                cfg,
             )
         self.assertTrue(low_conf)
         self.assertEqual(parse_confidences(data), [0.0, 0.0])
@@ -150,15 +154,17 @@ class TestWoodStockpileOCR(TestCase):
         self.assertIsNotNone(roi_info)
         x, y, w, h, roi, gray, _top, _fail = roi_info
         self.assertGreater(w, 34)
-        with patch.dict(CFG, {"treat_low_conf_as_failure": False}, clear=False):
-            digits, data, _mask, low_conf = _ocr_resource(
-                "wood_stockpile",
-                roi,
-                gray,
-                CFG.get("ocr_conf_threshold", 60),
-                (x, y, w, h),
-                cache_obj,
-            )
+        cfg = Config(dict(CFG))
+        cfg.update({"treat_low_conf_as_failure": False})
+        digits, data, _mask, low_conf = _ocr_resource(
+            "wood_stockpile",
+            roi,
+            gray,
+            cfg.get("ocr_conf_threshold", 60),
+            (x, y, w, h),
+            cache_obj,
+            cfg,
+        )
         self.assertEqual(digits, "80")
 
     def test_single_digit_low_confidence_triggers_color_pass(self):

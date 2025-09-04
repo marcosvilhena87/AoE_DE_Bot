@@ -49,6 +49,7 @@ os.environ.setdefault("TESSERACT_CMD", "/usr/bin/true")
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 import script.hud as hud
+from config import Config
 
 
 class TestCalculatePopulationROI(TestCase):
@@ -58,9 +59,11 @@ class TestCalculatePopulationROI(TestCase):
             "population_limit": (50, 0, 40, 20),
             "idle_villager": (80, 0, 10, 20),
         }
-        with patch("script.resources.locate_resource_panel", return_value=regions), \
-            patch.dict(hud.CFG, {"population_limit_roi": None, "population_idle_padding": 5}, clear=False):
-            roi = hud.calculate_population_roi(frame)
+        cfg = Config({"population_limit_roi": None, "population_idle_padding": 5})
+        def fake_locate(frame, cfg):
+            return regions
+        with patch("script.resources.locate_resource_panel", side_effect=fake_locate):
+            roi = hud.calculate_population_roi(frame, cfg)
         assert roi == {"left": 50, "top": 0, "width": 25, "height": 20}
 
     def test_custom_population_limit_roi_config(self):
@@ -71,8 +74,10 @@ class TestCalculatePopulationROI(TestCase):
             "width_pct": 0.3,
             "height_pct": 0.4,
         }
-        with patch("script.resources.locate_resource_panel", return_value={}), \
-            patch("script.screen_utils.get_screen_size", return_value=(200, 200)), \
-            patch.dict(hud.CFG, {"population_limit_roi": pop_cfg}, clear=False):
-            roi = hud.calculate_population_roi(frame)
+        cfg = Config({"population_limit_roi": pop_cfg, "population_idle_padding": 0})
+        def fake_locate(frame, cfg):
+            return {}
+        with patch("script.resources.locate_resource_panel", side_effect=fake_locate), \
+            patch("script.screen_utils.get_screen_size", return_value=(200, 200)):
+            roi = hud.calculate_population_roi(frame, cfg)
         assert roi == {"left": 20, "top": 40, "width": 60, "height": 80}

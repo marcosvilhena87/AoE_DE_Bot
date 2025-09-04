@@ -58,6 +58,7 @@ common.init_common()
 import script.resources as resources
 from script.resources import cache
 import script.screen_utils as screen_utils
+import script.common as common
 
 
 class TestResourceROIs(TestCase):
@@ -145,7 +146,7 @@ class TestResourceROIs(TestCase):
                 "icon_trim_pct": trim,
             },
         ):
-            regions = resources.locate_resource_panel(self.frame)
+            regions = resources.locate_resource_panel(self.frame, cfg=common.STATE.config)
             icon_template = screen_utils.ICON_TEMPLATES[self.icons[0]]
             icon_width = icon_template.shape[1]
             self.icon_height = icon_template.shape[0]
@@ -306,7 +307,7 @@ class TestResourceROIs(TestCase):
                 common.CFG["profiles"]["aoe1de"]["resource_panel"],
                 {"icon_trim_pct": [0] * 6},
             ):
-                regions = resources.locate_resource_panel(frame)
+                regions = resources.locate_resource_panel(frame, cfg=common.STATE.config)
                 icon_width = screen_utils.ICON_TEMPLATES[icons[0]].shape[1]
 
         roi = regions[icons[0]]
@@ -352,7 +353,7 @@ class TestResourceROIs(TestCase):
                 common.CFG["profiles"]["aoe1de"]["resource_panel"],
                 {"icon_trim_pct": [0] * 6},
             ):
-            regions = resources.locate_resource_panel(frame)
+            regions = resources.locate_resource_panel(frame, cfg=common.STATE.config)
             icon_width = screen_utils.ICON_TEMPLATES[icons[0]].shape[1]
 
         roi = regions[icons[0]]
@@ -401,7 +402,7 @@ class TestResourceROIs(TestCase):
                 common.CFG["profiles"]["aoe1de"]["resource_panel"],
                 {"icon_trim_pct": [0] * 6},
             ):
-                regions = resources.locate_resource_panel(frame)
+                regions = resources.locate_resource_panel(frame, cfg=common.STATE.config)
                 icon_width = screen_utils.ICON_TEMPLATES[icons[0]].shape[1]
 
         roi1 = regions[icons[0]]
