@@ -94,14 +94,3 @@ class TestInternalPopulation(TestCase):
             build_house_mock.assert_called_once()
             read_pop_mock.assert_not_called()
 
-    def test_population_fallback_error_included(self):
-        with patch(
-            "script.resources.read_population_from_roi",
-            side_effect=common.PopulationReadError("primary fail"),
-        ), patch(
-            "script.resources.reader.read_resources_from_hud",
-            side_effect=common.ResourceReadError("fallback fail"),
-        ), patch("script.resources.locate_resource_panel", return_value={}):
-            with self.assertRaises(common.PopulationReadError) as ctx:
-                hud.read_population_from_hud()
-        self.assertIn("fallback fail", str(ctx.exception))

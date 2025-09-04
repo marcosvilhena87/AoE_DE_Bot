@@ -34,21 +34,11 @@ def select_idle_villager(delay: float = 0.1, state: BotState = STATE) -> bool:
         if not isinstance(idle_vill, int):
             return False
 
-        cur_pop = state.current_pop
-        try:
-            cur_pop, _, low_conf = hud.read_population_from_hud()
-            if low_conf:
-                _last_idle_villager_count = 0
-                continue
-            state.current_pop = cur_pop
-        except common.PopulationReadError as exc:
-            logger.debug("Population read failed: %s", exc)
+        cur_pop, _, low_conf = hud.read_population_from_hud()
+        if low_conf:
             _last_idle_villager_count = 0
-            cur_pop = state.current_pop
             continue
-        except common.ResourceReadError as exc:
-            logger.debug("Population read failed: %s", exc)
-            cur_pop = state.current_pop
+        state.current_pop = cur_pop
 
         if (cur_pop and idle_vill > cur_pop) or (
             state.current_pop and idle_vill > state.current_pop
@@ -158,11 +148,7 @@ def build_house(state: BotState = STATE):
         input_utils._click_norm(hx, hy, button="right")
         time.sleep(0.5)
 
-        try:
-            cur, limit, _ = hud.read_population_from_hud()
-        except (common.ResourceReadError, common.PopulationReadError) as exc:  # pragma: no cover - falha de OCR
-            logger.warning("Failed to read population: %s", exc)
-            limit = state.pop_cap
+        cur, limit, _ = hud.read_population_from_hud()
 
         if limit > state.pop_cap:
             state.pop_cap = limit
