@@ -3,6 +3,7 @@ from __future__ import annotations
 import time
 from typing import Iterable, Callable
 from pathlib import Path
+from dataclasses import dataclass
 
 import cv2
 import numpy as np
@@ -49,6 +50,64 @@ class ResourceValidationError(ValueError):
         self.failing_keys = failing_keys
 
 
+@dataclass
+class OCRResult:
+    """Container for OCR results."""
+
+    digits: str | None
+    data: dict
+    mask: np.ndarray | None
+    low_conf: bool = False
+
+
+def _ocr_idle_villager(gray: np.ndarray, res_conf_threshold: int) -> OCRResult:
+    """Run OCR for the idle villager icon."""
+
+    data = pytesseract.image_to_data(
+        gray,
+        config="--psm 7 -c tessedit_char_whitelist=0123456789",
+        output_type=pytesseract.Output.DICT,
+    )
+    confidences = parse_confidences(data)
+    texts = data.get("text", [])
+    raw_digits = "".join(filter(str.isdigit, "".join(texts))) if texts else None
+    digits = None
+    low_conf = False
+    if raw_digits:
+        digit_confs = [
+            c for t, c in zip(texts, confidences or []) if any(ch.isdigit() for ch in t)
+        ]
+        if digit_confs and any(c >= res_conf_threshold for c in digit_confs):
+            digits = raw_digits
+        else:
+            low_conf = True
+    return OCRResult(digits, data, gray, low_conf)
+
+
+def _ocr_digits_resource(
+    roi: np.ndarray,
+    gray: np.ndarray,
+    res_conf_threshold: int,
+    roi_bbox: tuple[int, int, int, int],
+    name: str,
+    *,
+    threshold: bool = True,
+) -> OCRResult:
+    """Run OCR for generic resource icons."""
+
+    img = gray
+    if threshold:
+        _ret, img = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    digits, data, mask, low_conf = execute_ocr(
+        img,
+        color=roi,
+        conf_threshold=res_conf_threshold,
+        roi=roi_bbox,
+        resource=name,
+    )
+    return OCRResult(digits, data, mask, low_conf)
+
+
 def _ocr_resource(
     name: str,
     roi: np.ndarray,
@@ -81,95 +140,68 @@ def _ocr_resource(
         indicating low-confidence detection.
     """
 
-    x, y, w, h = roi_bbox
     if name == "idle_villager":
-        data = pytesseract.image_to_data(
+        result = _ocr_idle_villager(gray, res_conf_threshold)
+    else:
+        result = _ocr_digits_resource(
+            roi,
             gray,
-            config="--psm 7 -c tessedit_char_whitelist=0123456789",
-            output_type=pytesseract.Output.DICT,
-        )
-        confidences = parse_confidences(data)
-        texts = data.get("text", [])
-        raw_digits = "".join(filter(str.isdigit, "".join(texts))) if texts else None
-        digits = None
-        low_conf = False
-        if raw_digits:
-            digit_confs = [
-                c for t, c in zip(texts, confidences or []) if any(ch.isdigit() for ch in t)
-            ]
-            if digit_confs and any(c >= res_conf_threshold for c in digit_confs):
-                digits = raw_digits
-            else:
-                low_conf = True
-        mask = gray
-        logger.info(
-            "OCR %s: digits=%s conf=%s low_conf=%s",
+            res_conf_threshold,
+            roi_bbox,
             name,
-            digits,
-            confidences,
-            low_conf,
         )
-        return digits, data, mask, low_conf
-
-    _ret, gray_proc = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-    digits, data, mask, low_conf = execute_ocr(
-        gray_proc,
-        color=roi,
-        conf_threshold=res_conf_threshold,
-        roi=roi_bbox,
-        resource=name,
-    )
-    if data.get("zero_conf") and not CFG.get("allow_zero_confidence_digits"):
-        low_conf = True
+    if result.data.get("zero_conf") and not CFG.get("allow_zero_confidence_digits"):
+        result.low_conf = True
     logger.info(
         "OCR %s: digits=%s conf=%s low_conf=%s",
         name,
-        digits,
-        parse_confidences(data),
-        low_conf,
+        result.digits,
+        parse_confidences(result.data),
+        result.low_conf,
     )
     if (
         name == "wood_stockpile"
-        and low_conf
-        and digits
+        and result.low_conf
+        and result.digits
         and name not in cache_obj.last_resource_values
     ):
         min_conf = CFG.get("ocr_conf_min", 0)
         if res_conf_threshold > min_conf:
-            digits_retry, data_retry, mask_retry, low_conf = execute_ocr(
+            retry = _ocr_digits_resource(
+                roi,
                 gray,
-                color=roi,
-                conf_threshold=min_conf,
-                roi=roi_bbox,
-                resource=name,
+                min_conf,
+                roi_bbox,
+                name,
+                threshold=False,
             )
-            if data_retry.get("zero_conf") and not CFG.get("allow_zero_confidence_digits"):
-                low_conf = True
+            if retry.data.get("zero_conf") and not CFG.get("allow_zero_confidence_digits"):
+                retry.low_conf = True
             logger.info(
                 "Retry OCR %s: digits=%s conf=%s low_conf=%s",
                 name,
-                digits_retry,
-                parse_confidences(data_retry),
-                low_conf,
+                retry.digits,
+                parse_confidences(retry.data),
+                retry.low_conf,
             )
-            if digits_retry:
-                digits, data, mask = digits_retry, data_retry, mask_retry
+            if retry.digits:
+                result = retry
     if (
-        low_conf
-        and not digits
+        result.low_conf
+        and not result.digits
         and CFG.get("allow_low_conf_digits")
-        and data.get("text")
+        and result.data.get("text")
     ):
-        raw_digits = "".join(filter(str.isdigit, "".join(data["text"])))
+        raw_digits = "".join(filter(str.isdigit, "".join(result.data["text"])))
         if raw_digits:
-            digits = raw_digits
+            result.digits = raw_digits
     treat_low_conf_as_failure = (
         CFG.get("treat_low_conf_as_failure", True)
         and not CFG.get("allow_low_conf_digits", False)
     )
-    if low_conf and treat_low_conf_as_failure:
-        digits = None
-    return digits, data, mask, low_conf
+    if result.low_conf and treat_low_conf_as_failure:
+        result.digits = None
+    return result.digits, result.data, result.mask, result.low_conf
 
 
 def _retry_ocr(
