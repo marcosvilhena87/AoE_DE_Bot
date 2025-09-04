@@ -15,7 +15,9 @@ import cv2
 from .template_utils import find_template
 from . import screen_utils, common, resources
 from .resources import reader as resource_reader
-from .common import CFG
+from .common import STATE
+
+CFG = STATE.config
 
 ROOT = Path(__file__).resolve().parent.parent
 

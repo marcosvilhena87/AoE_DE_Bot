@@ -2,6 +2,7 @@ import logging
 import time
 
 import script.common as common
+from script.common import BotState, STATE
 import script.hud as hud
 import script.resources.reader as resources
 import script.input_utils as input_utils
@@ -12,7 +13,7 @@ logger = logging.getLogger(__name__)
 _last_idle_villager_count = 0
 
 
-def select_idle_villager(delay: float = 0.1) -> bool:
+def select_idle_villager(delay: float = 0.1, state: BotState = STATE) -> bool:
     """Tenta selecionar um aldeão ocioso usando a tecla configurada.
 
     Lê o valor de ``idle_villager`` e o compara com a população atual. Se o
@@ -33,25 +34,24 @@ def select_idle_villager(delay: float = 0.1) -> bool:
         if not isinstance(idle_vill, int):
             return False
 
-        cur_pop = common.CURRENT_POP
+        cur_pop = state.current_pop
         try:
             cur_pop, _, low_conf = hud.read_population_from_hud()
             if low_conf:
                 _last_idle_villager_count = 0
                 continue
-            common.CURRENT_POP = cur_pop
+            state.current_pop = cur_pop
         except common.PopulationReadError as exc:
             logger.debug("Population read failed: %s", exc)
             _last_idle_villager_count = 0
-            cur_pop = common.CURRENT_POP
+            cur_pop = state.current_pop
             continue
         except common.ResourceReadError as exc:
             logger.debug("Population read failed: %s", exc)
-            cur_pop = common.CURRENT_POP
+            cur_pop = state.current_pop
 
-        if (
-            (cur_pop and idle_vill > cur_pop)
-            or (common.CURRENT_POP and idle_vill > common.CURRENT_POP)
+        if (cur_pop and idle_vill > cur_pop) or (
+            state.current_pop and idle_vill > state.current_pop
         ):
             logger.warning(
                 "Idle villager count %s exceeds population %s; retrying",
@@ -63,18 +63,18 @@ def select_idle_villager(delay: float = 0.1) -> bool:
 
         _last_idle_villager_count = idle_vill
         if idle_vill > 0:
-            input_utils._press_key_safe(common.CFG["keys"]["idle_vill"], delay)
+            input_utils._press_key_safe(state.config["keys"]["idle_vill"], delay)
             return True
         return False
 
     # Após tentativas sem leitura válida, usa o último valor conhecido
     if _last_idle_villager_count > 0:
-        input_utils._press_key_safe(common.CFG["keys"]["idle_vill"], delay)
+        input_utils._press_key_safe(state.config["keys"]["idle_vill"], delay)
         return True
     return False
 
 
-def build_house():
+def build_house(state: BotState = STATE):
     """Constrói uma casa no local predefinido.
 
     Verifica se há madeira suficiente antes de tentar construir e confirma
@@ -136,12 +136,12 @@ def build_house():
         )
         return False
 
-    house_key = common.CFG["keys"].get("house")
+    house_key = state.config["keys"].get("house")
     if not house_key:
         logger.warning("House build key not configured.")
         return False
 
-    areas = common.CFG.get("areas", {})
+    areas = state.config.get("areas", {})
     main_spot = areas.get("house_spot")
     if not main_spot:
         logger.warning("House spot not configured.")
@@ -152,7 +152,7 @@ def build_house():
         spots.append(alt_spot)
 
     for idx, (hx, hy) in enumerate(spots, start=1):
-        input_utils._press_key_safe(common.CFG["keys"]["build_menu"], 0.05)
+        input_utils._press_key_safe(state.config["keys"]["build_menu"], 0.05)
         input_utils._press_key_safe(house_key, 0.15)
         input_utils._click_norm(hx, hy)
         input_utils._click_norm(hx, hy, button="right")
@@ -162,10 +162,10 @@ def build_house():
             cur, limit, _ = hud.read_population_from_hud()
         except (common.ResourceReadError, common.PopulationReadError) as exc:  # pragma: no cover - falha de OCR
             logger.warning("Failed to read population: %s", exc)
-            limit = common.POP_CAP
+            limit = state.pop_cap
 
-        if limit > common.POP_CAP:
-            common.POP_CAP = limit
+        if limit > state.pop_cap:
+            state.pop_cap = limit
             return True
 
         logger.warning("Attempt %s to build house failed.", idx)
@@ -189,14 +189,14 @@ def build_house():
     return False
 
 
-def build_granary():
+def build_granary(state: BotState = STATE):
     """Posiciona um Granary no ponto configurado."""
-    input_utils._press_key_safe(common.CFG["keys"]["build_menu"], 0.05)
-    g_key = common.CFG["keys"].get("granary")
+    input_utils._press_key_safe(state.config["keys"]["build_menu"], 0.05)
+    g_key = state.config["keys"].get("granary")
     if not g_key:
         logger.warning("Granary build key not configured.")
         return False
-    areas = common.CFG.get("areas", {})
+    areas = state.config.get("areas", {})
     spot = areas.get("granary_spot")
     if not spot:
         logger.warning("Granary spot not configured.")
@@ -207,14 +207,14 @@ def build_granary():
     return True
 
 
-def build_storage_pit():
+def build_storage_pit(state: BotState = STATE):
     """Posiciona um Storage Pit no ponto configurado."""
-    input_utils._press_key_safe(common.CFG["keys"]["build_menu"], 0.05)
-    s_key = common.CFG["keys"].get("storage_pit")
+    input_utils._press_key_safe(state.config["keys"]["build_menu"], 0.05)
+    s_key = state.config["keys"].get("storage_pit")
     if not s_key:
         logger.warning("Storage Pit build key not configured.")
         return False
-    areas = common.CFG.get("areas", {})
+    areas = state.config.get("areas", {})
     spot = areas.get("storage_spot")
     if not spot:
         logger.warning("Storage spot not configured.")

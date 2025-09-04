@@ -42,7 +42,12 @@ sys.modules.setdefault(
 )
 sys.modules.setdefault(
     "script.common",
-    types.SimpleNamespace(CFG={"resource_panel": {}}, HUD_ANCHOR={"left": 0, "width": 0}),
+    types.SimpleNamespace(
+        STATE=types.SimpleNamespace(
+            config={"resource_panel": {}}, current_pop=0, pop_cap=0, target_pop=0
+        ),
+        HUD_ANCHOR={"left": 0, "width": 0},
+    ),
 )
 sys.modules.setdefault("script.input_utils", types.SimpleNamespace())
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))

@@ -49,7 +49,7 @@ os.environ.setdefault("TESSERACT_CMD", "/bin/true")
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import script.common as common
-common.init_common()
+state = common.init_common()
 import script.buildings.town_center as tc
 import script.units.villager as villager
 import script.config_utils as config_utils
@@ -75,10 +75,10 @@ class TestInternalPopulation(TestCase):
         self.assertEqual(info.starting_buildings, {"Town Center": 1})
 
     def test_train_villagers_updates_population_without_ocr(self):
-        common.CURRENT_POP = 3
-        common.POP_CAP = 4
-        def fake_build_house():
-            common.POP_CAP += 4
+        state.current_pop = 3
+        state.pop_cap = 4
+        def fake_build_house(state=state):
+            state.pop_cap += 4
             return True
 
         with patch(
@@ -88,9 +88,9 @@ class TestInternalPopulation(TestCase):
              patch("script.buildings.town_center.build_house", side_effect=fake_build_house) as build_house_mock, \
              patch("script.buildings.town_center.select_idle_villager", return_value=True), \
              patch("script.hud.read_population_from_hud") as read_pop_mock:
-            tc.train_villagers(7)
-            self.assertEqual(common.CURRENT_POP, 7)
-            self.assertEqual(common.POP_CAP, 8)
+            tc.train_villagers(7, state=state)
+            self.assertEqual(state.current_pop, 7)
+            self.assertEqual(state.pop_cap, 8)
             build_house_mock.assert_called_once()
             read_pop_mock.assert_not_called()
 

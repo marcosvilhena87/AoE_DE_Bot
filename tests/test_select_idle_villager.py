@@ -34,7 +34,7 @@ os.environ.setdefault("TESSERACT_CMD", "/usr/bin/true")
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import script.units.villager as villager
 import script.common as common
-common.init_common()
+state = common.init_common()
 
 
 class TestSelectIdleVillager(TestCase):
@@ -79,7 +79,7 @@ class TestSelectIdleVillager(TestCase):
 
     def test_low_conf_population_resets_last_idle_count(self):
         villager._last_idle_villager_count = 3
-        common.CURRENT_POP = 5
+        state.current_pop = 5
         reads = iter([
             ({"idle_villager": 1}, (None, None)),
             ({"idle_villager": 1}, (None, None)),
@@ -87,9 +87,9 @@ class TestSelectIdleVillager(TestCase):
         with patch("script.input_utils._press_key_safe") as press_mock, \
              patch("script.resources.reader.read_resources_from_hud", side_effect=lambda *a, **k: next(reads)), \
              patch("script.hud.read_population_from_hud", return_value=(7, 10, True)):
-            villager.select_idle_villager()
+            villager.select_idle_villager(state=state)
             press_mock.assert_not_called()
-        self.assertEqual(common.CURRENT_POP, 5)
+        self.assertEqual(state.current_pop, 5)
         self.assertEqual(villager._last_idle_villager_count, 0)
 
     def test_population_error_resets_last_idle_count(self):
