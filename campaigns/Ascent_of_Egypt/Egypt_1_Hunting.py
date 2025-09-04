@@ -146,9 +146,24 @@ def run_mission(info, state: BotState = STATE) -> None:
 
     food_spot = state.config.get("areas", {}).get("food_spot")
 
-    logger.info("Assigning starting villagers to hunt (leaving one idle)")
-    # Leave one villager idle to build a house.
-    for idx in range(max(0, info.starting_idle_villagers - 1)):
+    logger.info("Building a house before sending villagers to hunt")
+    builder_used = False
+    if villager.select_idle_villager(state=state):
+        if villager.build_house(state=state):
+            builder_used = True
+            if food_spot:
+                input_utils._click_norm(*food_spot, button="right")
+                logger.info("House built. Builder sent to hunt")
+            else:
+                logger.info("House built but no food spot configured")
+        else:
+            logger.info("Failed to build house")
+    else:
+        logger.info("No idle villager available to build a house")
+
+    logger.info("Assigning remaining villagers to hunt")
+    hunters_to_assign = info.starting_idle_villagers - (1 if builder_used else 0)
+    for idx in range(max(0, hunters_to_assign)):
         if villager.select_idle_villager(state=state):
             if food_spot:
                 input_utils._click_norm(*food_spot, button="right")
@@ -158,15 +173,6 @@ def run_mission(info, state: BotState = STATE) -> None:
                 "No idle villager available for hunting when assigning villager %d",
                 idx + 1,
             )
-
-    logger.info("Initial villager assignment complete. Building a house with idle villager")
-
-    if villager.select_idle_villager(state=state):
-        if villager.build_house(state=state) and food_spot:
-            # Send the builder back to hunt once the house is finished
-            input_utils._click_norm(*food_spot, button="right")
-    else:
-        logger.info("No idle villager available to build a house")
 
     start_food = resources.RESOURCE_CACHE.last_resource_values.get(
         "food_stockpile", 0
