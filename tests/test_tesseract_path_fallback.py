@@ -18,6 +18,7 @@ def test_tesseract_path_fallback(monkeypatch, tmp_path):
     monkeypatch.setitem(sys.modules, "pytesseract", fake_pytesseract)
     sys.modules.pop("script.common", None)
     common = importlib.import_module("script.common")
+    common.init_common()
     assert common.pytesseract.pytesseract.tesseract_cmd == str(fake_tesseract)
     monkeypatch.delitem(sys.modules, "script.common", raising=False)
 

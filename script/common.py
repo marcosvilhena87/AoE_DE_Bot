@@ -32,23 +32,40 @@ logger = logging.getLogger(__name__)
 CFG = STATE.config
 
 
-def init_common(path: str | Path | None = None, state: BotState | None = None) -> BotState:
-    """Load configuration and configure Tesseract.
+def resolve_tesseract_path(cfg: Dict[str, Any]) -> str:
+    """Return a valid Tesseract executable path.
 
-    Parameters
-    ----------
-    path:
-        Optional path to the configuration file. Defaults to the standard
-        configuration file when ``None``.
-    state:
-        Optional :class:`BotState` instance to update. If ``None`` the module
-        level :data:`STATE` is used.
-
-    Returns
-    -------
-    BotState
-        The updated state instance.
+    The path is resolved using the ``TESSERACT_CMD`` environment variable,
+    the ``tesseract_path`` value from the provided configuration, or by
+    falling back to ``shutil.which``. A :class:`RuntimeError` is raised if no
+    usable path can be found.
     """
+
+    tesseract_cmd = os.environ.get("TESSERACT_CMD") or cfg.get("tesseract_path")
+    path_lookup = shutil.which("tesseract")
+
+    if tesseract_cmd:
+        tesseract_path = Path(tesseract_cmd)
+        if tesseract_path.is_file() and os.access(tesseract_path, os.X_OK):
+            return str(tesseract_path)
+        if path_lookup:
+            logger.warning(
+                "Configured Tesseract path '%s' is invalid. Using '%s' found on PATH.",
+                tesseract_cmd,
+                path_lookup,
+            )
+            return path_lookup
+
+    if path_lookup:
+        return path_lookup
+
+    raise RuntimeError(
+        "Invalid Tesseract OCR path. Install Tesseract or update 'tesseract_path' in config.json."
+    )
+
+
+def init_common(path: str | Path | None = None, state: BotState | None = None) -> BotState:
+    """Load configuration and configure Tesseract."""
 
     if state is None:
         state = STATE
@@ -56,29 +73,7 @@ def init_common(path: str | Path | None = None, state: BotState | None = None) -
     state.config.clear()
     state.config.update(load_config(path))
 
-    tesseract_cmd = os.environ.get("TESSERACT_CMD") or state.config.get("tesseract_path")
-    path_lookup = shutil.which("tesseract")
-    if tesseract_cmd:
-        tesseract_path = Path(tesseract_cmd)
-        if tesseract_path.is_file() and os.access(tesseract_path, os.X_OK):
-            pytesseract.pytesseract.tesseract_cmd = str(tesseract_path)
-        elif path_lookup:
-            logger.warning(
-                "Configured Tesseract path '%s' is invalid. Using '%s' found on PATH.",
-                tesseract_cmd,
-                path_lookup,
-            )
-            pytesseract.pytesseract.tesseract_cmd = path_lookup
-        else:
-            raise RuntimeError(
-                "Invalid Tesseract OCR path. Install Tesseract or update 'tesseract_path' in config.json.",
-            )
-    elif path_lookup:
-        pytesseract.pytesseract.tesseract_cmd = path_lookup
-    else:
-        raise RuntimeError(
-            "Invalid Tesseract OCR path. Install Tesseract or update 'tesseract_path' in config.json.",
-        )
+    pytesseract.pytesseract.tesseract_cmd = resolve_tesseract_path(state.config)
 
     return state
 
