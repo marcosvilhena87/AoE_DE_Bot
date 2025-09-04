@@ -48,6 +48,7 @@ os.environ.setdefault("TESSERACT_CMD", "/usr/bin/true")
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import script.resources as resources
+from script.resources.ocr.executor import _read_population_from_roi
 
 
 class TestPopulationOcrConfidence(TestCase):
@@ -63,9 +64,7 @@ class TestPopulationOcrConfidence(TestCase):
             ),
         ):
             with self.assertRaises(resources.common.PopulationReadError):
-                resources._read_population_from_roi(
-                    roi, conf_threshold=60
-                )
+                _read_population_from_roi(roi, conf_threshold=60)
 
     def test_fraction_patterns_extracted(self):
         roi = np.zeros((10, 10, 3), dtype=np.uint8)
@@ -75,9 +74,7 @@ class TestPopulationOcrConfidence(TestCase):
                 "script.resources.ocr.executor.execute_ocr",
                 return_value=(text, {"text": [text], "conf": ["95"]}, None, False),
             ):
-                cur, cap, low_conf = resources._read_population_from_roi(
-                    roi, conf_threshold=60
-                )
+                cur, cap, low_conf = _read_population_from_roi(roi, conf_threshold=60)
                 self.assertFalse(low_conf)
                 self.assertEqual((cur, cap), expected)
 
@@ -93,9 +90,7 @@ class TestPopulationOcrConfidence(TestCase):
                     True,
                 ),
             ):
-            cur, cap, low_conf = resources._read_population_from_roi(
-                roi, conf_threshold=60
-            )
+            cur, cap, low_conf = _read_population_from_roi(roi, conf_threshold=60)
             self.assertTrue(low_conf)
             self.assertEqual((cur, cap), (12, 34))
 
@@ -115,7 +110,7 @@ class TestPopulationOcrConfidence(TestCase):
             ),
         ):
             with self.assertRaises(resources.common.PopulationReadError):
-                resources._read_population_from_roi(roi, conf_threshold=60)
+                _read_population_from_roi(roi, conf_threshold=60)
 
     def test_ambiguous_double_digits_allowed_with_zero_conf_flag(self):
         roi = np.zeros((10, 10, 3), dtype=np.uint8)
@@ -132,7 +127,7 @@ class TestPopulationOcrConfidence(TestCase):
                 True,
             ),
         ):
-            cur, cap, low_conf = resources._read_population_from_roi(roi, conf_threshold=60)
+            cur, cap, low_conf = _read_population_from_roi(roi, conf_threshold=60)
         self.assertTrue(low_conf)
         self.assertEqual((cur, cap), (7, 7))
 
@@ -155,7 +150,7 @@ class TestPopulationOcrConfidence(TestCase):
                 True,
             ),
         ):
-            cur, cap, low_conf = resources._read_population_from_roi(roi, conf_threshold=60)
+            cur, cap, low_conf = _read_population_from_roi(roi, conf_threshold=60)
         self.assertTrue(low_conf)
         self.assertEqual((cur, cap), (7, 7))
 
@@ -181,10 +176,10 @@ class TestPopulationOcrConfidence(TestCase):
         ):
             for fc in (0, 1):
                 with self.assertRaises(resources.common.PopulationReadError):
-                    resources._read_population_from_roi(
+                    _read_population_from_roi(
                         roi, conf_threshold=60, failure_count=fc
                     )
-            cur, cap, low_conf = resources._read_population_from_roi(
+            cur, cap, low_conf = _read_population_from_roi(
                 roi, conf_threshold=60, failure_count=2
             )
             self.assertTrue(low_conf)
@@ -211,13 +206,13 @@ class TestPopulationOcrConfidence(TestCase):
             ),
         ):
             with self.assertRaises(resources.common.PopulationReadError) as ctx:
-                resources._read_population_from_roi(
+                _read_population_from_roi(
                     roi, conf_threshold=60, failure_count=0
                 )
             msg = str(ctx.exception)
             self.assertIn("text='12/34'", msg)
             self.assertIn("confs=[40.0]", msg)
-            cur, cap, low_conf = resources._read_population_from_roi(
+            cur, cap, low_conf = _read_population_from_roi(
                 roi, conf_threshold=60, failure_count=1
             )
             self.assertTrue(low_conf)
@@ -235,7 +230,7 @@ class TestPopulationOcrConfidence(TestCase):
             ),
         ):
             with self.assertRaises(resources.common.PopulationReadError):
-                resources._read_population_from_roi(roi, conf_threshold=60)
+                _read_population_from_roi(roi, conf_threshold=60)
 
     def test_zero_confidence_allowed_with_fallback_flag(self):
         roi = np.zeros((10, 10, 3), dtype=np.uint8)
@@ -255,7 +250,7 @@ class TestPopulationOcrConfidence(TestCase):
                 True,
             ),
         ):
-            cur, cap, low_conf = resources._read_population_from_roi(roi, conf_threshold=60)
+            cur, cap, low_conf = _read_population_from_roi(roi, conf_threshold=60)
         self.assertTrue(low_conf)
         self.assertEqual((cur, cap), (12, 34))
 
@@ -271,7 +266,7 @@ class TestPopulationOcrConfidence(TestCase):
             ),
         ):
             with self.assertRaises(resources.common.PopulationReadError):
-                resources._read_population_from_roi(roi, conf_threshold=60)
+                _read_population_from_roi(roi, conf_threshold=60)
 
     def test_negative_population_values_raise_error(self):
         with self.assertRaises(resources.common.PopulationReadError):

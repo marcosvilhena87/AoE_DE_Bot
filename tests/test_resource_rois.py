@@ -56,6 +56,7 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import script.common as common
 common.init_common()
 import script.resources as resources
+from script.resources import cache
 import script.screen_utils as screen_utils
 
 
@@ -430,7 +431,7 @@ class TestResourceROIs(TestCase):
 
     def test_cache_cleared_on_region_change(self):
         resources.RESOURCE_CACHE.last_icon_bounds.clear()
-        resources._LAST_REGION_BOUNDS = None
+        cache._LAST_REGION_BOUNDS = None
         resources.RESOURCE_CACHE.last_resource_values.clear()
         resources.RESOURCE_CACHE.last_resource_ts.clear()
 
