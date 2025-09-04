@@ -83,7 +83,7 @@ if "idle_villager" not in ICON_NAMES:
 ICON_TEMPLATES = {}
 
 
-def _load_icon_templates():
+def load_icon_templates():
     for name in ICON_NAMES:
         if name in ICON_TEMPLATES:
             continue
@@ -93,3 +93,15 @@ def _load_icon_templates():
             logger.warning("Icon asset missing: %s", path)
             continue
         ICON_TEMPLATES[name] = icon
+
+
+__all__ = [
+    "mss_session",
+    "init_sct",
+    "teardown_sct",
+    "get_monitor",
+    "load_icon_templates",
+    "HUD_TEMPLATE",
+    "ICON_NAMES",
+    "ICON_TEMPLATES",
+]

@@ -75,7 +75,7 @@ class TestCalibration(TestCase):
             captured["args"] = args
             return {}, {}, {}
 
-        with patch.object(screen_utils, "_load_icon_templates", lambda: None), \
+        with patch.object(screen_utils, "load_icon_templates", lambda: None), \
             patch(
                 "script.resources.panel.calibration._get_resource_panel_cfg",
                 return_value=cfg_obj,

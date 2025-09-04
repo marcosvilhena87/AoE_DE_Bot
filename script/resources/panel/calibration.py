@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 def _auto_calibrate_from_icons(frame, cache_obj: cache.ResourceCache = cache.RESOURCE_CACHE):
     """Locate resource icons directly on the frame to derive ROI regions."""
 
-    screen_utils._load_icon_templates()
+    screen_utils.load_icon_templates()
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
     cfg = _get_resource_panel_cfg()

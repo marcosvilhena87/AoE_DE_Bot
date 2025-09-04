@@ -66,7 +66,7 @@ def locate_resource_panel(frame, cache_obj: cache.ResourceCache = cache.RESOURCE
     panel_gray = cv2.cvtColor(frame[y : y + h, x : x + w], cv2.COLOR_BGR2GRAY)
 
     cfg = _get_resource_panel_cfg()
-    screen_utils._load_icon_templates()
+    screen_utils.load_icon_templates()
 
     detected = {}
     for name in RESOURCE_ICON_ORDER:

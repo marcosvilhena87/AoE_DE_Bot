@@ -38,7 +38,7 @@ sys.modules.setdefault("pyautogui", types.SimpleNamespace())
 sys.modules.setdefault("mss", types.SimpleNamespace(mss=lambda: None))
 sys.modules.setdefault(
     "script.screen_utils",
-    types.SimpleNamespace(ICON_TEMPLATES={}, HUD_TEMPLATE=None, _load_icon_templates=lambda: None),
+    types.SimpleNamespace(ICON_TEMPLATES={}, HUD_TEMPLATE=None, load_icon_templates=lambda: None),
 )
 sys.modules.setdefault(
     "script.common",
