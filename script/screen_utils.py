@@ -16,8 +16,61 @@ ASSETS = ROOT / "assets"
 CFG = load_config()
 logger = logging.getLogger(__name__)
 
-SCT = None
-MONITOR = None
+
+class ScreenCapture:
+    """Manage ``mss`` screen capture resources.
+
+    This class lazily creates an ``mss`` instance and stores the active
+    monitor. It can be used as a context manager to ensure resources are
+    released.
+    """
+
+    def __init__(self):
+        self._sct = None
+        self._monitor = None
+
+    def __enter__(self):
+        self.init_sct()
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        self.teardown_sct()
+
+    def init_sct(self):
+        """Initialise screen capture resources."""
+        if self._sct is None:
+            self._sct = mss()
+            self._monitor = self._sct.monitors[1]
+
+    def teardown_sct(self):
+        """Release screen capture resources."""
+        if self._sct is not None:
+            close = getattr(self._sct, "close", None)
+            if close:
+                close()
+            self._sct = None
+            self._monitor = None
+
+    def get_monitor(self):
+        """Return the active monitor, initialising resources if needed."""
+        if self._monitor is None:
+            self.init_sct()
+        return self._monitor
+
+    def _grab_frame(self, bbox=None):
+        """Capture a frame from the screen."""
+        self.init_sct()
+        region = bbox or self.get_monitor()
+        img = np.array(self._sct.grab(region))[:, :, :3]
+        return img
+
+    def grab_frame(self, bbox=None):
+        """Public wrapper around :meth:`_grab_frame`."""
+        return self._grab_frame(bbox)
+
+
+# Default screen capture manager used by module-level helpers
+screen_capture = ScreenCapture()
 
 
 @contextmanager
@@ -33,37 +86,19 @@ def mss_session():
 
 
 def init_sct():
-    """Initialise global screen capture resources."""
-    global SCT, MONITOR
-    if SCT is None:
-        SCT = mss()
-        MONITOR = SCT.monitors[1]
+    screen_capture.init_sct()
 
 
 def teardown_sct():
-    """Release global screen capture resources."""
-    global SCT, MONITOR
-    if SCT is not None:
-        close = getattr(SCT, "close", None)
-        if close:
-            close()
-        SCT = None
-        MONITOR = None
+    screen_capture.teardown_sct()
 
 
 def get_monitor():
-    """Return the active monitor, initialising resources if needed."""
-    if MONITOR is None:
-        init_sct()
-    return MONITOR
+    return screen_capture.get_monitor()
 
 
 def grab_frame(bbox=None):
-    """Capture a frame from the screen."""
-    init_sct()
-    region = bbox or get_monitor()
-    img = np.array(SCT.grab(region))[:, :, :3]
-    return img
+    return screen_capture.grab_frame(bbox)
 
 
 def _load_gray(path):
@@ -96,6 +131,8 @@ def load_icon_templates():
 
 
 __all__ = [
+    "ScreenCapture",
+    "screen_capture",
     "mss_session",
     "init_sct",
     "teardown_sct",

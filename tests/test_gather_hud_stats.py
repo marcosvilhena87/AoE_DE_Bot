@@ -233,8 +233,8 @@ class TestGatherHudStats(TestCase):
 
         with patch("campaign.parse_scenario_info", return_value=info), \
              patch("campaign.argparse.ArgumentParser.parse_args", return_value=types.SimpleNamespace(scenario="dummy")), \
-             patch("campaign.screen_utils.init_sct"), \
-             patch("campaign.screen_utils.teardown_sct"), \
+             patch("campaign.screen_utils.screen_capture.init_sct"), \
+             patch("campaign.screen_utils.screen_capture.teardown_sct"), \
              patch("campaign.hud.wait_hud", return_value=({}, "assets/resources.png")), \
              patch("campaign.resources.gather_hud_stats", return_value=({}, (0, 0))) as gh, \
              patch("campaign.resources.validate_starting_resources"):

@@ -159,7 +159,7 @@ class TestNoDigits(TestCase):
             return ocr_seq.pop(0)
 
         with patch("script.resources.reader.detect_resource_regions", side_effect=fake_detect), \
-            patch("script.screen_utils.grab_frame", side_effect=fake_grab_frame), \
+            patch("script.screen_utils.screen_capture.grab_frame", side_effect=fake_grab_frame), \
              patch("script.resources.ocr.masks._ocr_digits_better", side_effect=fake_ocr), \
              patch("script.resources.reader.pytesseract.image_to_string", return_value=""), \
              patch("script.resources.reader.cv2.imwrite"):

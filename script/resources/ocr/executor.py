@@ -724,7 +724,7 @@ def read_population_from_roi(
     attempt_errors: list[common.PopulationReadError] = []
     last_exc = None
     for attempt in range(retries):
-        roi = screen_utils.grab_frame({"left": x, "top": y, "width": w, "height": h})
+        roi = screen_utils.screen_capture.grab_frame({"left": x, "top": y, "width": w, "height": h})
         try:
             cur_pop, pop_cap, low_conf = _read_population_from_roi(
                 roi,
@@ -750,7 +750,7 @@ def read_population_from_roi(
             failure_count = cache_obj.resource_failure_counts.get(
                 "population_limit", 0
             )
-            frame_full = screen_utils.grab_frame()
+            frame_full = screen_utils.screen_capture.grab_frame()
             try:
                 expansion = expand_population_roi_after_failure(
                     frame_full,
