@@ -20,6 +20,29 @@ def _scenario_to_module(path: str) -> str:
     return ".".join(parts)
 
 
+def wait_for_hud_with_retry(timeout: int = 90, retry_delay: int = 25):
+    logger = logging.getLogger("campaign_bot")
+    try:
+        anchor, asset = hud.wait_hud(timeout=timeout)
+        logger.info("HUD detected at %s using '%s'.", anchor, asset)
+        return anchor, asset
+    except RuntimeError as e:
+        logger.error(str(e))
+        logger.info("Giving another %ds for you to adjust the camera/HUD (fallback)…", retry_delay)
+        time.sleep(retry_delay)
+        try:
+            anchor, asset = hud.wait_hud(timeout=timeout)
+            logger.info("HUD detected at %s using '%s'.", anchor, asset)
+            return anchor, asset
+        except RuntimeError as e2:
+            logger.error(str(e2))
+            logger.warning(
+                "HUD not detected after extra attempt; routine will continue without anchored HUD."
+            )
+            raise SystemExit(
+                "HUD not detected after two attempts; exiting script."
+            ) from e2
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -44,24 +67,7 @@ def main():
             "Enter the campaign mission (%s). The script starts when the HUD is detected…",
             scenario_name,
         )
-        try:
-            anchor, asset = hud.wait_hud(timeout=90)
-            logger.info("HUD detected at %s using '%s'.", anchor, asset)
-        except RuntimeError as e:
-            logger.error(str(e))
-            logger.info("Giving another 25s for you to adjust the camera/HUD (fallback)…")
-            time.sleep(25)
-            try:
-                anchor, asset = hud.wait_hud(timeout=90)
-                logger.info("HUD detected at %s using '%s'.", anchor, asset)
-            except RuntimeError as e2:
-                logger.error(str(e2))
-                logger.warning(
-                    "HUD not detected after extra attempt; routine will continue without anchored HUD."
-                )
-                raise SystemExit(
-                    "HUD not detected after two attempts; exiting script."
-                ) from e2
+        anchor, asset = wait_for_hud_with_retry(timeout=90, retry_delay=25)
 
         info = parse_scenario_info(args.scenario)
         common.CURRENT_POP = info.starting_villagers
