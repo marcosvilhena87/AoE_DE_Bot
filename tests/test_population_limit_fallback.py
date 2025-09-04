@@ -38,6 +38,7 @@ import script.resources as resources
 from script.resources.panel import detection
 from script.resources.panel import ResourcePanelCfg
 from script.resources.ocr.executor import _extract_population
+import script.common as common
 
 
 def _make_cfg():
@@ -78,8 +79,8 @@ def test_population_limit_fallback_estimates_width_with_padding():
         patch.object(resources.cv2, "minMaxLoc", lambda res: (0.0, 0.95, (0, 0), (xi, yi)), create=True), \
         patch.object(resources.cv2, "TM_CCOEFF_NORMED", 0, create=True), \
         patch.object(detection, "_get_resource_panel_cfg", return_value=cfg):
-        detection.locate_resource_panel(frame, cache)
-        detection.locate_resource_panel(frame, cache)
+        detection.locate_resource_panel(frame, cache, cfg=common.STATE.config)
+        detection.locate_resource_panel(frame, cache, cfg=common.STATE.config)
 
     pl = cache.last_icon_bounds["population_limit"]
     iv = cache.last_icon_bounds["idle_villager"]

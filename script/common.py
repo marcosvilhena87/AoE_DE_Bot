@@ -5,7 +5,9 @@ import os
 import shutil
 import logging
 from dataclasses import dataclass, field
-from typing import Any, Dict
+from typing import Any
+
+from config import Config
 
 import pytesseract
 from .config_utils import load_config
@@ -18,7 +20,7 @@ ASSETS = ROOT / "assets"
 class BotState:
     """Container for global bot state."""
 
-    config: Dict[str, Any] = field(default_factory=dict)
+    config: Config = field(default_factory=Config)
     current_pop: int = 0
     pop_cap: int = 0
     target_pop: int = 0
@@ -29,10 +31,10 @@ STATE = BotState()
 logger = logging.getLogger(__name__)
 
 # Backwards compatibility for modules/tests importing ``common.CFG``
-CFG = STATE.config
+CFG: Config = STATE.config
 
 
-def resolve_tesseract_path(cfg: Dict[str, Any]) -> str:
+def resolve_tesseract_path(cfg: Config) -> str:
     """Return a valid Tesseract executable path.
 
     The path is resolved using the ``TESSERACT_CMD`` environment variable,

@@ -10,6 +10,7 @@ import cv2
 import numpy as np
 import pytesseract
 
+from config import Config
 from .. import CFG, ROOT, cache, common, logger, RESOURCE_ICON_ORDER
 from ... import screen_utils
 from ..panel import detect_resource_regions
@@ -116,6 +117,7 @@ def _ocr_resource(
     res_conf_threshold: int,
     roi_bbox: tuple[int, int, int, int],
     cache_obj: ResourceCache,
+    cfg: Config | None = None,
 ) -> tuple[str | None, dict, np.ndarray | None, bool]:
     """Run OCR for a single resource ROI.
 
@@ -141,6 +143,8 @@ def _ocr_resource(
         indicating low-confidence detection.
     """
 
+    cfg = cfg or CFG
+
     if name == "idle_villager":
         result = _ocr_idle_villager(gray, res_conf_threshold)
     else:
@@ -151,7 +155,7 @@ def _ocr_resource(
             roi_bbox,
             name,
         )
-    if result.data.get("zero_conf") and not CFG.get("allow_zero_confidence_digits"):
+    if result.data.get("zero_conf") and not cfg.get("allow_zero_confidence_digits"):
         result.low_conf = True
     logger.info(
         "OCR %s: digits=%s conf=%s low_conf=%s",
@@ -166,7 +170,7 @@ def _ocr_resource(
         and result.digits
         and name not in cache_obj.last_resource_values
     ):
-        min_conf = CFG.get("ocr_conf_min", 0)
+        min_conf = cfg.get("ocr_conf_min", 0)
         if res_conf_threshold > min_conf:
             retry = _ocr_digits_resource(
                 roi,
@@ -176,7 +180,7 @@ def _ocr_resource(
                 name,
                 threshold=False,
             )
-            if retry.data.get("zero_conf") and not CFG.get("allow_zero_confidence_digits"):
+            if retry.data.get("zero_conf") and not cfg.get("allow_zero_confidence_digits"):
                 retry.low_conf = True
             logger.info(
                 "Retry OCR %s: digits=%s conf=%s low_conf=%s",
@@ -190,15 +194,15 @@ def _ocr_resource(
     if (
         result.low_conf
         and not result.digits
-        and CFG.get("allow_low_conf_digits")
+        and cfg.get("allow_low_conf_digits")
         and result.data.get("text")
     ):
         raw_digits = "".join(filter(str.isdigit, "".join(result.data["text"])))
         if raw_digits:
             result.digits = raw_digits
     treat_low_conf_as_failure = (
-        CFG.get("treat_low_conf_as_failure", True)
-        and not CFG.get("allow_low_conf_digits", False)
+        cfg.get("treat_low_conf_as_failure", True)
+        and not cfg.get("allow_low_conf_digits", False)
     )
     if result.low_conf and treat_low_conf_as_failure:
         result.digits = None
@@ -609,6 +613,7 @@ def _process_resource(
     res_conf_threshold: int,
     max_cache_age: float | None,
     low_conf_counts: dict[str, int],
+    cfg: Config | None = None,
 ) -> tuple[int | None, bool, bool, bool, tuple[np.ndarray, np.ndarray]]:
     """Read and resolve a single resource value from the HUD.
 
@@ -637,9 +642,10 @@ def _process_resource(
         where ``debug_images`` contains the grayscale ROI and threshold mask.
     """
 
+    cfg = cfg or CFG
     x, y, w, h, roi, gray, top_crop, failure_count = roi_info
     digits, data, mask, low_conf = _ocr_resource(
-        name, roi, gray, res_conf_threshold, (x, y, w, h), cache_obj
+        name, roi, gray, res_conf_threshold, (x, y, w, h), cache_obj, cfg
     )
     digits, data, mask, roi, gray, x, y, w, h, low_conf = _retry_ocr(
         frame,
@@ -663,7 +669,7 @@ def _process_resource(
     else:
         low_conf_counts[name] = 0
     debug_images = (gray, mask)
-    if CFG.get("ocr_debug"):
+    if cfg.get("ocr_debug"):
         debug_dir = ROOT / "debug"
         debug_dir.mkdir(exist_ok=True)
         ts = int(time.time() * 1000)

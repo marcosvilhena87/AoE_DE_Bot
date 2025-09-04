@@ -7,6 +7,7 @@ common.init_common()
 import script.resources as resources
 import script.resources.reader as reader
 import script.screen_utils as screen_utils
+import script.common as common
 
 
 class TestComputeResourceROIs(TestCase):
@@ -103,7 +104,7 @@ class TestComputeResourceROIs(TestCase):
             resources.RESOURCE_CACHE.resource_failure_counts.clear()
             resources.RESOURCE_CACHE.last_resource_values.clear()
             resources.RESOURCE_CACHE.last_resource_ts.clear()
-            resources.locate_resource_panel(frame)
+            resources.locate_resource_panel(frame, cfg=common.STATE.config)
             result = resources.cache._NARROW_ROIS.copy()
             resources.cache._NARROW_ROIS.clear()
             resources.cache._NARROW_ROI_DEFICITS.clear()

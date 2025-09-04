@@ -11,6 +11,8 @@ from script.resources import panel
 from script.resources.ocr.executor import _read_population_from_roi as _read_population_from_roi_func
 import numpy as np
 
+from config import Config
+
 # Public API expected by the tests
 HUD_ANCHOR = common.HUD_ANCHOR
 HUD_TEMPLATES = ["assets/resources.png"]
@@ -22,7 +24,7 @@ find_template = hud.find_template
 locate_resource_panel = panel.locate_resource_panel
 _read_population_from_roi = _read_population_from_roi_func
 
-def wait_hud(timeout=60):
+def wait_hud(cfg: Config = common.STATE.config, timeout=60):
     """Delegate to :func:`script.hud.wait_hud` using patched helpers."""
     original_template = screen_utils.HUD_TEMPLATE
     screen_utils.HUD_TEMPLATE = HUD_TEMPLATE
@@ -31,7 +33,7 @@ def wait_hud(timeout=60):
     screen_utils.grab_frame = grab_frame
     hud.find_template = find_template
     try:
-        anchor, asset = hud.wait_hud(timeout)
+        anchor, asset = hud.wait_hud(cfg, timeout)
         global HUD_ANCHOR
         HUD_ANCHOR = common.HUD_ANCHOR
         return anchor, asset
