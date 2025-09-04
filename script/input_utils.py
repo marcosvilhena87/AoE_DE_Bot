@@ -1,5 +1,6 @@
 import logging
 import time
+from contextlib import contextmanager
 
 import pyautogui as pg
 
@@ -48,22 +49,34 @@ def _to_px(nx: float, ny: float) -> tuple[int, int]:
     return int(nx * W), int(ny * H)
 
 
+@contextmanager
+def temporary_failsafe_disabled():
+    """Temporarily disable PyAutoGUI's fail-safe.
+
+    This context manager stores the current ``pg.FAILSAFE`` state, disables
+    it for the duration of the ``with`` block, and restores the original state
+    afterwards, even if an exception occurs.
+    """
+
+    failsafe_state = pg.FAILSAFE
+    pg.FAILSAFE = False
+    try:
+        yield
+    finally:
+        pg.FAILSAFE = failsafe_state
+
+
 def _move_cursor_safe() -> None:
-    """Move the cursor to the screen centre while temporarily disabling
-    PyAutoGUI's fail-safe.
+    """Move the cursor to the screen centre while temporarily disabling the
+    fail-safe.
 
-    This function ensures that subsequent automated mouse operations are not
-    interrupted by the user moving the cursor to the fail-safe corner.
-
-    Returns:
-        None
+    This helper ensures that automated mouse operations are not interrupted
+    by the user moving the cursor to the fail-safe corner.
     """
 
     W, H = screen_utils.get_screen_size()
-    failsafe_state = pg.FAILSAFE
-    pg.FAILSAFE = False
-    pg.moveTo(W // 2, H // 2)
-    pg.FAILSAFE = failsafe_state
+    with temporary_failsafe_disabled():
+        pg.moveTo(W // 2, H // 2)
 
 
 def _click_norm(nx: float, ny: float, button: str = "left") -> None:
