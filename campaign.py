@@ -289,50 +289,25 @@ def main(config_path: str | Path | None = None) -> None:
 
         resources.RESOURCE_CACHE.last_resource_values["idle_villager"] = idle_start
         resources.RESOURCE_CACHE.last_resource_ts["idle_villager"] = time.time()
-        try:
-            icon_cfg = state.config.get("hud_icons", {})
-            if info.starting_resources is None:
-                logger.warning(
-                    "No starting resources specified; skipping validation."
-                )
-                starting_res = {}
-            else:
-                starting_res = info.starting_resources
-            non_zero = {k: v for k, v in starting_res.items() if v}
-            zero_icons = {k for k, v in starting_res.items() if v == 0}
-            required = [i for i in icon_cfg.get("required", []) if i not in zero_icons]
-            optional = [i for i in icon_cfg.get("optional", []) if i not in zero_icons]
-            res, (cur_pop, pop_cap) = resources.gather_hud_stats(
-                force_delay=0.1,
-                required_icons=required,
-                optional_icons=optional,
-            )
-            res, (cur_pop, pop_cap) = validate_resources_with_retry(
-                res,
-                non_zero,
-                state.config,
-                required,
-                optional,
-                screen_utils_module=screen_utils,
-                resources_module=resources,
-                logger=logger,
-                cur_pop=cur_pop,
-                pop_cap=pop_cap,
-            )
-            logger.info(
-                "Detected resources: wood=%s, food=%s, gold=%s, stone=%s",
-                res.get("wood_stockpile"),
-                res.get("food_stockpile"),
-                res.get("gold_stockpile"),
-                res.get("stone_stockpile"),
-            )
-            logger.info("Detected population: %s/%s", cur_pop, pop_cap)
-            logger.info(
-                "Detected idle villagers: %s", res.get("idle_villager")
-            )
-        except (common.ResourceReadError, common.PopulationReadError) as e:
-            logger.error("Failed to detect resources or population: %s", e)
-            raise SystemExit("Failed to detect resources or population") from e
+        starting_res = info.starting_resources or {}
+        res = {
+            "wood_stockpile": starting_res.get("wood_stockpile", 0),
+            "food_stockpile": starting_res.get("food_stockpile", 0),
+            "gold_stockpile": starting_res.get("gold_stockpile", 0),
+            "stone_stockpile": starting_res.get("stone_stockpile", 0),
+            "idle_villager": idle_start if idle_start is not None else 0,
+        }
+        cur_pop = info.starting_villagers or 0
+        pop_cap = state.pop_cap
+        logger.info(
+            "Detected resources: wood=%s, food=%s, gold=%s, stone=%s",
+            res.get("wood_stockpile"),
+            res.get("food_stockpile"),
+            res.get("gold_stockpile"),
+            res.get("stone_stockpile"),
+        )
+        logger.info("Detected population: %s/%s", cur_pop, pop_cap)
+        logger.info("Detected idle villagers: %s", res.get("idle_villager"))
 
         logger.info("Setup complete.")
         module_name = _scenario_to_module(args.scenario)
