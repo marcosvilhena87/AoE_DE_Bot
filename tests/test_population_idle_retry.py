@@ -66,7 +66,7 @@ class TestPopulationIdleRetry(TestCase):
             "script.resources.reader.core._read_resources",
             side_effect=[first, second],
         ) as read_mock, patch(
-            "script.resources.reader.core.screen_utils._grab_frame",
+            "script.resources.reader.core.screen_utils.grab_frame",
             return_value=frame,
         ), self.assertLogs(reader.logger, level="WARNING") as cm:
             results, pop = reader.gather_hud_stats()

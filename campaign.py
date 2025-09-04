@@ -34,7 +34,7 @@ def validate_resources_with_retry(
         config (dict): Configuration dictionary containing tolerance options.
         required (list[str]): Required HUD icons to read.
         optional (list[str]): Optional HUD icons to read.
-        screen_utils_module: Module providing ``_grab_frame``.
+        screen_utils_module: Module providing ``grab_frame``.
         resources_module: Module providing resource helpers.
         logger (logging.Logger, optional): Logger for status messages.
 
@@ -57,7 +57,7 @@ def validate_resources_with_retry(
         relaxed_threshold = tolerance + 2 * increment
         attempt = 1
         while True:
-            frame = screen_utils_module._grab_frame()
+            frame = screen_utils_module.grab_frame()
             rois = getattr(resources_module, "_LAST_REGION_BOUNDS", {})
             logger.info(
                 "Starting resource validation attempt %d/%d (±%d)",

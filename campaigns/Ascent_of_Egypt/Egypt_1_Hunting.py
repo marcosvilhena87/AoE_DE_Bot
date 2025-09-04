@@ -84,7 +84,7 @@ def main() -> None:
     # Validação dos recursos iniciais
     tol_cfg = common.CFG.get("resource_validation_tolerance", {})
     tolerance = tol_cfg.get("initial", 10)
-    frame = screen_utils._grab_frame()
+    frame = screen_utils.grab_frame()
     rois = getattr(resources, "_LAST_REGION_BOUNDS", {})
     try:
         resources.validate_starting_resources(

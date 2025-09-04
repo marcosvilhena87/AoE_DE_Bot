@@ -89,7 +89,7 @@ class TestCampaignResourceValidation(TestCase):
             patch("campaign.hud.wait_hud", return_value=({}, "asset")), \
             patch("campaign.resources.gather_hud_stats", side_effect=gh_side_effect), \
             patch(
-                "campaign.screen_utils._grab_frame",
+                "campaign.screen_utils.grab_frame",
                 return_value=np.zeros((10, 10, 3), dtype=np.uint8),
             ), \
             patch("campaign.logging.getLogger", return_value=logger_mock), \

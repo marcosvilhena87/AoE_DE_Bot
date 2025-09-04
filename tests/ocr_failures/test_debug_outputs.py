@@ -24,7 +24,7 @@ def test_discard_low_confidence_logged(caplog):
     resources.RESOURCE_CACHE.last_resource_values["wood_stockpile"] = 0
     with patch.dict(resources.CFG, {"wood_stockpile_low_conf_fallback": False}, clear=False), \
          patch("script.resources.reader.detect_resource_regions", side_effect=fake_detect), \
-         patch("script.screen_utils._grab_frame", side_effect=fake_grab_frame), \
+        patch("script.screen_utils.grab_frame", side_effect=fake_grab_frame), \
          patch("script.resources.ocr.masks._ocr_digits_better", side_effect=fake_ocr), \
          patch("script.resources.reader.pytesseract.image_to_string", return_value=""), \
          patch("script.resources.reader.cv2.imwrite"), \

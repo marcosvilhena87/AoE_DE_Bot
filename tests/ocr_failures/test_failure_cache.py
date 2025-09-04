@@ -89,7 +89,7 @@ class TestFailureCache(TestCase):
         frame = np.zeros((600, 600, 3), dtype=np.uint8)
 
         with patch("script.resources.reader.detect_resource_regions", side_effect=fake_detect), \
-             patch("script.screen_utils._grab_frame", return_value=frame), \
+            patch("script.screen_utils.grab_frame", return_value=frame), \
              patch("script.resources.reader.execute_ocr", side_effect=fake_ocr), \
              patch("script.resources.reader.pytesseract.image_to_string", return_value=""), \
              patch("script.resources.reader.cv2.imwrite"):
@@ -115,7 +115,7 @@ class TestFailureCache(TestCase):
         frame = np.zeros((600, 600, 3), dtype=np.uint8)
 
         with patch("script.resources.reader.detect_resource_regions", side_effect=fake_detect), \
-             patch("script.screen_utils._grab_frame", return_value=frame), \
+            patch("script.screen_utils.grab_frame", return_value=frame), \
              patch("script.resources.reader.execute_ocr", side_effect=fake_ocr) as ocr_mock, \
              patch("script.resources.reader.pytesseract.image_to_string", return_value=""), \
              patch("script.resources.reader.cv2.imwrite"):
@@ -145,7 +145,7 @@ class TestFailureCache(TestCase):
             return "", {"text": [""]}, None, False
 
         with patch("script.resources.reader.detect_resource_regions", side_effect=fake_detect), \
-             patch("script.screen_utils._grab_frame", return_value=frame), \
+            patch("script.screen_utils.grab_frame", return_value=frame), \
              patch("script.resources.reader.preprocess_roi", side_effect=lambda roi: roi[..., 0]), \
              patch("script.resources.reader.execute_ocr", side_effect=fake_execute), \
              patch.dict(resources._LAST_REGION_SPANS, {"wood_stockpile": (0, 120)}, clear=True), \
@@ -172,7 +172,7 @@ class TestFailureCache(TestCase):
         )
 
         with patch("script.resources.reader.detect_resource_regions", side_effect=fake_detect), \
-             patch("script.screen_utils._grab_frame", return_value=frame), \
+            patch("script.screen_utils.grab_frame", return_value=frame), \
              patch("script.resources.reader.execute_ocr", side_effect=fake_ocr), \
              patch("script.resources.reader.pytesseract.image_to_string", return_value=""), \
              patch("script.resources.reader.cv2.imwrite"):
@@ -194,7 +194,7 @@ class TestFailureCache(TestCase):
 
         with patch.dict(resources.CFG, {"ocr_retry_limit": 2}, clear=False), \
              patch("script.resources.reader.detect_resource_regions", side_effect=fake_detect), \
-             patch("script.screen_utils._grab_frame", return_value=frame), \
+            patch("script.screen_utils.grab_frame", return_value=frame), \
              patch("script.resources.reader.execute_ocr", side_effect=fake_ocr), \
              patch("script.resources.reader.pytesseract.image_to_string", return_value=""), \
              patch("script.resources.reader.cv2.imwrite"):
@@ -219,7 +219,7 @@ class TestFailureCache(TestCase):
             return "", {"text": [""]}, np.zeros((1, 1), dtype=np.uint8), False
 
         with patch("script.resources.reader.detect_resource_regions", side_effect=fake_detect), \
-             patch("script.screen_utils._grab_frame", return_value=frame), \
+            patch("script.screen_utils.grab_frame", return_value=frame), \
              patch("script.resources.reader.preprocess_roi", side_effect=lambda r: r[..., 0] if r.ndim == 3 else r), \
              patch("script.resources.reader.execute_ocr", side_effect=fake_execute), \
              patch("script.resources.reader.pytesseract.image_to_string", return_value=""), \
@@ -263,7 +263,7 @@ class TestFailureCache(TestCase):
         frame = np.zeros((600, 600, 3), dtype=np.uint8)
 
         with patch("script.resources.reader.detect_resource_regions", side_effect=fake_detect), \
-             patch("script.screen_utils._grab_frame", return_value=frame), \
+            patch("script.screen_utils.grab_frame", return_value=frame), \
              patch("script.resources.reader.execute_ocr", side_effect=fake_ocr), \
              patch("script.resources.reader.pytesseract.image_to_string", return_value=""), \
              patch("script.resources.reader.cv2.imwrite"):
