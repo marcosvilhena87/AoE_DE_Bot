@@ -7,7 +7,6 @@ from unittest.mock import patch
 import numpy as np
 
 # Stub modules that require GUI
-
 dummy_pg = types.SimpleNamespace(
     PAUSE=0,
     FAILSAFE=False,
@@ -34,61 +33,20 @@ os.environ.setdefault("TESSERACT_CMD", "/usr/bin/true")
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import script.units.villager as villager
 import script.common as common
+
 state = common.init_common()
 
 
 class TestSelectIdleVillager(TestCase):
-    def test_returns_true_when_count_decreases(self):
-        villager._last_idle_villager_count = 0
-        reads = iter([
-            ({"idle_villager": 2}, (None, None)),
-            ({"idle_villager": 1}, (None, None)),
-        ])
-
-        with patch("script.input_utils._press_key_safe") as press_mock, \
-             patch("script.resources.reader.read_resources_from_hud", side_effect=lambda *a, **k: next(reads)), \
-             patch("script.hud.read_population_from_hud", return_value=(2, 10, False)):
+    def test_presses_idle_key_when_configured(self):
+        with patch("script.input_utils._press_key_safe") as press_mock:
             self.assertTrue(villager.select_idle_villager())
-            press_mock.assert_called_once()
+            press_mock.assert_called_once_with(state.config["keys"]["idle_vill"], 0.1)
 
-    def test_returns_false_when_no_idle_villagers(self):
-        villager._last_idle_villager_count = 0
-        reads = iter([
-            ({"idle_villager": 0}, (None, None)),
-            ({"idle_villager": 0}, (None, None)),
-        ])
-
-        with patch("script.input_utils._press_key_safe") as press_mock, \
-             patch("script.resources.reader.read_resources_from_hud", side_effect=lambda *a, **k: next(reads)), \
-             patch("script.hud.read_population_from_hud", return_value=(0, 10, False)):
-            self.assertFalse(villager.select_idle_villager())
+    def test_returns_false_when_key_missing(self):
+        new_state = common.init_common(state=common.BotState())
+        new_state.config["keys"].pop("idle_vill", None)
+        with patch("script.input_utils._press_key_safe") as press_mock:
+            self.assertFalse(villager.select_idle_villager(state=new_state))
             press_mock.assert_not_called()
-
-    def test_ignores_idle_count_exceeding_population(self):
-        villager._last_idle_villager_count = 0
-        reads = iter([
-            ({"idle_villager": 5}, (None, None)),
-            ({"idle_villager": 5}, (None, None)),
-        ])
-
-        with patch("script.input_utils._press_key_safe") as press_mock, \
-             patch("script.resources.reader.read_resources_from_hud", side_effect=lambda *a, **k: next(reads)), \
-             patch("script.hud.read_population_from_hud", return_value=(3, 10, False)):
-            self.assertFalse(villager.select_idle_villager())
-            press_mock.assert_not_called()
-
-    def test_low_conf_population_resets_last_idle_count(self):
-        villager._last_idle_villager_count = 3
-        state.current_pop = 5
-        reads = iter([
-            ({"idle_villager": 1}, (None, None)),
-            ({"idle_villager": 1}, (None, None)),
-        ])
-        with patch("script.input_utils._press_key_safe") as press_mock, \
-             patch("script.resources.reader.read_resources_from_hud", side_effect=lambda *a, **k: next(reads)), \
-             patch("script.hud.read_population_from_hud", return_value=(7, 10, True)):
-            villager.select_idle_villager(state=state)
-            press_mock.assert_not_called()
-        self.assertEqual(state.current_pop, 5)
-        self.assertEqual(villager._last_idle_villager_count, 0)
 
