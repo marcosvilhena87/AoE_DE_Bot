@@ -5,6 +5,7 @@ import script.common as common
 from script.common import BotState, STATE
 import script.input_utils as input_utils
 from script.units.villager import build_house, select_idle_villager
+from script import hud
 
 logger = logging.getLogger(__name__)
 
@@ -47,5 +48,27 @@ def train_villagers(target_pop: int, state: BotState = STATE):
             continue
 
         input_utils._press_key_safe(state.config["keys"]["train_vill"], 0.0)
-        state.current_pop += 1
+
+        confirmed = False
+        queue_reader = getattr(hud, "read_villager_queue_from_hud", None)
+        if queue_reader:
+            try:
+                queue_val = queue_reader()
+                if queue_val:
+                    state.current_pop += 1
+                    confirmed = True
+            except Exception:
+                queue_val = None
+
+        if not confirmed:
+            pop_after, _cap, _low = hud.read_population_from_hud()
+            if pop_after is not None and pop_after > state.current_pop:
+                state.current_pop = pop_after
+                confirmed = True
+
+        if not confirmed:
+            logger.warning("Villager training not confirmed; retrying")
+            time.sleep(0.10)
+            continue
+
         time.sleep(0.10)

@@ -28,6 +28,7 @@ class DummyMSS:
 
 sys.modules.setdefault("pyautogui", dummy_pg)
 sys.modules.setdefault("mss", types.SimpleNamespace(mss=lambda: DummyMSS()))
+os.environ.setdefault("TESSERACT_CMD", "/bin/true")
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import script.common as common
@@ -40,15 +41,18 @@ class TestMissingResourceBar(TestCase):
     def test_train_villagers_does_not_read_missing_bar(self):
         state.current_pop = 3
         state.pop_cap = 5
+        pop_vals = [(4, 5, False), (5, 5, False)]
         with patch(
             "script.resources.reader.read_resources_from_hud",
             side_effect=common.ResourceReadError("missing"),
         ) as read_mock, \
              patch("script.buildings.town_center.select_idle_villager", return_value=True), \
-             patch("script.buildings.town_center.build_house"):
+             patch("script.buildings.town_center.build_house"), \
+             patch("script.hud.read_population_from_hud", side_effect=pop_vals) as pop_mock:
             tc.train_villagers(5, state=state)
         self.assertEqual(state.current_pop, 5)
         read_mock.assert_not_called()
+        self.assertEqual(pop_mock.call_count, 2)
 
     def test_build_house_handles_missing_bar(self):
         state.pop_cap = 4
