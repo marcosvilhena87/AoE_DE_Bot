@@ -81,12 +81,20 @@ class TestInternalPopulation(TestCase):
             state.pop_cap += 4
             return True
 
+        pop_vals = [
+            (4, 4, False),
+            (5, 8, False),
+            (6, 8, False),
+            (7, 8, False),
+        ]
         with patch("script.resources.reader.read_resources_from_hud") as read_mock, \
              patch("script.buildings.town_center.build_house", side_effect=fake_build_house) as build_house_mock, \
-             patch("script.buildings.town_center.select_idle_villager", return_value=True):
+             patch("script.buildings.town_center.select_idle_villager", return_value=True), \
+             patch("script.hud.read_population_from_hud", side_effect=pop_vals) as pop_mock:
             tc.train_villagers(7, state=state)
             self.assertEqual(state.current_pop, 7)
             self.assertEqual(state.pop_cap, 8)
             build_house_mock.assert_called_once()
             read_mock.assert_not_called()
+            self.assertEqual(pop_mock.call_count, 4)
 
