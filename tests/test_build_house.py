@@ -47,17 +47,46 @@ class TestClickAndBuildHouse(TestCase):
     def test_build_house_uses_right_click_and_updates_population(self):
         state.pop_cap = 4
         expected_coords = tuple(common.CFG["areas"]["house_spot"])
-        with patch("script.resources.reader.read_resources_from_hud") as read_mock, \
-            patch("script.hud.read_population_from_hud") as read_pop_mock, \
-            patch("script.input_utils._press_key_safe"), \
-            patch("script.input_utils._click_norm") as click_mock, \
-            patch("script.units.villager.time.sleep"):
+
+        def res_side_effect(*a, **k):
+            if res_side_effect.calls == 0:
+                res_side_effect.calls += 1
+                return ({"wood_stockpile": 100}, (0, 4))
+            return ({"wood_stockpile": 70}, (0, 8))
+
+        res_side_effect.calls = 0
+
+        def pop_side_effect(*a, **k):
+            return (0, 8, False)
+
+        with patch(
+            "script.resources.reader.read_resources_from_hud", side_effect=res_side_effect
+        ) as read_mock, patch(
+            "script.hud.read_population_from_hud", side_effect=pop_side_effect
+        ) as read_pop_mock, patch(
+            "script.template_utils.find_template", return_value=(None, 0.9, None)
+        ) as tmpl_mock, patch(
+            "pathlib.Path.exists", return_value=True
+        ), patch(
+            "cv2.imread", return_value=np.zeros((10, 10), dtype=np.uint8)
+        ), patch(
+            "script.screen_utils.screen_capture.grab_frame",
+            return_value=np.zeros((200, 200, 3), dtype=np.uint8),
+        ), patch(
+            "script.input_utils._press_key_safe"
+        ), patch(
+            "script.input_utils._click_norm"
+        ) as click_mock, patch(
+            "script.units.villager.time.sleep"
+        ):
             result = villager.build_house(state=state)
+
         self.assertTrue(result)
         self.assertEqual(state.pop_cap, 8)
         self.assertEqual(click_mock.call_count, 2)
         self.assertEqual(click_mock.call_args_list[0].args, expected_coords)
         self.assertEqual(click_mock.call_args_list[1].args, expected_coords)
         self.assertEqual(click_mock.call_args_list[1].kwargs["button"], "right")
-        read_mock.assert_not_called()
-        read_pop_mock.assert_not_called()
+        self.assertGreaterEqual(read_mock.call_count, 2)
+        self.assertGreaterEqual(read_pop_mock.call_count, 1)
+        tmpl_mock.assert_called()
