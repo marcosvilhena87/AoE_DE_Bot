@@ -19,18 +19,37 @@ def train_villagers(target_pop: int, state: BotState = STATE):
         # change the selection (e.g. building houses).
         input_utils._press_key_safe(state.config["keys"]["select_tc"], 0.10)
 
+        if state.current_pop >= state.pop_cap:
+            # Need to increase population cap before training more villagers
+            deadline = time.time() + 30.0
+            built_house = False
+            while time.time() < deadline:
+                if select_idle_villager(state=state):
+                    if build_house(state=state):
+                        logger.info("House built to increase population")
+                        built_house = True
+                        break
+                    else:
+                        logger.warning(
+                            "Failed to build house to increase population"
+                        )
+                else:
+                    logger.warning("No idle villager to build house")
+                time.sleep(1.0)
+            if not built_house:
+                logger.error(
+                    "Unable to build house; stopping villager training"
+                )
+                break
+            # Reselect the Town Center after building a house so that
+            # further villager training continues from the correct building.
+            input_utils._press_key_safe(
+                state.config["keys"]["select_tc"], 0.10
+            )
+            # After a successful house build, loop again to verify the new
+            # population cap before training.
+            continue
+
         input_utils._press_key_safe(state.config["keys"]["train_vill"], 0.0)
         state.current_pop += 1
-        if state.current_pop == state.pop_cap:
-            if select_idle_villager(state=state):
-                if build_house(state=state):
-                    logger.info("House built to increase population")
-                else:
-                    logger.warning("Failed to build house to increase population")
-            else:
-                logger.warning("No idle villager to build house")
-            # Reselect the Town Center after attempting to build a house so
-            # that further villager training continues from the correct
-            # building.
-            input_utils._press_key_safe(state.config["keys"]["select_tc"], 0.10)
         time.sleep(0.10)
