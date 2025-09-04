@@ -442,18 +442,21 @@ def _handle_cache_and_fallback(
         if CFG.get(fallback_key, False) and name in cache_obj.last_resource_values:
             cached_val = cache_obj.last_resource_values[name]
             tol = CFG.get("resource_cache_tolerance", 100)
-            expected = CFG.get("starting_resources", {}).get(name)
-            compare = value if digits is not None else expected
-            if compare is not None and abs(cached_val - compare) > tol:
+            reference = (
+                int(digits)
+                if digits is not None
+                else CFG.get("starting_resources", {}).get(name)
+            )
+            if reference is not None and abs(cached_val - reference) > tol:
                 logger.warning(
                     "Discarding cached value for %s due to mismatch with %d",
                     name,
-                    compare,
+                    reference,
                 )
-                cache_obj.last_resource_values[name] = compare if compare is not None else cached_val
+                cache_obj.last_resource_values[name] = reference
                 cache_obj.last_resource_ts[name] = time.time()
                 cache_obj.resource_failure_counts[name] = 0
-                return compare, False, False, no_digit_flag
+                return reference, False, False, no_digit_flag
             cache_hit = True
             value = cached_val
             logger.warning(
