@@ -50,6 +50,34 @@ _LAST_REGION_BOUNDS = None
 # Track last available spans for each region
 _LAST_REGION_SPANS: dict[str, tuple[int, int]] = {}
 
+
+def reset(cache_obj: ResourceCache = RESOURCE_CACHE) -> None:
+    """Clear cached resource detection state.
+
+    Parameters
+    ----------
+    cache_obj:
+        The :class:`ResourceCache` instance to reset. Defaults to the module's
+        shared :data:`RESOURCE_CACHE`.
+    """
+
+    cache_obj.last_icon_bounds.clear()
+    cache_obj.last_resource_values.clear()
+    cache_obj.last_resource_ts.clear()
+    cache_obj.resource_failure_counts.clear()
+    cache_obj.last_debug_image_ts.clear()
+    cache_obj.last_debug_failure_set.clear()
+    cache_obj.last_debug_failure_ts = None
+    cache_obj.last_low_confidence.clear()
+    cache_obj.last_no_digits.clear()
+
+    _LAST_READ_FROM_CACHE.clear()
+    _NARROW_ROIS.clear()
+    _NARROW_ROI_DEFICITS.clear()
+    global _LAST_REGION_BOUNDS
+    _LAST_REGION_BOUNDS = None
+    _LAST_REGION_SPANS.clear()
+
 __all__ = [
     "ResourceCache",
     "RESOURCE_CACHE",
@@ -61,4 +89,5 @@ __all__ = [
     "_RESOURCE_DEBUG_COOLDOWN",
     "_LAST_REGION_BOUNDS",
     "_LAST_REGION_SPANS",
+    "reset",
 ]

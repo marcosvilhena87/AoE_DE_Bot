@@ -76,9 +76,7 @@ def main():
         idle_start = getattr(info, "starting_idle_villagers", info.starting_villagers)
 
         # Reset resource cache to prevent stale OCR values across scenarios
-        resources.RESOURCE_CACHE.last_resource_values.clear()
-        resources.RESOURCE_CACHE.last_resource_ts.clear()
-        resources.RESOURCE_CACHE.resource_failure_counts.clear()
+        resources.cache.reset()
 
         resources.RESOURCE_CACHE.last_resource_values["idle_villager"] = idle_start
         resources.RESOURCE_CACHE.last_resource_ts["idle_villager"] = time.time()
