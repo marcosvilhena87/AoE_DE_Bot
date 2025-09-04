@@ -83,7 +83,7 @@ def main(config_path: str | Path | None = None) -> None:
         return
     res_vals, (cur_pop, pop_cap) = pop_check
 
-    # Validação dos recursos iniciais
+    # Validate initial resources
     tol_cfg = common.CFG.get("resource_validation_tolerance", {})
     tolerance = tol_cfg.get("initial", 10)
     frame = screen_utils.screen_capture.grab_frame()
@@ -98,7 +98,7 @@ def main(config_path: str | Path | None = None) -> None:
             rois=rois,
         )
     except resources.ResourceValidationError as exc:
-        logger.error("Erro na validação dos recursos iniciais: %s", exc)
+        logger.error("Error validating starting resources: %s", exc)
         raise
 
     hud_idle = res_vals.get("idle_villager")
@@ -126,7 +126,7 @@ def main(config_path: str | Path | None = None) -> None:
     logger.info("Setup complete.")
     if "PYTEST_CURRENT_TEST" in os.environ:
         logger.info(
-            "Variável PYTEST_CURRENT_TEST detectada; run_mission será pulado."
+            "PYTEST_CURRENT_TEST variable detected; run_mission will be skipped."
         )
     if "PYTEST_CURRENT_TEST" not in os.environ:
         run_mission(info)
