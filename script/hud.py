@@ -35,7 +35,7 @@ def wait_hud(timeout=60):
         )
     last_score = -1.0
     while time.time() - t0 < timeout:
-        frame = screen_utils._grab_frame()
+        frame = screen_utils.grab_frame()
         box, score, heat = find_template(
             frame, tmpl, threshold=CFG["threshold"], scales=CFG["scales"]
         )
@@ -161,7 +161,7 @@ def read_population_from_hud(retries=1, conf_threshold=None, save_failed_roi=Fal
     if conf_threshold is None:
         conf_threshold = CFG.get("ocr_conf_threshold", 60)
 
-    frame_full = screen_utils._grab_frame()
+    frame_full = screen_utils.grab_frame()
     roi_bbox = calculate_population_roi(frame_full)
     try:
         cur, limit, low_conf = resources.read_population_from_roi(

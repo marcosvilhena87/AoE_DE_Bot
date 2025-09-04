@@ -80,7 +80,7 @@ class TestGatherHudStats(TestCase):
             return 123, 200, False
 
         with patch("tools.campaign.locate_resource_panel", return_value={}), \
-             patch("tools.campaign._grab_frame", side_effect=fake_grab_frame), \
+            patch("tools.campaign.grab_frame", side_effect=fake_grab_frame), \
              patch("tools.campaign._ocr_digits_better", side_effect=fake_ocr), \
              patch("tools.campaign._read_population_from_roi", side_effect=fake_pop), \
              patch("tools.campaign.resources.detect_resource_regions", return_value={
@@ -137,7 +137,7 @@ class TestGatherHudStats(TestCase):
             return 123, 200, False
 
         with patch("tools.campaign.locate_resource_panel", return_value={}), \
-             patch("tools.campaign._grab_frame", side_effect=fake_grab_frame), \
+            patch("tools.campaign.grab_frame", side_effect=fake_grab_frame), \
              patch("tools.campaign._ocr_digits_better", side_effect=fake_ocr), \
              patch("tools.campaign._read_population_from_roi", side_effect=fake_pop), \
              patch("tools.campaign.resources.detect_resource_regions", return_value={
@@ -179,7 +179,7 @@ class TestGatherHudStats(TestCase):
             return d, {"text": [d]}
 
         with patch("tools.campaign.locate_resource_panel", return_value={}), \
-             patch("tools.campaign._grab_frame", side_effect=fake_grab_frame), \
+            patch("tools.campaign.grab_frame", side_effect=fake_grab_frame), \
              patch("tools.campaign._ocr_digits_better", side_effect=fake_ocr), \
              patch(
                  "tools.campaign.resources.detect_resource_regions",
@@ -204,7 +204,7 @@ class TestGatherHudStats(TestCase):
             return "100", {"text": ["100"]}
 
         with patch("tools.campaign.locate_resource_panel", return_value={}), \
-             patch("tools.campaign._grab_frame", side_effect=fake_grab_frame), \
+            patch("tools.campaign.grab_frame", side_effect=fake_grab_frame), \
              patch("tools.campaign._ocr_digits_better", side_effect=fake_ocr), \
              patch(
                  "tools.campaign.resources.detect_resource_regions",

@@ -58,7 +58,7 @@ def get_monitor():
     return MONITOR
 
 
-def _grab_frame(bbox=None):
+def grab_frame(bbox=None):
     """Capture a frame from the screen."""
     init_sct()
     region = bbox or get_monitor()
@@ -100,6 +100,7 @@ __all__ = [
     "init_sct",
     "teardown_sct",
     "get_monitor",
+    "grab_frame",
     "load_icon_templates",
     "HUD_TEMPLATE",
     "ICON_NAMES",

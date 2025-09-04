@@ -56,7 +56,7 @@ class TestResourceDebugImages(TestCase):
         def fake_ocr(gray):
             return "", {"text": [""]}, np.zeros((1, 1), dtype=np.uint8)
 
-        with patch("script.screen_utils._grab_frame", side_effect=fake_grab_frame), \
+        with patch("script.screen_utils.grab_frame", side_effect=fake_grab_frame), \
              patch(
                  "script.resources.reader.locate_resource_panel",
                  return_value={
@@ -114,7 +114,7 @@ class TestResourceDebugImages(TestCase):
         resources.RESOURCE_CACHE.last_resource_values.clear()
         resources.RESOURCE_CACHE.last_resource_ts.clear()
         resources.RESOURCE_CACHE.resource_failure_counts.clear()
-        with patch("script.screen_utils._grab_frame", side_effect=fake_grab_frame), \
+        with patch("script.screen_utils.grab_frame", side_effect=fake_grab_frame), \
              patch(
                  "script.resources.reader.locate_resource_panel",
                  return_value={
