@@ -71,13 +71,13 @@ def main(config_path: str | Path | None = None) -> None:
         )
         return
 
-    # Validação dos recursos iniciais
+    # Validate initial resources
     try:
         resources.validate_starting_resources(
             res_vals, info.starting_resources, raise_on_error=True
         )
     except resources.ResourceValidationError as exc:
-        logger.error("Erro na validação dos recursos iniciais: %s", exc)
+        logger.error("Error validating starting resources: %s", exc)
         raise
 
     hud_idle = res_vals.get("idle_villager")

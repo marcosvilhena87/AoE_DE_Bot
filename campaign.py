@@ -352,7 +352,7 @@ def main(config_path: str | Path | None = None) -> None:
         sig = inspect.signature(func)
         accepts_info = "info" in sig.parameters
         logger.info("Starting mission '%s'.", module_name)
-        logger.info("Tentando cumprir os objetivos do cenário %s...", module_name)
+        logger.info("Attempting to complete scenario objectives for %s...", module_name)
         if accepts_info:
             func(info)
         else:

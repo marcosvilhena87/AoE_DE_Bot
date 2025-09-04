@@ -788,7 +788,7 @@ def _read_resources(
     cache._LAST_READ_FROM_CACHE = cache_hits
     cache_obj.last_low_confidence = set(low_confidence)
     cache_obj.last_no_digits = set(no_digits)
-    logger.info("Resumo de recursos detectados: %s", results)
+    logger.info("Summary of detected resources: %s", results)
     return results, (cur_pop, pop_cap)
 
 
