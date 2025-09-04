@@ -14,6 +14,119 @@ import script.screen_utils as screen_utils
 from script.config_utils import parse_scenario_info
 
 
+def validate_resources_with_retry(
+    res,
+    expected,
+    config,
+    required,
+    optional,
+    screen_utils_module=screen_utils,
+    resources_module=resources,
+    logger=None,
+    cur_pop=None,
+    pop_cap=None,
+):
+    """Validate starting resources with retries and adaptive tolerance.
+
+    Args:
+        res (dict): Initial resource readings.
+        expected (dict): Expected resource values (non-zero only).
+        config (dict): Configuration dictionary containing tolerance options.
+        required (list[str]): Required HUD icons to read.
+        optional (list[str]): Optional HUD icons to read.
+        screen_utils_module: Module providing ``_grab_frame``.
+        resources_module: Module providing resource helpers.
+        logger (logging.Logger, optional): Logger for status messages.
+
+    Returns:
+        tuple[dict, tuple[int, int]]: Final resource readings and population.
+    """
+
+    if logger is None:
+        logger = logging.getLogger("campaign_bot")
+
+    skip_validation = config.get("skip_starting_resource_validation", False)
+    res_tolerances = config.get("resource_validation_tolerances", {})
+
+    if expected and not skip_validation:
+        retry_limit = config.get("resource_validation_retries", 3)
+        tol_cfg = config.get("resource_validation_tolerance", {})
+        tolerance = tol_cfg.get("initial", 10)
+        increment = tol_cfg.get("increment", 5)
+        max_tolerance = tolerance + increment
+        relaxed_threshold = tolerance + 2 * increment
+        attempt = 1
+        while True:
+            frame = screen_utils_module._grab_frame()
+            rois = getattr(resources_module, "_LAST_REGION_BOUNDS", {})
+            logger.info(
+                "Starting resource validation attempt %d/%d (±%d)",
+                attempt,
+                retry_limit,
+                tolerance,
+            )
+            try:
+                resources_module.validate_starting_resources(
+                    res,
+                    expected,
+                    tolerance=tolerance,
+                    tolerances=res_tolerances,
+                    raise_on_error=True,
+                    frame=frame,
+                    rois=rois,
+                )
+                break
+            except resources_module.ResourceValidationError as e:
+                logger.warning(
+                    "Starting resource validation attempt %d failed: %s",
+                    attempt,
+                    e,
+                )
+                if attempt >= retry_limit:
+                    max_dev = 0
+                    for k, v in expected.items():
+                        actual = res.get(k)
+                        if actual is None:
+                            max_dev = float("inf")
+                            break
+                        max_dev = max(max_dev, abs(actual - v))
+                    if max_dev <= relaxed_threshold:
+                        logger.warning(
+                            "Resource readings within ±%d; continuing.",
+                            relaxed_threshold,
+                        )
+                        resources_module.validate_starting_resources(
+                            res,
+                            expected,
+                            tolerance=tolerance,
+                            tolerances=res_tolerances,
+                            raise_on_error=False,
+                            frame=frame,
+                            rois=rois,
+                        )
+                        break
+                    raise
+                attempt += 1
+                tolerance = min(max_tolerance, tolerance + increment)
+                low_conf = resources_module.RESOURCE_CACHE.last_low_confidence
+                no_digits = resources_module.RESOURCE_CACHE.last_no_digits
+                for k in e.failing_keys:
+                    if k in low_conf or k in no_digits:
+                        resources_module._NARROW_ROI_DEFICITS[k] = (
+                            resources_module._NARROW_ROI_DEFICITS.get(k, 0) + 2
+                        )
+                res, (cur_pop, pop_cap) = resources_module.gather_hud_stats(
+                    force_delay=0.1 * attempt,
+                    required_icons=required,
+                    optional_icons=optional,
+                )
+    elif expected and skip_validation:
+        logger.info(
+            "Skipping starting resource validation; initial readings will be logged."
+        )
+    return res, (cur_pop, pop_cap)
+
+
 def _scenario_to_module(path: str) -> str:
     """Convert a scenario file path to an importable module path.
 
@@ -132,87 +245,18 @@ def main() -> None:
                 required_icons=required,
                 optional_icons=optional,
             )
-            skip_validation = common.CFG.get(
-                "skip_starting_resource_validation", False
+            res, (cur_pop, pop_cap) = validate_resources_with_retry(
+                res,
+                non_zero,
+                common.CFG,
+                required,
+                optional,
+                screen_utils_module=screen_utils,
+                resources_module=resources,
+                logger=logger,
+                cur_pop=cur_pop,
+                pop_cap=pop_cap,
             )
-            res_tolerances = common.CFG.get("resource_validation_tolerances", {})
-            if non_zero and not skip_validation:
-                retry_limit = common.CFG.get("resource_validation_retries", 3)
-                tol_cfg = common.CFG.get("resource_validation_tolerance", {})
-                tolerance = tol_cfg.get("initial", 10)
-                increment = tol_cfg.get("increment", 5)
-                max_tolerance = tolerance + increment
-                relaxed_threshold = tolerance + 2 * increment
-                attempt = 1
-                while True:
-                    frame = screen_utils._grab_frame()
-                    rois = getattr(resources, "_LAST_REGION_BOUNDS", {})
-                    logger.info(
-                        "Starting resource validation attempt %d/%d (±%d)",
-                        attempt,
-                        retry_limit,
-                        tolerance,
-                    )
-                    try:
-                        resources.validate_starting_resources(
-                            res,
-                            non_zero,
-                            tolerance=tolerance,
-                            tolerances=res_tolerances,
-                            raise_on_error=True,
-                            frame=frame,
-                            rois=rois,
-                        )
-                        break
-                    except resources.ResourceValidationError as e:
-                        logger.warning(
-                            "Starting resource validation attempt %d failed: %s",
-                            attempt,
-                            e,
-                        )
-                        if attempt >= retry_limit:
-                            max_dev = 0
-                            for k, v in non_zero.items():
-                                actual = res.get(k)
-                                if actual is None:
-                                    max_dev = float("inf")
-                                    break
-                                max_dev = max(max_dev, abs(actual - v))
-                            if max_dev <= relaxed_threshold:
-                                logger.warning(
-                                    "Resource readings within ±%d; continuing.",
-                                    relaxed_threshold,
-                                )
-                                resources.validate_starting_resources(
-                                    res,
-                                    non_zero,
-                                    tolerance=tolerance,
-                                    tolerances=res_tolerances,
-                                    raise_on_error=False,
-                                    frame=frame,
-                                    rois=rois,
-                                )
-                                break
-                            else:
-                                raise
-                        attempt += 1
-                        tolerance = min(max_tolerance, tolerance + increment)
-                        low_conf = resources.RESOURCE_CACHE.last_low_confidence
-                        no_digits = resources.RESOURCE_CACHE.last_no_digits
-                        for k in e.failing_keys:
-                            if k in low_conf or k in no_digits:
-                                resources._NARROW_ROI_DEFICITS[k] = (
-                                    resources._NARROW_ROI_DEFICITS.get(k, 0) + 2
-                                )
-                        res, (cur_pop, pop_cap) = resources.gather_hud_stats(
-                            force_delay=0.1 * attempt,
-                            required_icons=required,
-                            optional_icons=optional,
-                        )
-            elif non_zero and skip_validation:
-                logger.info(
-                    "Skipping starting resource validation; initial readings will be logged."
-                )
             logger.info(
                 "Detected resources: wood=%s, food=%s, gold=%s, stone=%s",
                 res.get("wood_stockpile"),
