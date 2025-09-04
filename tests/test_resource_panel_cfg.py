@@ -53,7 +53,7 @@ class TestGetResourcePanelCfg(TestCase):
             "profile": None,
         }
         with patch.dict(resources.CFG, cfg_data, clear=False):
-            cfg = resources._get_resource_panel_cfg()
+            cfg = resources.panel._get_resource_panel_cfg()
         n = len(resources.RESOURCE_ICON_ORDER)
         self.assertEqual(cfg.match_threshold, 0.95)
         self.assertEqual(cfg.scales, [1.0, 1.5])

@@ -37,6 +37,7 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import script.resources as resources
 from script.resources.panel import detection
 from script.resources.panel import ResourcePanelCfg
+from script.resources.ocr.executor import _extract_population
 
 
 def _make_cfg():
@@ -114,7 +115,7 @@ def test_population_low_conf_cache_fallback():
         "script.resources.reader.roi.expand_population_roi_after_failure",
         return_value=None,
     ):
-        cur, cap = resources._extract_population(
+        cur, cap = _extract_population(
             frame,
             regions,
             results,
@@ -152,7 +153,7 @@ def test_population_retry_until_confidence_improves():
         "script.resources.ocr.executor._read_population_from_roi",
         side_effect=fake_read,
     ):
-        cur, cap = resources._extract_population(
+        cur, cap = _extract_population(
             frame,
             regions,
             results,
@@ -204,7 +205,7 @@ def test_population_roi_expansion_respects_idle_villager_boundary():
         "script.resources.reader.roi.expand_population_roi_after_failure",
         new=wrapper,
     ):
-        resources._extract_population(
+        _extract_population(
             frame,
             regions,
             results,

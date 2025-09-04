@@ -56,6 +56,7 @@ os.environ.setdefault("TESSERACT_CMD", "/usr/bin/true")
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import script.resources as resources
+from script.resources.panel import _fallback_rois_from_slice
 
 
 class TestFallbackROIsFromSlice(TestCase):
@@ -70,7 +71,7 @@ class TestFallbackROIsFromSlice(TestCase):
         resources.cache._LAST_REGION_SPANS.clear()
 
     def test_fallback_rois_from_slice_updates_cache_and_regions(self):
-        regions = resources._fallback_rois_from_slice(
+        regions = _fallback_rois_from_slice(
             0,  # left
             120,  # width
             0,  # top

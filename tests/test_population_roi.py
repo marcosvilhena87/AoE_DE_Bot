@@ -50,6 +50,7 @@ import script.common as common
 common.init_common()
 import script.hud as hud
 import script.resources as resources
+from script.resources.ocr.executor import _read_population_from_roi, _extract_population
 
 
 class TestPopulationROI(TestCase):
@@ -291,7 +292,7 @@ class TestPopulationROI(TestCase):
             "script.resources.ocr.executor.execute_ocr",
             return_value=("2025", {"text": ["20/25"], "conf": ["80"]}, None, False),
         ) as ocr_mock:
-            cur, cap, low_conf = resources._read_population_from_roi(roi)
+            cur, cap, low_conf = _read_population_from_roi(roi)
 
         self.assertFalse(low_conf)
         self.assertEqual((cur, cap), (20, 25))
@@ -344,7 +345,7 @@ class TestPopulationROI(TestCase):
             ),
         ):
             with self.assertRaises(common.PopulationReadError) as ctx:
-                resources._extract_population(
+                _extract_population(
                     frame,
                     regions,
                     {},
@@ -365,7 +366,7 @@ class TestPopulationROI(TestCase):
             "script.resources.ocr.executor.execute_ocr",
             return_value=("34", {"text": ["34"], "conf": ["80"]}, None, False),
         ) as ocr_mock:
-            cur, cap, low_conf = resources._read_population_from_roi(roi)
+            cur, cap, low_conf = _read_population_from_roi(roi)
 
         self.assertFalse(low_conf)
         self.assertEqual((cur, cap), (3, 4))
@@ -387,7 +388,7 @@ class TestPopulationROI(TestCase):
                 True,
             ),
         ):
-            result = resources._read_population_from_roi(roi, conf_threshold=60)
+            result = _read_population_from_roi(roi, conf_threshold=60)
             assert result == (7, 7, True)
 
     def test_low_confidence_duplicate_digits_returns_value_when_allowed(self):
@@ -404,9 +405,7 @@ class TestPopulationROI(TestCase):
                 True,
             ),
         ):
-            cur, cap, low_conf = resources._read_population_from_roi(
-                roi, conf_threshold=60
-            )
+            cur, cap, low_conf = _read_population_from_roi(roi, conf_threshold=60)
 
         self.assertTrue(low_conf)
         self.assertEqual((cur, cap), (7, 7))

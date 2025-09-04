@@ -65,6 +65,7 @@ for name in list(sys.modules):
         del sys.modules[name]
 
 import script.resources as resources
+from script.resources.ocr.executor import _extract_population
 del sys.modules["script.common"]
 import script.common as common
 common.init_common()
@@ -110,7 +111,7 @@ class TestPopulationROIBounds(TestCase):
             "script.resources.reader.roi.expand_population_roi_after_failure",
             new=wrapper,
         ):
-            resources._extract_population(
+            _extract_population(
                 frame,
                 regions,
                 results,
@@ -169,7 +170,7 @@ class TestPopulationROIBounds(TestCase):
             "script.resources.reader.roi.expand_population_roi_after_failure",
             new=wrapper,
         ):
-            resources._extract_population(
+            _extract_population(
                 frame,
                 regions,
                 results,

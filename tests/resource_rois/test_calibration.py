@@ -6,7 +6,7 @@ import script.common as common
 common.init_common()
 import script.resources as resources
 import script.resources.reader as reader
-from script.resources.panel import ResourcePanelCfg
+from script.resources.panel import ResourcePanelCfg, _recalibrate_low_variance
 import script.screen_utils as screen_utils
 
 
@@ -41,7 +41,7 @@ class TestCalibration(TestCase):
             "script.resources.panel.calibration._auto_calibrate_from_icons",
             side_effect=fake_auto_calibrate,
         ) as mock_calib:
-            regions = resources._recalibrate_low_variance(
+            regions = _recalibrate_low_variance(
                 frame, misaligned, ["wood_stockpile"], resources.RESOURCE_CACHE
             )
 

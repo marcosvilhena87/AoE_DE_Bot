@@ -3,6 +3,7 @@ from unittest import TestCase
 from unittest.mock import patch
 
 import script.resources as resources
+from script.resources.panel import _apply_custom_rois
 
 
 class TestResourceCustomROIs(TestCase):
@@ -27,7 +28,7 @@ class TestResourceCustomROIs(TestCase):
                 with self.subTest(name=name):
                     key = f"{name}_roi"
                     with patch.dict(resources.CFG, {key: cfg}, clear=False):
-                        regions = resources._apply_custom_rois(frame, {})
+                        regions = _apply_custom_rois(frame, {})
                     self.assertEqual(regions[name], expected)
 
 
@@ -44,6 +45,6 @@ class TestIdleVillagerCustomROI(TestCase):
         with patch("script.screen_utils.get_screen_size", return_value=(200, 200)), patch.dict(
             resources.CFG, {"idle_villager_roi": cfg}, clear=False
         ):
-            regions = resources._apply_custom_rois(frame, {})
+            regions = _apply_custom_rois(frame, {})
 
         self.assertEqual(regions["idle_villager"], expected)
