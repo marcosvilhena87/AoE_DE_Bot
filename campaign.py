@@ -234,7 +234,7 @@ def wait_for_hud_with_retry(
                     f"HUD not detected after {max_retries} attempts; exiting script."
                 ) from e
 
-def main() -> None:
+def main(config_path: str | Path | None = None) -> None:
     """Run a campaign mission based on command-line arguments.
 
     The function parses CLI options, configures logging and screen capture,
@@ -242,6 +242,7 @@ def main() -> None:
     and executes the mission module for the chosen scenario.
 
     Args:
+        config_path: Optional configuration file path.
         --scenario (str): Path to the scenario text file. Defaults to the
             configuration value or
             ``campaigns/Ascent_of_Egypt/Egypt_1_Hunting.txt``.
@@ -250,6 +251,7 @@ def main() -> None:
         None
     """
 
+    common.init_common(config_path)
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--scenario",

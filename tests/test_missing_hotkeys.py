@@ -31,6 +31,7 @@ sys.modules.setdefault("mss", types.SimpleNamespace(mss=lambda: DummyMSS()))
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import script.common as common
+common.init_common()
 import script.units.villager as villager
 
 

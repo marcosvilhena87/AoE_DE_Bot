@@ -14,32 +14,54 @@ from .config_utils import load_config
 ROOT = Path(__file__).resolve().parent.parent
 ASSETS = ROOT / "assets"
 
-CFG = load_config()
+# Global configuration dictionary populated by ``init_common``.
+CFG: dict = {}
 logger = logging.getLogger(__name__)
 
-tesseract_cmd = os.environ.get("TESSERACT_CMD") or CFG.get("tesseract_path")
-path_lookup = shutil.which("tesseract")
-if tesseract_cmd:
-    tesseract_path = Path(tesseract_cmd)
-    if tesseract_path.is_file() and os.access(tesseract_path, os.X_OK):
-        pytesseract.pytesseract.tesseract_cmd = str(tesseract_path)
+
+def init_common(path: str | Path | None = None) -> dict:
+    """Load configuration and configure Tesseract.
+
+    Parameters
+    ----------
+    path:
+        Optional path to the configuration file. Defaults to the standard
+        configuration file when ``None``.
+
+    Returns
+    -------
+    dict
+        The loaded configuration dictionary.
+    """
+
+    CFG.clear()
+    CFG.update(load_config(path))
+
+    tesseract_cmd = os.environ.get("TESSERACT_CMD") or CFG.get("tesseract_path")
+    path_lookup = shutil.which("tesseract")
+    if tesseract_cmd:
+        tesseract_path = Path(tesseract_cmd)
+        if tesseract_path.is_file() and os.access(tesseract_path, os.X_OK):
+            pytesseract.pytesseract.tesseract_cmd = str(tesseract_path)
+        elif path_lookup:
+            logger.warning(
+                "Configured Tesseract path '%s' is invalid. Using '%s' found on PATH.",
+                tesseract_cmd,
+                path_lookup,
+            )
+            pytesseract.pytesseract.tesseract_cmd = path_lookup
+        else:
+            raise RuntimeError(
+                "Invalid Tesseract OCR path. Install Tesseract or update 'tesseract_path' in config.json."
+            )
     elif path_lookup:
-        logger.warning(
-            "Configured Tesseract path '%s' is invalid. Using '%s' found on PATH.",
-            tesseract_cmd,
-            path_lookup,
-        )
         pytesseract.pytesseract.tesseract_cmd = path_lookup
     else:
         raise RuntimeError(
             "Invalid Tesseract OCR path. Install Tesseract or update 'tesseract_path' in config.json."
         )
-elif path_lookup:
-    pytesseract.pytesseract.tesseract_cmd = path_lookup
-else:
-    raise RuntimeError(
-        "Invalid Tesseract OCR path. Install Tesseract or update 'tesseract_path' in config.json."
-    )
+
+    return CFG
 
 
 # Contadores internos de população

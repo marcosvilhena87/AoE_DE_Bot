@@ -49,6 +49,7 @@ os.environ.setdefault("TESSERACT_CMD", "/bin/true")
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import script.common as common
+common.init_common()
 import script.buildings.town_center as tc
 import script.units.villager as villager
 import script.config_utils as config_utils

@@ -7,12 +7,11 @@ from types import SimpleNamespace
 import cv2
 import numpy as np
 
-from ..config_utils import load_config
 from .. import screen_utils, common
 from ..template_utils import find_template
 
 ROOT = Path(__file__).resolve().parent.parent
-CFG = load_config()
+CFG = common.CFG
 logger = logging.getLogger(__name__)
 
 RESOURCE_ICON_ORDER = [
