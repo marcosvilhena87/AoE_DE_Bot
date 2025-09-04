@@ -26,13 +26,9 @@ def train_villagers(target_pop: int, state: BotState = STATE):
             while time.time() < deadline:
                 if select_idle_villager(state=state):
                     if build_house(state=state):
-                        logger.info("House built to increase population")
                         built_house = True
                         break
-                    else:
-                        logger.warning(
-                            "Failed to build house to increase population"
-                        )
+                    # build_house logs success or failure internally
                 else:
                     logger.warning("No idle villager to build house")
                 time.sleep(1.0)
