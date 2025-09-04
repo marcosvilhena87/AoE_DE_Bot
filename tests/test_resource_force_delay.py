@@ -50,7 +50,7 @@ class TestResourceForceDelay(TestCase):
             return np.zeros((1, 1, 3), dtype=np.uint8)
 
         with patch("script.resources.reader.time.sleep", side_effect=fake_sleep), \
-            patch("script.resources.reader.screen_utils.grab_frame", side_effect=fake_grab), \
+            patch("script.resources.reader.screen_utils.screen_capture.grab_frame", side_effect=fake_grab), \
             patch("script.resources.reader.detect_resource_regions", return_value={}), \
             patch("script.resources.reader.handle_ocr_failure"):
             resources.read_resources_from_hud([], force_delay=0.1)

@@ -57,7 +57,7 @@ class TestPopulationROI(TestCase):
             patch.dict(common.CFG["areas"], {"pop_box": [2.0, 2.0, 0.1, 0.1]}), \
             patch.dict(common.CFG, {"population_limit_roi": None}, clear=False), \
             patch("script.resources.locate_resource_panel", return_value={}), \
-            patch("script.screen_utils.grab_frame", return_value=np.zeros((1, 1, 3))) as grab_mock, \
+            patch("script.screen_utils.screen_capture.grab_frame", return_value=np.zeros((1, 1, 3))) as grab_mock, \
             patch("script.resources.ocr.executor.execute_ocr") as ocr_mock:
             with self.assertRaises(common.PopulationReadError) as ctx:
                 hud.read_population_from_hud(
@@ -78,7 +78,7 @@ class TestPopulationROI(TestCase):
             h, w = bbox["height"], bbox["width"]
             return np.zeros((h, w, 3), dtype=np.uint8)
 
-        with patch("script.screen_utils.grab_frame", side_effect=fake_grab), \
+        with patch("script.screen_utils.screen_capture.grab_frame", side_effect=fake_grab), \
             patch("script.resources.locate_resource_panel", return_value={}), \
             patch("script.input_utils._screen_size", return_value=(200, 200)), \
             patch.dict(common.CFG["areas"], {"pop_box": [0.1, 0.1, 0.5, 0.5]}), \
@@ -118,7 +118,7 @@ class TestPopulationROI(TestCase):
             recorded["roi"] = src
             return src
 
-        with patch("script.screen_utils.grab_frame", side_effect=fake_grab), \
+        with patch("script.screen_utils.screen_capture.grab_frame", side_effect=fake_grab), \
             patch("script.resources.locate_resource_panel", return_value={}), \
             patch("script.input_utils._screen_size", return_value=(200, 200)), \
             patch.dict(common.CFG["areas"], {"pop_box": pop_box}), \
@@ -162,7 +162,7 @@ class TestPopulationROI(TestCase):
             patch.dict(common.CFG["areas"], {"pop_box": [0.1, 0.1, -0.5, 0.2]}), \
             patch.dict(common.CFG, {"population_limit_roi": None}, clear=False), \
             patch("script.resources.locate_resource_panel", return_value={}), \
-            patch("script.screen_utils.grab_frame", return_value=np.zeros((1, 1, 3))) as grab_mock, \
+            patch("script.screen_utils.screen_capture.grab_frame", return_value=np.zeros((1, 1, 3))) as grab_mock, \
             patch("script.resources.ocr.executor.execute_ocr") as ocr_mock, \
             patch("script.resources.ocr.executor.time.sleep") as sleep_mock:
             with self.assertRaises(common.PopulationReadError) as ctx:
@@ -208,7 +208,7 @@ class TestPopulationROI(TestCase):
                 "population_ocr_roi_expand_growth": 1.0,
             },
             clear=False,
-        ), patch("script.screen_utils.grab_frame", side_effect=fake_grab), patch(
+        ), patch("script.screen_utils.screen_capture.grab_frame", side_effect=fake_grab), patch(
             "script.resources.ocr.executor._read_population_from_roi",
             side_effect=fake_pop,
         ), patch(
@@ -260,7 +260,7 @@ class TestPopulationROI(TestCase):
                 "population_ocr_roi_expand_growth": 1.0,
             },
             clear=False,
-        ), patch("script.screen_utils.grab_frame", side_effect=fake_grab), patch(
+        ), patch("script.screen_utils.screen_capture.grab_frame", side_effect=fake_grab), patch(
             "script.resources.ocr.executor._read_population_from_roi",
             side_effect=fake_pop,
         ), patch(
@@ -311,7 +311,7 @@ class TestPopulationROI(TestCase):
         def failing_read(*args, **kwargs):
             raise common.PopulationReadError("text='0/0', confs=[0]")
 
-        with patch("script.screen_utils.grab_frame", side_effect=fake_grab), patch(
+        with patch("script.screen_utils.screen_capture.grab_frame", side_effect=fake_grab), patch(
             "script.resources.ocr.executor._read_population_from_roi",
             side_effect=failing_read,
         ), patch(
@@ -418,7 +418,7 @@ class TestPopulationROI(TestCase):
             {"allow_low_conf_population": True, "treat_low_conf_as_failure": True},
             clear=False,
         ), patch(
-            "script.screen_utils.grab_frame", return_value=roi
+            "script.screen_utils.screen_capture.grab_frame", return_value=roi
         ), patch(
             "script.resources.ocr.executor._read_population_from_roi",
             return_value=(12, 34, True),
@@ -445,7 +445,7 @@ class TestPopulationROI(TestCase):
             {"allow_low_conf_population": True, "treat_low_conf_as_failure": True},
             clear=False,
         ), patch(
-            "script.screen_utils.grab_frame", return_value=roi
+            "script.screen_utils.screen_capture.grab_frame", return_value=roi
         ), patch(
             "script.resources.ocr.executor._read_population_from_roi",
             side_effect=failing_read,

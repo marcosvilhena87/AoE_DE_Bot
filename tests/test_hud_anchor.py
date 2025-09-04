@@ -48,7 +48,7 @@ class TestHudAnchor(TestCase):
 
     def test_wait_hud_raises_without_template(self):
         with patch.object(hud.screen_utils, "HUD_TEMPLATE", None), \
-            patch("script.screen_utils.grab_frame") as grab_mock:
+            patch("script.screen_utils.screen_capture.grab_frame") as grab_mock:
             with self.assertRaises(RuntimeError) as ctx:
                 hud.wait_hud(timeout=1)
         grab_mock.assert_not_called()
@@ -57,7 +57,7 @@ class TestHudAnchor(TestCase):
     def test_wait_hud_sets_asset(self):
         common.HUD_ANCHOR = None
         fake_frame = np.zeros((100, 100, 3), dtype=np.uint8)
-        with patch("script.screen_utils.grab_frame", return_value=fake_frame), \
+        with patch("script.screen_utils.screen_capture.grab_frame", return_value=fake_frame), \
              patch("script.hud.find_template", return_value=((10, 20, 30, 40), 0.9, None)):
             anchor, asset = hud.wait_hud(timeout=1)
         self.assertEqual(asset, ASSET)
@@ -82,7 +82,7 @@ class TestHudAnchor(TestCase):
             return d, {"text": [d]}, np.zeros((1, 1), dtype=np.uint8)
 
         with patch("script.resources.reader.locate_resource_panel", return_value={}), \
-            patch("script.screen_utils.grab_frame", side_effect=fake_grab_frame), \
+            patch("script.screen_utils.screen_capture.grab_frame", side_effect=fake_grab_frame), \
              patch("script.resources.reader._ocr_digits_better", side_effect=fake_ocr), \
              patch("script.resources.reader.preprocess_roi", side_effect=lambda roi: np.zeros((52, 90), dtype=np.uint8)), \
              patch(

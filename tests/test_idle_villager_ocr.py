@@ -51,7 +51,7 @@ class TestIdleVillagerOCR(TestCase):
         with patch(
             "script.resources.reader.core.detect_resource_regions",
             side_effect=fake_detect,
-        ), patch("script.screen_utils.grab_frame", return_value=frame), patch(
+        ), patch("script.screen_utils.screen_capture.grab_frame", return_value=frame), patch(
             "script.resources.reader.pytesseract.image_to_data",
             return_value={"text": ["1", "2"], "conf": ["90", "90"]},
         ) as img2data, patch(
@@ -84,7 +84,7 @@ class TestIdleVillagerOCR(TestCase):
         with patch(
             "script.resources.reader.core.detect_resource_regions",
             side_effect=fake_detect,
-        ), patch("script.screen_utils.grab_frame", return_value=frame), patch(
+        ), patch("script.screen_utils.screen_capture.grab_frame", return_value=frame), patch(
             "script.resources.reader.pytesseract.image_to_data",
             return_value={"text": ["1", "2"], "conf": [-1, "0", "95"]},
         ) as img2data, patch(
@@ -114,7 +114,7 @@ class TestIdleVillagerOCR(TestCase):
         with patch(
             "script.resources.reader.core.detect_resource_regions",
             side_effect=fake_detect,
-        ), patch("script.screen_utils.grab_frame", return_value=frame), patch(
+        ), patch("script.screen_utils.screen_capture.grab_frame", return_value=frame), patch(
             "script.resources.reader.pytesseract.image_to_data",
             return_value={"text": ["1"], "conf": [low_conf]},
         ), patch(
@@ -140,7 +140,7 @@ class TestIdleVillagerOCR(TestCase):
         with patch(
             "script.resources.reader.core.detect_resource_regions",
             side_effect=fake_detect,
-        ), patch("script.screen_utils.grab_frame", return_value=frame), patch(
+        ), patch("script.screen_utils.screen_capture.grab_frame", return_value=frame), patch(
             "script.resources.reader.pytesseract.image_to_data",
             return_value={"text": ["1", "2"], "conf": ["0", "95"]},
         ) as img2data, patch(
@@ -165,7 +165,7 @@ class TestIdleVillagerOCR(TestCase):
         with patch(
             "script.resources.reader.core.detect_resource_regions",
             side_effect=fake_detect,
-        ), patch("script.screen_utils.grab_frame", return_value=frame), patch(
+        ), patch("script.screen_utils.screen_capture.grab_frame", return_value=frame), patch(
             "script.resources.reader.pytesseract.image_to_data",
             return_value=low_conf,
         ):
@@ -193,7 +193,7 @@ class TestIdleVillagerOCR(TestCase):
         with patch(
             "script.resources.reader.core.detect_resource_regions",
             side_effect=fake_detect,
-        ), patch("script.screen_utils.grab_frame", return_value=frame), patch(
+        ), patch("script.screen_utils.screen_capture.grab_frame", return_value=frame), patch(
             "script.resources.reader.pytesseract.image_to_data",
             return_value=low_conf,
         ):
@@ -219,7 +219,7 @@ class TestIdleVillagerOCR(TestCase):
         with patch(
             "script.resources.reader.core.detect_resource_regions",
             side_effect=fake_detect,
-        ), patch("script.screen_utils.grab_frame", return_value=frame), patch(
+        ), patch("script.screen_utils.screen_capture.grab_frame", return_value=frame), patch(
             "script.resources.reader.pytesseract.image_to_data",
             return_value={"text": ["3"], "conf": [low_conf]},
         ), patch(
@@ -252,7 +252,7 @@ class TestIdleVillagerOCR(TestCase):
                 "script.resources.reader.core.detect_resource_regions",
                 side_effect=fake_detect,
             ), patch(
-                "script.screen_utils.grab_frame", return_value=frame
+                "script.screen_utils.screen_capture.grab_frame", return_value=frame
             ), patch(
                 "script.resources.reader.pytesseract.image_to_data",
                 return_value={"text": [str(val)], "conf": ["95"]},

@@ -804,7 +804,7 @@ def read_resources_from_hud(
     if force_delay is not None:
         time.sleep(force_delay)
 
-    frame = screen_utils.grab_frame()
+    frame = screen_utils.screen_capture.grab_frame()
 
     if required_icons is None:
         required_icons = list(RESOURCE_ICON_ORDER)
@@ -837,7 +837,7 @@ def gather_hud_stats(
     if force_delay is not None:
         time.sleep(force_delay)
 
-    frame = screen_utils.grab_frame()
+    frame = screen_utils.screen_capture.grab_frame()
 
     icon_cfg = CFG.get("hud_icons", {})
     provided_lists = not (required_icons is None and optional_icons is None)

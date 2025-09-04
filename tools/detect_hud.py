@@ -8,7 +8,7 @@ import script.resources as resources
 
 
 def main():
-    frame = screen_utils.grab_frame()
+    frame = screen_utils.screen_capture.grab_frame()
     box, score = resources.detect_hud(frame)
     print(box, score)
 

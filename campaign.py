@@ -268,7 +268,7 @@ def main() -> None:
     logger = logging.getLogger("campaign_bot")
     configure_pyautogui()
 
-    screen_utils.init_sct()
+    screen_utils.screen_capture.init_sct()
     try:
         logger.info(
             "Enter the campaign mission (%s). The script starts when the HUD is detected…",
@@ -357,7 +357,7 @@ def main() -> None:
             func()
         logger.info("Mission '%s' completed.", module_name)
     finally:
-        screen_utils.teardown_sct()
+        screen_utils.screen_capture.teardown_sct()
 
 
 if __name__ == "__main__":

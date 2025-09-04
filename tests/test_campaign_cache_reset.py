@@ -54,8 +54,8 @@ class TestCampaignCacheReset(TestCase):
                     "campaign.argparse.ArgumentParser.parse_args",
                     return_value=types.SimpleNamespace(scenario="dummy"),
                 ), \
-                patch("campaign.screen_utils.init_sct"), \
-                patch("campaign.screen_utils.teardown_sct"), \
+                patch("campaign.screen_utils.screen_capture.init_sct"), \
+                patch("campaign.screen_utils.screen_capture.teardown_sct"), \
                 patch("campaign.hud.wait_hud", return_value=({}, "asset")), \
                 patch("campaign.resources.gather_hud_stats", side_effect=gather_side_effect), \
                 patch("campaign.logging.getLogger", return_value=logger_mock), \

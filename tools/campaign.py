@@ -17,7 +17,7 @@ HUD_TEMPLATES = ["assets/resources.png"]
 HUD_TEMPLATE = np.zeros((1, 1), dtype=np.uint8)
 
 # Default helpers (can be monkeypatched in tests)
-grab_frame = screen_utils.grab_frame
+grab_frame = screen_utils.screen_capture.grab_frame
 find_template = hud.find_template
 locate_resource_panel = panel.locate_resource_panel
 _read_population_from_roi = _read_population_from_roi_func

@@ -58,7 +58,7 @@ def test_read_resources_handles_missing_non_required_icons():
         return ocr_seq.pop(0)
 
     with patch("script.resources.reader.detect_resource_regions", side_effect=fake_detect), \
-        patch("script.screen_utils.grab_frame", side_effect=fake_grab_frame), \
+        patch("script.screen_utils.screen_capture.grab_frame", side_effect=fake_grab_frame), \
          patch("script.resources.ocr.masks._ocr_digits_better", side_effect=fake_ocr), \
          patch("script.resources.reader.pytesseract.image_to_string", return_value=""), \
          patch("script.resources.reader.cv2.imwrite"):
@@ -83,7 +83,7 @@ def test_discard_low_confidence_without_fallback():
     resources.RESOURCE_CACHE.last_resource_values["wood_stockpile"] = 0
     with patch.dict(resources.CFG, {"wood_stockpile_low_conf_fallback": False}, clear=False), \
          patch("script.resources.reader.detect_resource_regions", side_effect=fake_detect), \
-        patch("script.screen_utils.grab_frame", side_effect=fake_grab_frame), \
+        patch("script.screen_utils.screen_capture.grab_frame", side_effect=fake_grab_frame), \
          patch("script.resources.ocr.masks._ocr_digits_better", side_effect=fake_ocr) as ocr_mock, \
          patch("script.resources.reader.pytesseract.image_to_string", return_value="") as img2str_mock, \
          patch("script.resources.reader.cv2.imwrite"):
@@ -114,7 +114,7 @@ def test_low_confidence_triggers_fallback():
     resources.RESOURCE_CACHE.last_resource_values["wood_stockpile"] = 0
     with patch.dict(resources.CFG, {"wood_stockpile_low_conf_fallback": False}, clear=False), \
          patch("script.resources.reader.detect_resource_regions", side_effect=fake_detect), \
-        patch("script.screen_utils.grab_frame", side_effect=fake_grab_frame), \
+        patch("script.screen_utils.screen_capture.grab_frame", side_effect=fake_grab_frame), \
          patch("script.resources.ocr.masks._ocr_digits_better", side_effect=fake_ocr) as ocr_mock, \
          patch("script.resources.reader.pytesseract.image_to_string", return_value="") as img2str_mock, \
          patch("script.resources.reader.cv2.imwrite"):
@@ -140,7 +140,7 @@ def test_confidence_zero_does_not_call_image_to_string():
     resources.RESOURCE_CACHE.last_resource_values["wood_stockpile"] = 0
     with patch.dict(resources.CFG, {"wood_stockpile_low_conf_fallback": False, "allow_zero_confidence_digits": False}, clear=False), \
          patch("script.resources.reader.detect_resource_regions", side_effect=fake_detect), \
-        patch("script.screen_utils.grab_frame", side_effect=fake_grab_frame), \
+        patch("script.screen_utils.screen_capture.grab_frame", side_effect=fake_grab_frame), \
          patch("script.resources.ocr.masks._ocr_digits_better", side_effect=fake_ocr), \
          patch("script.resources.reader.pytesseract.image_to_string", return_value="") as img2str_mock, \
          patch("script.resources.reader.cv2.imwrite"):
@@ -168,7 +168,7 @@ def test_missing_optional_icon_not_in_results():
 
     frame = np.zeros((600, 600, 3), dtype=np.uint8)
     with patch("script.resources.reader.detect_resource_regions", side_effect=fake_detect), \
-        patch("script.screen_utils.grab_frame", return_value=frame), \
+        patch("script.screen_utils.screen_capture.grab_frame", return_value=frame), \
          patch("script.resources.ocr.masks._ocr_digits_better", side_effect=fake_ocr), \
          patch("script.resources.reader.pytesseract.image_to_string", return_value=""), \
          patch("script.resources.reader.cv2.imwrite"):
