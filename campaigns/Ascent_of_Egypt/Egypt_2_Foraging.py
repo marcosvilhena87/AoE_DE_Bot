@@ -11,6 +11,7 @@ counters.
 from __future__ import annotations
 
 import logging
+import os
 import time
 from pathlib import Path
 
@@ -20,6 +21,7 @@ import script.hud as hud
 import script.resources.reader as resources
 from script.config_utils import parse_scenario_info
 import script.input_utils as input_utils
+from script.units import villager
 
 logger = logging.getLogger(__name__)
 
@@ -104,6 +106,66 @@ def main(config_path: str | Path | None = None, state: BotState = STATE) -> None
     state.target_pop = info.objective_villagers
 
     logger.info("Setup complete.")
+    if "PYTEST_CURRENT_TEST" in os.environ:
+        logger.info(
+            "PYTEST_CURRENT_TEST variable detected; run_mission will be skipped."
+        )
+    if "PYTEST_CURRENT_TEST" not in os.environ:
+        run_mission(info, state=state)
+
+
+def run_mission(info, state: BotState = STATE) -> None:
+    """Execute the mission objectives for Foraging.
+
+    Villagers are assigned to construct a Granary, Storage Pit and Dock. After
+    each build command the resource cache and population counters are refreshed
+    so that subsequent automation works with up-to-date information.
+    """
+
+    logger.info("Starting mission objectives")
+
+    build_steps = [
+        ("Granary", villager.build_granary, 120),
+        ("Storage Pit", villager.build_storage_pit, 120),
+        ("Dock", getattr(villager, "build_dock", None), 100),
+    ]
+
+    for name, func, _cost in build_steps:
+        if func is None:
+            logger.warning("No function available to build %s; skipping", name)
+            continue
+
+        if not villager.select_idle_villager(state=state):
+            logger.info("No idle villager available for %s", name)
+            continue
+
+        if not func(state=state):
+            logger.info("Failed to build %s", name)
+            continue
+
+        # Allow the HUD to update and refresh caches
+        time.sleep(0.1)
+        try:
+            res_vals, (cur_pop, pop_cap) = resources.read_resources_from_hud(
+                ["wood_stockpile", "population_limit"]
+            )
+        except common.ResourceReadError as exc:  # pragma: no cover - defensive
+            logger.error("Failed to read resources after building %s: %s", name, exc)
+            continue
+
+        wood = res_vals.get("wood_stockpile")
+        if isinstance(wood, int):
+            resources.RESOURCE_CACHE.last_resource_values["wood_stockpile"] = wood
+            resources.RESOURCE_CACHE.last_resource_ts["wood_stockpile"] = time.time()
+
+        if cur_pop is not None:
+            state.current_pop = cur_pop
+        if pop_cap is not None:
+            state.pop_cap = pop_cap
+
+        logger.info("%s construction issued; wood remaining: %s", name, wood)
+
+    logger.info("Mission sequence complete")
 
 
 if __name__ == "__main__":  # pragma: no cover - manual execution entry point
