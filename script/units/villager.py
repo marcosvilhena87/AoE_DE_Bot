@@ -78,54 +78,6 @@ def build_house(state: BotState = STATE):
         ``True`` se a casa foi construída com sucesso.
     """
 
-    wood_needed = 30
-    res_vals = None
-    wood = None
-    for attempt in range(1, 2):
-        logger.debug(
-            "Attempt %s to read wood from HUD while building house", attempt
-        )
-        try:
-            res_vals, _ = resources.read_resources_from_hud(["wood_stockpile"])
-        except common.ResourceReadError as exc:
-            logger.error(
-                "Resource read error while building house (attempt %s): %s",
-                attempt,
-                exc,
-            )
-        else:
-            wood = res_vals.get("wood_stockpile")
-            if isinstance(wood, int):
-                break
-            logger.warning(
-                "wood_stockpile not detected (attempt %s); HUD may not be updated",
-                attempt,
-            )
-        time.sleep(0.2)
-    if not isinstance(wood, int):
-        logger.debug("Refreshing HUD anchor before final resource read")
-        try:
-            hud.wait_hud()
-            res_vals, _ = resources.read_resources_from_hud(["wood_stockpile"])
-        except common.ResourceReadError as exc:
-            logger.error(
-                "Failed to refresh HUD or read resources while building house: %s",
-                exc,
-            )
-            return False
-        wood = res_vals.get("wood_stockpile")
-        if not isinstance(wood, int):
-            logger.error(
-                "Failed to obtain wood stockpile after HUD refresh; cannot build house"
-            )
-            return False
-    if wood < wood_needed:
-        logger.warning(
-            "Insufficient wood (%s) to build house.",
-            wood,
-        )
-        return False
-
     house_key = state.config["keys"].get("house")
     if not house_key:
         logger.warning("House build key not configured.")
@@ -141,36 +93,15 @@ def build_house(state: BotState = STATE):
     if alt_spot:
         spots.append(alt_spot)
 
-    for idx, (hx, hy) in enumerate(spots, start=1):
+    for hx, hy in spots:
         input_utils._press_key_safe(state.config["keys"]["build_menu"], 0.05)
         input_utils._press_key_safe(house_key, 0.15)
         input_utils._click_norm(hx, hy)
         input_utils._click_norm(hx, hy, button="right")
         time.sleep(0.5)
 
-        cur, limit, _ = hud.read_population_from_hud()
-
-        if limit > state.pop_cap:
-            state.pop_cap = limit
-            return True
-
-        logger.warning("Attempt %s to build house failed.", idx)
-        try:
-            res_vals, _ = resources.read_resources_from_hud(["wood_stockpile"])
-        except common.ResourceReadError as exc:
-            logger.error(
-                "Resource read error while retrying house construction: %s", exc
-            )
-            return False
-        wood = res_vals.get("wood_stockpile")
-        if wood is None:
-            logger.error("Failed to read wood; aborting house construction")
-            return False
-        if wood < wood_needed:
-            logger.warning(
-                "Insufficient wood after attempt (%s).", wood
-            )
-            break
+        state.pop_cap += 4
+        return True
 
     return False
 
