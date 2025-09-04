@@ -33,6 +33,9 @@ def execute_ocr(
         conf_threshold = CFG.get("ocr_conf_threshold", 60)
     allow_zero = CFG.get("allow_zero_confidence_digits")
     metric = 0
+    metrics = []
+    prev_metric = -1.0
+    best_metric = -1.0
 
     if whitelist is None:
         whitelist = "0123456789"
@@ -72,14 +75,22 @@ def execute_ocr(
             if c > 0 and any(ch.isdigit() for ch in t)
         ]
         metric = np.median(digit_confs) if digit_confs else 0
+        metrics.append(metric)
+        if metric > best_metric:
+            best_digits, best_data, best_mask = digits, data, mask
+            best_metric = metric
         if digit_confs and metric >= conf_threshold:
             low_conf = False
             break
         low_conf = True
-        if metric == 0:
+        if metric == 0 or metric <= prev_metric:
+            digits, data, mask = best_digits, best_data, best_mask
+            metric = best_metric
             break
+        prev_metric = metric
         if conf_threshold <= min_conf:
             digits, data, mask = best_digits, best_data, best_mask
+            metric = best_metric
             break
         old_threshold = conf_threshold
         conf_threshold = max(min_conf, conf_threshold * decay)
@@ -89,8 +100,13 @@ def execute_ocr(
             conf_threshold,
         )
         attempts += 1
-        if conf_threshold == old_threshold or attempts > max_attempts or conf_threshold <= metric:
+        if (
+            conf_threshold == old_threshold
+            or attempts > max_attempts
+            or conf_threshold <= metric
+        ):
             digits, data, mask = best_digits, best_data, best_mask
+            metric = best_metric
             break
         try:
             if whitelist == "0123456789":
@@ -108,8 +124,6 @@ def execute_ocr(
                 digits, data, mask = masks._ocr_digits_better(
                     gray, whitelist=whitelist
                 )
-        if digits:
-            best_digits, best_data, best_mask = digits, data, mask
         if attempts == max_attempts:
             logger.debug(
                 "Reached OCR confidence iteration cap (%d)", max_attempts
