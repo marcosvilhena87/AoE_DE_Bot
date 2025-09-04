@@ -58,6 +58,8 @@
     "//food_stockpile_max_width": "Maximum width of the food stockpile ROI.",
     "ocr_retry_limit": 3,
     "//ocr_retry_limit": "Consecutive OCR failures before using fallback value.",
+    "ocr_candidate_widths": [64, 56, 48],
+    "//ocr_candidate_widths": "Candidate widths used when scanning a resource span.",
     "ocr_roi_expand_base": 3,
     "//ocr_roi_expand_base": "Base pixel margin to expand OCR ROI after a miss.",
     "ocr_roi_expand_step": 3,
