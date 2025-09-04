@@ -86,9 +86,8 @@ def build_house(state: BotState = STATE):
             int(ts * 1000),
         )
 
-        input_utils._press_key_safe(state.config["keys"]["build_menu"], 0.05)
+        select_idle_villager(state=state)
         input_utils._press_key_safe(house_key, 0.15)
-        input_utils._click_norm(hx, hy)
         input_utils._click_norm(hx, hy, button="right")
 
         state_name = "ISSUED"
