@@ -816,48 +816,23 @@ def _extract_population(
         low_conf_counts = getattr(cache_obj, "resource_low_conf_counts", {})
         cache_obj.resource_low_conf_counts = low_conf_counts
         low_conf_count = low_conf_counts.get("population_limit", 0)
-        try:
-            cur_pop, pop_cap, low_conf = _read_population_from_roi(
-                roi,
-                conf_threshold=conf_threshold,
-                roi_bbox=(x, y, w, h),
-                failure_count=low_conf_count,
-            )
-            if results is not None:
-                results["population_limit"] = cur_pop
-            cache_obj.resource_failure_counts["population_limit"] = 0
-            if low_conf:
-                low_conf_counts["population_limit"] = low_conf_count + 1
-            else:
-                low_conf_counts["population_limit"] = 0
-            cache_obj.last_resource_values["population_limit"] = (cur_pop, pop_cap)
-        except common.PopulationReadError as exc:
-            low_conf = getattr(exc, "low_conf", False)
-            low_conf_digits = getattr(exc, "low_conf_digits", None)
-            max_right = (
-                regions["idle_villager"][0] - CFG.get("population_idle_padding", 0)
-                if "idle_villager" in regions
-                else None
-            )
+        max_right = (
+            regions["idle_villager"][0] - CFG.get("population_idle_padding", 0)
+            if "idle_villager" in regions
+            else None
+        )
+        low_conf = False
+        low_conf_digits = None
+        retry_limit = CFG.get("ocr_retry_limit", 3)
+        exc = None
+        for attempt in range(retry_limit):
             try:
-                expansion = expand_population_roi_after_failure(
-                    frame,
-                    x,
-                    y,
-                    w,
-                    h,
+                cur_pop, pop_cap, low_conf = _read_population_from_roi(
                     roi,
-                    failure_count,
-                    conf_threshold,
-                    max_right=max_right,
+                    conf_threshold=conf_threshold,
+                    roi_bbox=(x, y, w, h),
+                    failure_count=low_conf_count,
                 )
-            except common.PopulationReadError as exp_exc:
-                exc = exp_exc
-                low_conf = getattr(exp_exc, "low_conf", low_conf)
-                low_conf_digits = getattr(exp_exc, "low_conf_digits", low_conf_digits)
-                expansion = None
-            if expansion:
-                cur_pop, pop_cap, _, x, y, w, h, low_conf = expansion
                 if results is not None:
                     results["population_limit"] = cur_pop
                 cache_obj.resource_failure_counts["population_limit"] = 0
@@ -866,49 +841,80 @@ def _extract_population(
                 else:
                     low_conf_counts["population_limit"] = 0
                 cache_obj.last_resource_values["population_limit"] = (cur_pop, pop_cap)
-            else:
-                if results is not None:
-                    results["population_limit"] = None
-                cache_obj.resource_failure_counts["population_limit"] = (
-                    failure_count + 1
-                )
-                if low_conf:
-                    low_conf_counts["population_limit"] = low_conf_count + 1
-                else:
-                    low_conf_counts["population_limit"] = 0
-                if (
-                    low_conf
-                    and CFG.get("population_limit_low_conf_fallback", False)
-                    and low_conf_counts["population_limit"]
-                    >= CFG.get("ocr_retry_limit", 3)
-                ):
-                    if low_conf_digits is not None:
-                        cur_pop, pop_cap = low_conf_digits
-                        source = "low-confidence"
+                break
+            except common.PopulationReadError as e:
+                exc = e
+                low_conf = getattr(e, "low_conf", False)
+                low_conf_digits = getattr(e, "low_conf_digits", low_conf_digits)
+                try:
+                    expansion = expand_population_roi_after_failure(
+                        frame,
+                        x,
+                        y,
+                        w,
+                        h,
+                        roi,
+                        failure_count + attempt,
+                        conf_threshold,
+                        max_right=max_right,
+                    )
+                except common.PopulationReadError as exp_exc:
+                    exc = exp_exc
+                    low_conf = getattr(exp_exc, "low_conf", low_conf)
+                    low_conf_digits = getattr(exp_exc, "low_conf_digits", low_conf_digits)
+                    expansion = None
+                if expansion:
+                    cur_pop, pop_cap, roi, x, y, w, h, low_conf = expansion
+                    if results is not None:
+                        results["population_limit"] = cur_pop
+                    cache_obj.resource_failure_counts["population_limit"] = 0
+                    if low_conf:
+                        low_conf_counts["population_limit"] = low_conf_count + 1
                     else:
-                        cur_pop, pop_cap = cache_obj.last_resource_values.get(
-                            "population_limit", (None, None)
-                        )
-                        source = "cached"
-                    if cur_pop is not None:
-                        if results is not None:
-                            results["population_limit"] = cur_pop
-                        logger.warning(
-                            "Using %s population %d/%d after %d low-confidence attempts",
-                            source,
-                            cur_pop,
-                            pop_cap,
-                            low_conf_counts["population_limit"],
-                        )
-                        cache_obj.last_resource_values["population_limit"] = (
-                            cur_pop,
-                            pop_cap,
-                        )
-                        cache_obj.resource_failure_counts["population_limit"] = 0
                         low_conf_counts["population_limit"] = 0
-                        return cur_pop, pop_cap
-                if pop_required:
-                    raise exc
+                    cache_obj.last_resource_values["population_limit"] = (cur_pop, pop_cap)
+                    break
+        else:
+            if results is not None:
+                results["population_limit"] = None
+            cache_obj.resource_failure_counts["population_limit"] = (
+                failure_count + 1
+            )
+            if low_conf:
+                low_conf_counts["population_limit"] = low_conf_count + 1
+            else:
+                low_conf_counts["population_limit"] = 0
+            if (
+                low_conf
+                and CFG.get("population_limit_low_conf_fallback", False)
+            ):
+                if low_conf_digits is not None:
+                    cur_pop, pop_cap = low_conf_digits
+                    source = "low-confidence"
+                else:
+                    cur_pop, pop_cap = cache_obj.last_resource_values.get(
+                        "population_limit", (None, None)
+                    )
+                    source = "cached"
+                if cur_pop is not None:
+                    if results is not None:
+                        results["population_limit"] = cur_pop
+                    logger.warning(
+                        "Using %s population %d/%d after %d low-confidence attempts",
+                        source,
+                        cur_pop,
+                        pop_cap,
+                        low_conf_counts["population_limit"],
+                    )
+                    cache_obj.last_resource_values["population_limit"] = (
+                        cur_pop,
+                        pop_cap,
+                    )
+                    cache_obj.resource_failure_counts["population_limit"] = 0
+                    low_conf_counts["population_limit"] = 0
+                    return cur_pop, pop_cap
+            if pop_required and exc is not None:
+                raise exc
     else:
         if results is not None:
             results["population_limit"] = None

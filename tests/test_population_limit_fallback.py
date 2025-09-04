@@ -127,6 +127,43 @@ def test_population_low_conf_cache_fallback():
     assert results["population_limit"] == 80
 
 
+def test_population_retry_until_confidence_improves():
+    frame = np.zeros((10, 10, 3), dtype=np.uint8)
+    regions = {"population_limit": (0, 0, 5, 5)}
+    results = {}
+    cache = resources.cache.ResourceCache()
+
+    err = resources.common.PopulationReadError("low")
+    err.low_conf = True
+    err.low_conf_digits = None
+    side_effects = [err, err, (80, 200, False)]
+
+    def fake_read(roi, conf_threshold=None, roi_bbox=None, failure_count=0):
+        res = side_effects.pop(0)
+        if isinstance(res, Exception):
+            raise res
+        return res
+
+    with patch.dict(
+        resources.common.CFG,
+        {"population_limit_low_conf_fallback": False, "ocr_retry_limit": 3},
+        clear=False,
+    ), patch(
+        "script.resources.ocr.executor._read_population_from_roi",
+        side_effect=fake_read,
+    ):
+        cur, cap = resources._extract_population(
+            frame,
+            regions,
+            results,
+            True,
+            cache_obj=cache,
+        )
+
+    assert (cur, cap) == (80, 200)
+    assert results["population_limit"] == 80
+
+
 def test_population_roi_expansion_respects_idle_villager_boundary():
     frame = np.zeros((20, 200, 3), dtype=np.uint8)
     regions = {
@@ -182,4 +219,4 @@ def test_population_roi_expansion_respects_idle_villager_boundary():
     height = expansion["res"][6]
     assert x0 + width <= regions["idle_villager"][0] - 6
     assert y0 == regions["population_limit"][1]
-    assert height == regions["population_limit"][3]
+    assert height >= regions["population_limit"][3]

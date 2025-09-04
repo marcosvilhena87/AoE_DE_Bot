@@ -301,7 +301,7 @@ def _retry_ocr(
 
 def _handle_cache_and_fallback(
     name: str,
-    digits: str | None,
+    digits: str | tuple[int, int] | None,
     low_conf: bool,
     data: dict,
     roi: np.ndarray,
@@ -321,6 +321,11 @@ def _handle_cache_and_fallback(
     cache_hit = False
     low_conf_flag = False
     no_digit_flag = False
+    pop_cap = None
+
+    if name == "population_limit" and isinstance(digits, tuple):
+        pop_cap = digits[1]
+        digits = str(digits[0]) if digits[0] is not None else None
 
     if (
         name == "wood_stockpile"
@@ -365,15 +370,24 @@ def _handle_cache_and_fallback(
             cached_val = cache_obj.last_resource_values[name]
             tol = CFG.get("resource_cache_tolerance", 100)
             expected = CFG.get("starting_resources", {}).get(name)
-            if expected is not None and abs(cached_val - expected) > tol:
-                logger.warning(
-                    "Discarding cached value for %s due to mismatch with expected %d",
-                    name,
-                    expected,
-                )
-                use_cache = False
+            if expected is not None:
+                if name == "population_limit" and isinstance(cached_val, tuple):
+                    cached_cur = cached_val[0]
+                else:
+                    cached_cur = cached_val
+                if abs(cached_cur - expected) > tol:
+                    logger.warning(
+                        "Discarding cached value for %s due to mismatch with expected %d",
+                        name,
+                        expected,
+                    )
+                    use_cache = False
         if use_cache:
-            value = cache_obj.last_resource_values[name]
+            cached_val = cache_obj.last_resource_values[name]
+            if name == "population_limit" and isinstance(cached_val, tuple):
+                value, pop_cap = cached_val
+            else:
+                value = cached_val
             cache_hit = True
         else:
             value = None
@@ -447,18 +461,33 @@ def _handle_cache_and_fallback(
                 if digits is not None
                 else CFG.get("starting_resources", {}).get(name)
             )
-            if reference is not None and abs(cached_val - reference) > tol:
-                logger.warning(
-                    "Discarding cached value for %s due to mismatch with %d",
-                    name,
-                    reference,
-                )
-                cache_obj.last_resource_values[name] = reference
-                cache_obj.last_resource_ts[name] = time.time()
-                cache_obj.resource_failure_counts[name] = 0
-                return reference, False, False, no_digit_flag
+            if name == "population_limit" and isinstance(cached_val, tuple):
+                cached_cur, cached_cap = cached_val
+                if reference is not None and abs(cached_cur - reference) > tol:
+                    logger.warning(
+                        "Discarding cached value for %s due to mismatch with %d",
+                        name,
+                        reference,
+                    )
+                    cache_obj.last_resource_values[name] = (reference, cached_cap)
+                    cache_obj.last_resource_ts[name] = time.time()
+                    cache_obj.resource_failure_counts[name] = 0
+                    return reference, False, False, no_digit_flag
+                value = cached_cur
+                pop_cap = cached_cap
+            else:
+                if reference is not None and abs(cached_val - reference) > tol:
+                    logger.warning(
+                        "Discarding cached value for %s due to mismatch with %d",
+                        name,
+                        reference,
+                    )
+                    cache_obj.last_resource_values[name] = reference
+                    cache_obj.last_resource_ts[name] = time.time()
+                    cache_obj.resource_failure_counts[name] = 0
+                    return reference, False, False, no_digit_flag
+                value = cached_val
             cache_hit = True
-            value = cached_val
             logger.warning(
                 "Using cached value for %s due to low-confidence OCR", name
             )
@@ -474,7 +503,10 @@ def _handle_cache_and_fallback(
         return value, cache_hit, low_conf_flag, no_digit_flag
 
     if not low_conf:
-        cache_obj.last_resource_values[name] = value
+        if name == "population_limit" and pop_cap is not None:
+            cache_obj.last_resource_values[name] = (value, pop_cap)
+        else:
+            cache_obj.last_resource_values[name] = value
         cache_obj.last_resource_ts[name] = time.time()
         cache_obj.resource_failure_counts[name] = 0
     else:
