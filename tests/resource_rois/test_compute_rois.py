@@ -3,6 +3,7 @@ from unittest import TestCase
 from unittest.mock import patch
 
 import script.common as common
+common.init_common()
 import script.resources as resources
 import script.resources.reader as reader
 import script.screen_utils as screen_utils

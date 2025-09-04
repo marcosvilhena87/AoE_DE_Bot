@@ -61,6 +61,7 @@ for name in list(sys.modules):
 
 import script.resources as resources
 import script.common as common
+common.init_common()
 
 
 class TestPopulationROIBounds(TestCase):

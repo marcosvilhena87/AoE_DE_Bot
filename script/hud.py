@@ -13,14 +13,13 @@ from pathlib import Path
 import cv2
 
 from .template_utils import find_template
-from .config_utils import load_config
 from . import screen_utils
 from . import common, resources, input_utils
 from .resources import reader as resource_reader
+from .common import CFG
 
 ROOT = Path(__file__).resolve().parent.parent
 
-CFG = load_config()
 logger = logging.getLogger(__name__)
 
 

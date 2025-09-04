@@ -33,6 +33,7 @@ os.environ.setdefault("TESSERACT_CMD", "/usr/bin/true")
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import script.common as common
+common.init_common()
 import script.input_utils as input_utils
 import script.units.villager as villager
 

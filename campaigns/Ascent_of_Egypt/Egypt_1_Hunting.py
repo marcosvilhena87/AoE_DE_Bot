@@ -27,7 +27,7 @@ import script.screen_utils as screen_utils
 logger = logging.getLogger(__name__)
 
 
-def main() -> None:
+def main(config_path: str | Path | None = None) -> None:
     """Run the automation routine for the *Hunting* mission.
 
     The function performs the following high level steps:
@@ -40,6 +40,7 @@ def main() -> None:
         the rest of the automation knows the correct starting state.
     """
 
+    common.init_common(config_path)
     logger.info(
         "Enter the campaign mission (Hunting). The script starts when the HUD is detected…"
     )

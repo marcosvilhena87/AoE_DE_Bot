@@ -2,10 +2,7 @@
 
 from dataclasses import dataclass, field
 
-from ..config_utils import load_config
-
-# Load configuration at module import
-CFG = load_config()
+from ..common import CFG
 
 
 @dataclass

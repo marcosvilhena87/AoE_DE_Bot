@@ -34,6 +34,7 @@ os.environ.setdefault("TESSERACT_CMD", "/usr/bin/true")
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import script.units.villager as villager
 import script.common as common
+common.init_common()
 
 
 class TestSelectIdleVillager(TestCase):
