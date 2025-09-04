@@ -15,6 +15,18 @@ from script.config_utils import parse_scenario_info
 
 
 def _scenario_to_module(path: str) -> str:
+    """Convert a scenario file path to an importable module path.
+
+    The file extension is stripped and non-alphanumeric characters in each
+    path component are replaced with underscores.
+
+    Args:
+        path (str): Filesystem path to the scenario text file.
+
+    Returns:
+        str: Dot-separated module path corresponding to the scenario.
+    """
+
     p = Path(path).with_suffix("")
     parts = [re.sub(r"\W", "_", part) for part in p.parts]
     return ".".join(parts)
@@ -43,7 +55,22 @@ def wait_for_hud_with_retry(timeout: int = 90, retry_delay: int = 25):
                 "HUD not detected after two attempts; exiting script."
             ) from e2
 
-def main():
+def main() -> None:
+    """Run a campaign mission based on command-line arguments.
+
+    The function parses CLI options, configures logging and screen capture,
+    waits for the in-game HUD, validates starting resources, and then imports
+    and executes the mission module for the chosen scenario.
+
+    Args:
+        --scenario (str): Path to the scenario text file. Defaults to the
+            configuration value or
+            ``campaigns/Ascent_of_Egypt/Egypt_1_Hunting.txt``.
+
+    Returns:
+        None
+    """
+
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--scenario",
