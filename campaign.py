@@ -32,28 +32,35 @@ def _scenario_to_module(path: str) -> str:
     return ".".join(parts)
 
 
-def wait_for_hud_with_retry(timeout: int = 90, retry_delay: int = 25):
+def wait_for_hud_with_retry(
+    timeout: int = 90, retry_delay: int = 25, max_retries: int = 2
+):
     logger = logging.getLogger("campaign_bot")
-    try:
-        anchor, asset = hud.wait_hud(timeout=timeout)
-        logger.info("HUD detected at %s using '%s'.", anchor, asset)
-        return anchor, asset
-    except RuntimeError as e:
-        logger.error(str(e))
-        logger.info("Giving another %ds for you to adjust the camera/HUD (fallback)…", retry_delay)
-        time.sleep(retry_delay)
+
+    for attempt in range(1, max_retries + 1):
         try:
+            logger.info("HUD detection attempt %d/%d", attempt, max_retries)
             anchor, asset = hud.wait_hud(timeout=timeout)
             logger.info("HUD detected at %s using '%s'.", anchor, asset)
             return anchor, asset
-        except RuntimeError as e2:
-            logger.error(str(e2))
-            logger.warning(
-                "HUD not detected after extra attempt; routine will continue without anchored HUD."
-            )
-            raise SystemExit(
-                "HUD not detected after two attempts; exiting script."
-            ) from e2
+        except RuntimeError as e:
+            logger.error("%s (attempt %d/%d)", e, attempt, max_retries)
+            if attempt < max_retries:
+                logger.info(
+                    "Giving another %ds for you to adjust the camera/HUD (next: %d/%d)…",
+                    retry_delay,
+                    attempt + 1,
+                    max_retries,
+                )
+                time.sleep(retry_delay)
+            else:
+                logger.warning(
+                    "HUD not detected after %d attempts; routine will continue without anchored HUD.",
+                    max_retries,
+                )
+                raise SystemExit(
+                    f"HUD not detected after {max_retries} attempts; exiting script."
+                ) from e
 
 def main() -> None:
     """Run a campaign mission based on command-line arguments.
