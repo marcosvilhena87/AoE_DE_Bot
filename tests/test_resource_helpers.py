@@ -525,3 +525,34 @@ class TestCacheDiscrepancy(TestCase):
             {"wood_stockpile": value}, {"wood_stockpile": 80}, raise_on_error=False
         )
         self.assertEqual(failing, set())
+
+    def test_large_difference_discards_cached_food_value(self):
+        cache = resources.ResourceCache()
+        cache.last_resource_values["food_stockpile"] = 441
+        cache.last_resource_ts["food_stockpile"] = time.time()
+
+        with patch.dict(
+            resources.CFG,
+            {
+                "food_stockpile_low_conf_fallback": True,
+                "resource_cache_tolerance": 100,
+            },
+            clear=False,
+        ):
+            value, cache_hit, low_conf, no_digit = resources.core._handle_cache_and_fallback(
+                "food_stockpile",
+                "140",
+                True,
+                {"text": ["140"]},
+                np.zeros((1, 1), dtype=np.uint8),
+                None,
+                0,
+                cache_obj=cache,
+                max_cache_age=None,
+                low_conf_counts={},
+            )
+
+        self.assertEqual(value, 140)
+        self.assertFalse(cache_hit)
+        self.assertTrue(low_conf)
+        self.assertEqual(cache.last_resource_values["food_stockpile"], 140)
