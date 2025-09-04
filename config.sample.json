@@ -36,17 +36,10 @@
     "//idle_villager_low_conf_fallback": "Set true to reuse last value on low-confidence OCR.",
     "idle_villager_low_conf_streak": 5,
     "//*_low_conf_fallback": "Use cached value when OCR confidence is low.",
-    "wood_stockpile_ocr_conf_threshold": 45,
     "wood_stockpile_color_pass": true,
     "//wood_stockpile_color_pass": "Validate wood stockpile with a second color-mask OCR pass.",
     "food_stockpile_color_pass": true,
     "//food_stockpile_color_pass": "Validate food stockpile with a second color-mask OCR pass.",
-    "food_stockpile_ocr_conf_threshold": 45,
-    "gold_stockpile_ocr_conf_threshold": 45,
-    "stone_stockpile_ocr_conf_threshold": 45,
-    "population_limit_ocr_conf_threshold": 45,
-    "idle_villager_ocr_conf_threshold": 55,
-    "//*_ocr_conf_threshold": "Optional per-resource OCR confidence overrides.",
     "wood_stockpile_ocr_psm_list": null,
     "food_stockpile_ocr_psm_list": null,
     "gold_stockpile_ocr_psm_list": null,
@@ -72,8 +65,6 @@
     "//population_ocr_roi_expand_step": "Additional pixels to grow the population ROI per consecutive failure.",
     "population_ocr_roi_expand_growth": 2.0,
     "//population_ocr_roi_expand_growth": "Exponent controlling population ROI growth rate; >1 grows faster.",
-    "population_idle_padding": 0,
-    "//population_idle_padding": "Pixels to keep between population ROI and idle villager icon.",
     "idle_icon_inner_trim": 0,
     "//idle_icon_inner_trim": "Pixels to trim inside the idle villager icon ROI on each side; total trim is capped at 50% of the icon width.",
     "idle_icon_inner_pct": 0.0,
@@ -134,22 +125,25 @@
       },
   "hud_icons": {
     "required": [
-      "wood_stockpile",
-      "food_stockpile",
-      "gold_stockpile",
-      "stone_stockpile",
-      "population_limit",
-      "idle_villager"
+      "population_limit"
     ],
     "optional": []
   },
+  "defaults": {
+    "population_limit": 0,
+    "wood_stockpile": 0,
+    "food_stockpile": 0,
+    "gold_stockpile": 0,
+    "stone_stockpile": 0,
+    "idle_villager": 0
+  },
+  "//defaults": "Fallback HUD values when detection is disabled.",
   "wood_stockpile_roi": { "top_pct": 0.12, "height_pct": 0.03, "left_pct": 0.2,   "width_pct": 0.03 },
   "food_stockpile_roi": { "top_pct": 0.12, "height_pct": 0.03, "left_pct": 0.254, "width_pct": 0.03 },
   "gold_stockpile_roi": { "top_pct": 0.12, "height_pct": 0.03, "left_pct": 0.308, "width_pct": 0.03 },
   "stone_stockpile_roi":{ "top_pct": 0.12, "height_pct": 0.03, "left_pct": 0.362, "width_pct": 0.03 },
   "population_limit_roi":{"top_pct": 0.12, "height_pct": 0.03, "left_pct": 0.416, "width_pct": 0.03 },
   "//population_limit_roi": "Remove this block to use automatic HUD detection; oversized ROIs can overlap the idle-villager icon and break OCR.",
-  "idle_villager_roi":   { "top_pct": 0.12, "height_pct": 0.03, "left_pct": 0.47,  "width_pct": 0.03 },
   "profiles": {
       "aoe1de": {
         "resource_panel": {

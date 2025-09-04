@@ -719,15 +719,12 @@ def _post_process_population(
     cur_pop = pop_cap = None
     if "population_limit" in icons_to_read:
         pop_required = "population_limit" in required_set
-        pop_conf_threshold = CFG.get(
-            "population_limit_ocr_conf_threshold", conf_threshold
-        )
         cur_pop, pop_cap = _extract_population(
             frame,
             regions,
             results,
             pop_required,
-            conf_threshold=pop_conf_threshold,
+            conf_threshold=conf_threshold,
             cache_obj=cache_obj,
         )
 
@@ -782,10 +779,7 @@ def _read_resources(
     if max_cache_age is None:
         max_cache_age = cache._RESOURCE_CACHE_MAX_AGE
     if conf_threshold is None:
-        conf_threshold = CFG.get(
-            "population_limit_ocr_conf_threshold",
-            CFG.get("ocr_conf_threshold", 60),
-        )
+        conf_threshold = CFG.get("ocr_conf_threshold", 60)
 
     resource_icons = [n for n in icons_to_read if n != "population_limit"]
     results: dict[str, int | None] = {}
@@ -799,7 +793,7 @@ def _read_resources(
     prev_idle_ts = cache_obj.last_resource_ts.get("idle_villager")
 
     for name in resource_icons:
-        res_conf_threshold = CFG.get(f"{name}_ocr_conf_threshold", conf_threshold)
+        res_conf_threshold = conf_threshold
         if name not in regions:
             if name in required_set:
                 results[name] = None

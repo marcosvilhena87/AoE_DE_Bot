@@ -144,8 +144,6 @@ def _ocr_digits_better(gray, color=None, resource=None, whitelist="0123456789"):
         resource=resource,
     )
     threshold = CFG.get("ocr_conf_threshold", 60)
-    if resource:
-        threshold = CFG.get(f"{resource}_ocr_conf_threshold", threshold)
     confs = parse_confidences(data)
 
     if (

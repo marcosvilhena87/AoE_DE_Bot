@@ -36,13 +36,6 @@ Configuration options in `config.json` allow adjusting how resource numbers are 
 * `ocr_conf_threshold` – global minimum confidence (0–100) required to accept OCR
   digits. The default is `60`; when regions of interest are especially tight,
   consider lowering this to `45–50`.
-* `<resource>_ocr_conf_threshold` – optional per-resource overrides (for example,
-  `wood_stockpile_ocr_conf_threshold`) applied before falling back to the global
-  threshold.
-* When display scaling, non-native resolutions, or streaming artifacts lower OCR
-  accuracy, reduce the relevant `<resource>_ocr_conf_threshold` values in small
-  steps (e.g., `58` → `50` → `45`). After each change, inspect `execute_ocr`
-  debug output to ensure obviously incorrect digits are still flagged.
 * `ocr_conf_min` / `ocr_conf_decay` – after a failed OCR attempt, the confidence
   threshold is multiplied by `ocr_conf_decay` (default `0.8`) until it reaches
   `ocr_conf_min` (default `25–30`). This adaptive decay allows accepting digits
@@ -164,7 +157,7 @@ section in `config.json`:
 
 ```json
 "hud_icons": {
-  "required": ["wood_stockpile", "food_stockpile", "gold_stockpile", "stone_stockpile", "population_limit", "idle_villager"],
+  "required": ["population_limit"],
   "optional": []
 }
 ```
@@ -187,6 +180,23 @@ Campaign missions can override these lists either under `profiles` in
   }
 }
 ```
+
+When HUD icons are not read, the bot falls back to values defined in the
+`defaults` section of `config.json`:
+
+```json
+"defaults": {
+  "population_limit": 0,
+  "wood_stockpile": 0,
+  "food_stockpile": 0,
+  "gold_stockpile": 0,
+  "stone_stockpile": 0,
+  "idle_villager": 0
+}
+```
+
+These numbers represent the assumed starting amounts for population and
+resources.
 
 ```python
 # inside a scenario module
@@ -239,7 +249,6 @@ also include `top_pct` and `height_pct`:
 "gold_stockpile_roi": {"left_pct": 0.25, "width_pct": 0.05},
 "stone_stockpile_roi": {"left_pct": 0.35, "width_pct": 0.05},
 "population_limit_roi": {"left_pct": 0.45, "width_pct": 0.05},
-"idle_villager_roi": {"left_pct": 0.84, "width_pct": 0.05}
 ```
 
 When present, these overrides take precedence and allow OCR to proceed even

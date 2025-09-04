@@ -30,21 +30,3 @@ class TestResourceCustomROIs(TestCase):
                     with patch.dict(resources.CFG, {key: cfg}, clear=False):
                         regions = _apply_custom_rois(frame, {})
                     self.assertEqual(regions[name], expected)
-
-
-class TestIdleVillagerCustomROI(TestCase):
-    def test_roi_matches_configured_percentages_when_missing(self):
-        frame = np.zeros((100, 200, 3), dtype=np.uint8)
-        cfg = {
-            "left_pct": 0.2,
-            "top_pct": 0.3,
-            "width_pct": 0.25,
-            "height_pct": 0.25,
-        }
-        expected = (40, 60, 50, 50)
-        with patch("script.screen_utils.get_screen_size", return_value=(200, 200)), patch.dict(
-            resources.CFG, {"idle_villager_roi": cfg}, clear=False
-        ):
-            regions = _apply_custom_rois(frame, {})
-
-        self.assertEqual(regions["idle_villager"], expected)

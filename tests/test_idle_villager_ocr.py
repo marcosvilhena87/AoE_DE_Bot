@@ -110,7 +110,7 @@ class TestIdleVillagerOCR(TestCase):
             return {"idle_villager": (0, 0, 50, 50)}
 
         frame = np.zeros((100, 100, 3), dtype=np.uint8)
-        low_conf = str(resources.CFG["idle_villager_ocr_conf_threshold"] - 1)
+        low_conf = str(resources.CFG.get("ocr_conf_threshold", 60) - 1)
         with patch(
             "script.resources.reader.core.detect_resource_regions",
             side_effect=fake_detect,
@@ -215,7 +215,7 @@ class TestIdleVillagerOCR(TestCase):
             return {"idle_villager": (0, 0, 50, 50)}
 
         frame = np.zeros((100, 100, 3), dtype=np.uint8)
-        low_conf = str(resources.CFG["idle_villager_ocr_conf_threshold"] - 1)
+        low_conf = str(resources.CFG.get("ocr_conf_threshold", 60) - 1)
         with patch(
             "script.resources.reader.core.detect_resource_regions",
             side_effect=fake_detect,

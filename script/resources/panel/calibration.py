@@ -102,24 +102,6 @@ def _auto_calibrate_from_icons(frame, cache_obj: cache.ResourceCache = cache.RES
 def _apply_custom_rois(frame, regions, names=None, include_idle=True):
     """Apply ROI overrides defined in the configuration."""
 
-    if include_idle and "idle_villager" not in regions:
-        idle_cfg = CFG.get("idle_villager_roi")
-        if idle_cfg:
-            W, H = screen_utils.get_screen_size()
-            left = int(idle_cfg.get("left_pct", 0) * W)
-            top = int(idle_cfg.get("top_pct", 0) * H)
-            width = int(idle_cfg.get("width_pct", 0) * W)
-            height = int(idle_cfg.get("height_pct", 0) * H)
-            regions["idle_villager"] = (
-                left,
-                top,
-                max(40, width),
-                max(20, height),
-            )
-            logger.debug(
-                "Custom ROI applied for idle_villager: %s", regions["idle_villager"]
-            )
-
     if names is None:
         names = [
             "wood_stockpile",
