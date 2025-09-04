@@ -37,22 +37,29 @@ import script.units.villager as villager
 
 
 class TestMissingResourceBar(TestCase):
-    def test_train_villagers_handles_missing_bar(self):
+    def test_train_villagers_does_not_read_missing_bar(self):
         state.current_pop = 3
         state.pop_cap = 5
         with patch(
             "script.resources.reader.read_resources_from_hud",
             side_effect=common.ResourceReadError("missing"),
-        ), \
+        ) as read_mock, \
              patch("script.buildings.town_center.select_idle_villager", return_value=True), \
              patch("script.buildings.town_center.build_house"):
             tc.train_villagers(5, state=state)
-        self.assertEqual(state.current_pop, 3)
+        self.assertEqual(state.current_pop, 5)
+        read_mock.assert_not_called()
 
-    def test_build_house_handles_missing_bar(self):
+    def test_build_house_does_not_read_missing_bar(self):
         state.pop_cap = 4
         with patch(
             "script.resources.reader.read_resources_from_hud",
             side_effect=common.ResourceReadError("missing"),
-        ):
-            self.assertFalse(villager.build_house(state=state))
+        ) as read_mock, \
+             patch("script.input_utils._press_key_safe"), \
+             patch("script.input_utils._click_norm"), \
+             patch("script.units.villager.time.sleep"):
+            result = villager.build_house(state=state)
+        self.assertTrue(result)
+        self.assertEqual(state.pop_cap, 8)
+        read_mock.assert_not_called()

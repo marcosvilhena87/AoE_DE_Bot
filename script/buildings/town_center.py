@@ -3,7 +3,6 @@ import time
 
 import script.common as common
 from script.common import BotState, STATE
-import script.resources.reader as resources
 import script.input_utils as input_utils
 from script.units.villager import build_house, select_idle_villager
 
@@ -20,40 +19,6 @@ def train_villagers(target_pop: int, state: BotState = STATE):
         # change the selection (e.g. building houses).
         input_utils._press_key_safe(state.config["keys"]["select_tc"], 0.10)
 
-        res_vals = None
-        food = None
-        for attempt in range(1, 2):
-            logger.debug(
-                "Attempt %s to read food from HUD while training villagers", attempt
-            )
-            try:
-                res_vals, _ = resources.read_resources_from_hud(["food_stockpile"])
-            except common.ResourceReadError as exc:
-                logger.error(
-                    "Resource read error while training villagers (attempt %s): %s",
-                    attempt,
-                    exc,
-                )
-            else:
-                food = res_vals.get("food_stockpile")
-                if isinstance(food, int):
-                    break
-                logger.warning(
-                    "food_stockpile not detected (attempt %s); HUD may not be updated",
-                    attempt,
-                )
-            time.sleep(0.2)
-        if not isinstance(food, int):
-            logger.error(
-                "Failed to obtain food stockpile after 1 attempt; stopping villager training"
-            )
-            break
-        if food < 50:
-            logger.info(
-                "Insufficient food (%s) to train villagers.",
-                food,
-            )
-            break
         input_utils._press_key_safe(state.config["keys"]["train_vill"], 0.0)
         state.current_pop += 1
         if state.current_pop == state.pop_cap:
