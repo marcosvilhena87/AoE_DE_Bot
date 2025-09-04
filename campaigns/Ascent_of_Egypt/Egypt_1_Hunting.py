@@ -90,7 +90,7 @@ def main(config_path: str | Path | None = None, state: BotState = STATE) -> None
     frame = screen_utils.screen_capture.grab_frame()
     rois = getattr(resources, "_LAST_REGION_BOUNDS", {})
     try:
-    resources.validate_starting_resources(
+        resources.validate_starting_resources(
             res_vals,
             info.starting_resources,
             tolerance=tolerance,
