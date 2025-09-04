@@ -13,8 +13,7 @@ from pathlib import Path
 import cv2
 
 from .template_utils import find_template
-from . import screen_utils
-from . import common, resources, input_utils
+from . import screen_utils, common, resources
 from .resources import reader as resource_reader
 from .common import CFG
 
@@ -93,7 +92,7 @@ def calculate_population_roi(frame_full) -> dict:
     regions = resources.locate_resource_panel(frame_full)
     pop_cfg = CFG.get("population_limit_roi")
     if pop_cfg:
-        W, H = input_utils._screen_size()
+        W, H = screen_utils.get_screen_size()
         left = int(pop_cfg.get("left_pct", 0) * W)
         top = int(pop_cfg.get("top_pct", 0) * H)
         width = int(pop_cfg.get("width_pct", 0) * W)
@@ -120,7 +119,7 @@ def calculate_population_roi(frame_full) -> dict:
         roi_bbox = {"left": x, "top": y, "width": w, "height": h}
     else:
         x, y, w, h = CFG["areas"]["pop_box"]
-        screen_width, screen_height = input_utils._screen_size()
+        screen_width, screen_height = screen_utils.get_screen_size()
         abs_left = int(x * screen_width)
         abs_top = int(y * screen_height)
         pw = int(w * screen_width)

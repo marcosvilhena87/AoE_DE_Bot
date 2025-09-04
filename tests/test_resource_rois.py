@@ -465,7 +465,7 @@ class TestResourceROIs(TestCase):
             icon_size = 5 * scale
 
             with patch("script.resources.locate_resource_panel", return_value={}), \
-                patch("script.resources.input_utils._screen_size", return_value=(width, height)), \
+                patch("script.screen_utils.get_screen_size", return_value=(width, height)), \
                 patch("script.resources.cv2.cvtColor", lambda src, code: np.zeros(src.shape[:2], dtype=np.uint8)), \
                 patch("script.resources.cv2.resize", lambda img, *a, **k: img), \
                 patch("script.resources.cv2.matchTemplate", lambda *a, **k: np.zeros((100, 200), dtype=np.float32)), \

@@ -10,7 +10,8 @@ import cv2
 import numpy as np
 import pytesseract
 
-from .. import CFG, ROOT, screen_utils, common, cache
+from .. import CFG, ROOT, common, cache
+from ... import screen_utils
 from .preprocess import preprocess_roi
 from . import masks
 from .confidence import parse_confidences, _sanitize_digits

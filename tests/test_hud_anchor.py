@@ -91,7 +91,7 @@ class TestHudAnchor(TestCase):
                  return_value={"text": ["600"], "conf": ["90"]},
              ), \
              patch("script.resources.reader._read_population_from_roi", return_value=(500, 500, False)), \
-             patch("script.input_utils._screen_size", return_value=(1920, 1080)), \
+            patch("script.screen_utils.get_screen_size", return_value=(1920, 1080)), \
              patch("script.resources.reader.cv2.imwrite"):
             result, _ = resources.read_resources_from_hud()
 
@@ -161,7 +161,7 @@ class TestHudAnchorTools(TestCase):
                  return_value={"text": ["600"], "conf": ["90"]},
              ), \
              patch("script.resources.reader._read_population_from_roi", return_value=(500, 500, False)), \
-             patch("script.input_utils._screen_size", return_value=(1920, 1080)), \
+            patch("script.screen_utils.get_screen_size", return_value=(1920, 1080)), \
              patch("script.resources.reader.cv2.imwrite"):
             result, _ = cb.read_resources_from_hud([
                 "wood_stockpile",

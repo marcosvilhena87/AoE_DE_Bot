@@ -72,7 +72,7 @@ class TestCalculatePopulationROI(TestCase):
             "height_pct": 0.4,
         }
         with patch("script.resources.locate_resource_panel", return_value={}), \
-            patch("script.input_utils._screen_size", return_value=(200, 200)), \
+            patch("script.screen_utils.get_screen_size", return_value=(200, 200)), \
             patch.dict(hud.CFG, {"population_limit_roi": pop_cfg}, clear=False):
             roi = hud.calculate_population_roi(frame)
         assert roi == {"left": 20, "top": 40, "width": 60, "height": 80}

@@ -2,12 +2,11 @@
 
 import logging
 from pathlib import Path
-from types import SimpleNamespace
 
 import cv2
 import numpy as np
 
-from .. import screen_utils, common
+from .. import common
 from ..template_utils import find_template
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -37,14 +36,6 @@ _RESOURCE_CACHE_MAX_AGE = cache._RESOURCE_CACHE_MAX_AGE
 _RESOURCE_DEBUG_COOLDOWN = cache._RESOURCE_DEBUG_COOLDOWN
 _LAST_REGION_BOUNDS = cache._LAST_REGION_BOUNDS
 _LAST_REGION_SPANS = cache._LAST_REGION_SPANS
-
-
-def _screen_size():
-    monitor = screen_utils.get_monitor()
-    return monitor["width"], monitor["height"]
-
-
-input_utils = SimpleNamespace(_screen_size=_screen_size)
 
 # Panel helpers
 from .panel import (

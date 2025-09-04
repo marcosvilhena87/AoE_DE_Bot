@@ -8,7 +8,8 @@ import cv2
 import numpy as np
 import pytesseract
 
-from .. import CFG, ROOT, cache, common, logger, screen_utils, RESOURCE_ICON_ORDER
+from .. import CFG, ROOT, cache, common, logger, RESOURCE_ICON_ORDER
+from ... import screen_utils
 from ..panel import detect_resource_regions
 from ..ocr.preprocess import preprocess_roi
 from ..ocr.confidence import parse_confidences

@@ -2,7 +2,8 @@
 import logging
 import time
 
-from .. import CFG, ROOT, screen_utils, common, RESOURCE_ICON_ORDER, cache, cv2, np
+from .. import CFG, ROOT, common, RESOURCE_ICON_ORDER, cache, cv2, np
+from ... import screen_utils
 from .roi import compute_resource_rois
 from . import _get_resource_panel_cfg
 
