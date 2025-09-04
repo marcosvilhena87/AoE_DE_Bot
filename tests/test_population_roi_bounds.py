@@ -46,11 +46,16 @@ sys.modules.setdefault("pytesseract", types.SimpleNamespace(pytesseract=types.Si
 os.environ.setdefault("TESSERACT_CMD", "/usr/bin/true")
 
 # Provide minimal common module for resources import
+_cfg = {}
 sys.modules["script.common"] = types.SimpleNamespace(
-    CFG={},
+    STATE=types.SimpleNamespace(
+        config=_cfg, current_pop=0, pop_cap=0, target_pop=0
+    ),
+    CFG=_cfg,
     HUD_ANCHOR={},
     PopulationReadError=RuntimeError,
     ResourceReadError=RuntimeError,
+    init_common=lambda *a, **k: None,
 )
 
 # Ensure project root is importable
@@ -60,6 +65,7 @@ for name in list(sys.modules):
         del sys.modules[name]
 
 import script.resources as resources
+del sys.modules["script.common"]
 import script.common as common
 common.init_common()
 

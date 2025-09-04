@@ -16,6 +16,7 @@ from pathlib import Path
 import os
 
 import script.common as common
+from script.common import BotState, STATE
 import script.hud as hud
 import script.resources.reader as resources
 import script.input_utils as input_utils
@@ -27,7 +28,7 @@ import script.screen_utils as screen_utils
 logger = logging.getLogger(__name__)
 
 
-def main(config_path: str | Path | None = None) -> None:
+def main(config_path: str | Path | None = None, state: BotState = STATE) -> None:
     """Run the automation routine for the *Hunting* mission.
 
     The function performs the following high level steps:
@@ -40,7 +41,7 @@ def main(config_path: str | Path | None = None) -> None:
         the rest of the automation knows the correct starting state.
     """
 
-    common.init_common(config_path)
+    common.init_common(config_path, state)
     logger.info(
         "Enter the campaign mission (Hunting). The script starts when the HUD is detected…"
     )
@@ -84,12 +85,12 @@ def main(config_path: str | Path | None = None) -> None:
     res_vals, (cur_pop, pop_cap) = pop_check
 
     # Validate initial resources
-    tol_cfg = common.CFG.get("resource_validation_tolerance", {})
+    tol_cfg = state.config.get("resource_validation_tolerance", {})
     tolerance = tol_cfg.get("initial", 10)
     frame = screen_utils.screen_capture.grab_frame()
     rois = getattr(resources, "_LAST_REGION_BOUNDS", {})
     try:
-        resources.validate_starting_resources(
+    resources.validate_starting_resources(
             res_vals,
             info.starting_resources,
             tolerance=tolerance,
@@ -119,9 +120,9 @@ def main(config_path: str | Path | None = None) -> None:
     resources.RESOURCE_CACHE.last_resource_ts["idle_villager"] = now
 
     # Atualize população e limites
-    common.CURRENT_POP = cur_pop
-    common.POP_CAP = pop_cap
-    common.TARGET_POP = info.objective_villagers
+    state.current_pop = cur_pop
+    state.pop_cap = pop_cap
+    state.target_pop = info.objective_villagers
 
     logger.info("Setup complete.")
     if "PYTEST_CURRENT_TEST" in os.environ:
@@ -132,7 +133,7 @@ def main(config_path: str | Path | None = None) -> None:
         run_mission(info)
 
 
-def run_mission(info) -> None:
+def run_mission(info, state: BotState = STATE) -> None:
     """Execute the mission objectives.
 
     The routine assigns villagers to hunting, monitors the food stockpile and
@@ -143,12 +144,12 @@ def run_mission(info) -> None:
 
     logger.info("Starting mission objectives")
 
-    food_spot = common.CFG.get("areas", {}).get("food_spot")
+    food_spot = state.config.get("areas", {}).get("food_spot")
 
     logger.info("Assigning starting villagers to hunt")
     # Allocate only the idle starting villagers to gather food.
     for idx in range(info.starting_idle_villagers):
-        if villager.select_idle_villager():
+        if villager.select_idle_villager(state=state):
             if food_spot:
                 input_utils._click_norm(*food_spot, button="right")
             logger.info("Villager %d assigned to hunt", idx + 1)
@@ -163,14 +164,14 @@ def run_mission(info) -> None:
     spent_food = 0
 
     loops = 0
-    max_loops = common.CFG.get("max_mission_loops", 20)
-    logger.info("Mission loop starting. Target population: %s", common.TARGET_POP)
-    while common.CURRENT_POP < common.TARGET_POP and loops < max_loops:
+    max_loops = state.config.get("max_mission_loops", 20)
+    logger.info("Mission loop starting. Target population: %s", state.target_pop)
+    while state.current_pop < state.target_pop and loops < max_loops:
         loops += 1
         logger.info(
             "Population progress: %s/%s",
-            common.CURRENT_POP,
-            common.TARGET_POP,
+            state.current_pop,
+            state.target_pop,
         )
         try:
             res_vals, _ = resources.read_resources_from_hud(["food_stockpile"])
@@ -188,32 +189,32 @@ def run_mission(info) -> None:
         logger.info("Current food stockpile: %s", food)
 
         if food >= start_food + spent_food + 50:
-            logger.info("Training villager to reach population %s", common.CURRENT_POP + 1)
-            train_villagers(common.CURRENT_POP + 1)
-            spent_food += 50
             logger.info(
-                "Villager trained. Population: %s", common.CURRENT_POP
+                "Training villager to reach population %s", state.current_pop + 1
             )
+            train_villagers(state.current_pop + 1, state=state)
+            spent_food += 50
+            logger.info("Villager trained. Population: %s", state.current_pop)
         time.sleep(0.1)
 
     logger.info(
         "Mission loop ended after %s iterations. Objective met: %s",
         loops,
-        common.CURRENT_POP >= common.TARGET_POP,
+        state.current_pop >= state.target_pop,
     )
 
-    if common.CURRENT_POP >= common.TARGET_POP:
+    if state.current_pop >= state.target_pop:
         logger.info(
             "Population objective reached: %s/%s",
-            common.CURRENT_POP,
-            common.TARGET_POP,
+            state.current_pop,
+            state.target_pop,
         )
         logger.info("Mission accomplished: objectives achieved")
     else:
         logger.info(
             "Mission ended before reaching population objective. Population: %s/%s",
-            common.CURRENT_POP,
-            common.TARGET_POP,
+            state.current_pop,
+            state.target_pop,
         )
         logger.info("Mission failed: objectives not achieved")
 

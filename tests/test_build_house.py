@@ -33,7 +33,7 @@ os.environ.setdefault("TESSERACT_CMD", "/usr/bin/true")
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import script.common as common
-common.init_common()
+state = common.init_common()
 import script.input_utils as input_utils
 import script.units.villager as villager
 
@@ -45,7 +45,7 @@ class TestClickAndBuildHouse(TestCase):
         click_mock.assert_called_once_with(100, 100, button="right")
 
     def test_build_house_uses_right_click_and_updates_population(self):
-        common.POP_CAP = 4
+        state.pop_cap = 4
         expected_coords = tuple(common.CFG["areas"]["house_spot"])
         with patch(
             "script.resources.reader.read_resources_from_hud",
@@ -55,9 +55,9 @@ class TestClickAndBuildHouse(TestCase):
             patch("script.input_utils._click_norm") as click_mock, \
             patch("script.hud.read_population_from_hud", return_value=(0, 8, False)) as read_pop_mock, \
             patch("script.units.villager.time.sleep"):
-            result = villager.build_house()
+            result = villager.build_house(state=state)
         self.assertTrue(result)
-        self.assertEqual(common.POP_CAP, 8)
+        self.assertEqual(state.pop_cap, 8)
         self.assertEqual(click_mock.call_count, 2)
         self.assertEqual(click_mock.call_args_list[0].args, expected_coords)
         self.assertEqual(click_mock.call_args_list[1].args, expected_coords)
@@ -87,7 +87,7 @@ class TestBuildHouseResourceRetry(TestCase):
         click_mock.assert_not_called()
 
     def test_build_house_recovers_from_transient_failure(self):
-        common.POP_CAP = 4
+        state.pop_cap = 4
         side_effect = [
             common.ResourceReadError("fail1"),
             ({"wood_stockpile": 100}, (None, None)),
@@ -102,7 +102,7 @@ class TestBuildHouseResourceRetry(TestCase):
         ), patch("script.units.villager.time.sleep"), patch(
             "script.hud.wait_hud"
         ):
-            result = villager.build_house()
+            result = villager.build_house(state=state)
         self.assertTrue(result)
         self.assertEqual(read_mock.call_count, 2)
-        self.assertEqual(common.POP_CAP, 8)
+        self.assertEqual(state.pop_cap, 8)

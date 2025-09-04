@@ -31,28 +31,28 @@ sys.modules.setdefault("mss", types.SimpleNamespace(mss=lambda: DummyMSS()))
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import script.common as common
-common.init_common()
+state = common.init_common()
 import script.buildings.town_center as tc
 import script.units.villager as villager
 
 
 class TestMissingResourceBar(TestCase):
     def test_train_villagers_handles_missing_bar(self):
-        common.CURRENT_POP = 3
-        common.POP_CAP = 5
+        state.current_pop = 3
+        state.pop_cap = 5
         with patch(
             "script.resources.reader.read_resources_from_hud",
             side_effect=common.ResourceReadError("missing"),
         ), \
              patch("script.buildings.town_center.select_idle_villager", return_value=True), \
              patch("script.buildings.town_center.build_house"):
-            tc.train_villagers(5)
-        self.assertEqual(common.CURRENT_POP, 3)
+            tc.train_villagers(5, state=state)
+        self.assertEqual(state.current_pop, 3)
 
     def test_build_house_handles_missing_bar(self):
-        common.POP_CAP = 4
+        state.pop_cap = 4
         with patch(
             "script.resources.reader.read_resources_from_hud",
             side_effect=common.ResourceReadError("missing"),
         ):
-            self.assertFalse(villager.build_house())
+            self.assertFalse(villager.build_house(state=state))

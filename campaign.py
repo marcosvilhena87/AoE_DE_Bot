@@ -251,11 +251,11 @@ def main(config_path: str | Path | None = None) -> None:
         None
     """
 
-    common.init_common(config_path)
+    common.init_common(config_path, state)
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--scenario",
-        default=common.CFG.get(
+        default=state.config.get(
             "scenario_path", "campaigns/Ascent_of_Egypt/Egypt_1_Hunting.txt"
         ),
         help="Path to scenario text file",
@@ -264,7 +264,7 @@ def main(config_path: str | Path | None = None) -> None:
     scenario_name = Path(args.scenario).stem
 
     logging.basicConfig(
-        level=logging.DEBUG if common.CFG.get("verbose_logging") else logging.INFO,
+        level=logging.DEBUG if state.config.get("verbose_logging") else logging.INFO,
         format="%(asctime)s - %(levelname)s - %(message)s",
     )
     logger = logging.getLogger("campaign_bot")
@@ -279,9 +279,9 @@ def main(config_path: str | Path | None = None) -> None:
         anchor, asset = wait_for_hud_with_retry(timeout=90, retry_delay=25)
 
         info = parse_scenario_info(args.scenario)
-        common.CURRENT_POP = info.starting_villagers
-        common.POP_CAP = 4  # 1 Town Center
-        common.TARGET_POP = info.objective_villagers
+        state.current_pop = info.starting_villagers
+        state.pop_cap = 4  # 1 Town Center
+        state.target_pop = info.objective_villagers
         idle_start = getattr(info, "starting_idle_villagers", info.starting_villagers)
 
         # Reset resource cache to prevent stale OCR values across scenarios
@@ -290,7 +290,7 @@ def main(config_path: str | Path | None = None) -> None:
         resources.RESOURCE_CACHE.last_resource_values["idle_villager"] = idle_start
         resources.RESOURCE_CACHE.last_resource_ts["idle_villager"] = time.time()
         try:
-            icon_cfg = common.CFG.get("hud_icons", {})
+            icon_cfg = state.config.get("hud_icons", {})
             if info.starting_resources is None:
                 logger.warning(
                     "No starting resources specified; skipping validation."
@@ -310,7 +310,7 @@ def main(config_path: str | Path | None = None) -> None:
             res, (cur_pop, pop_cap) = validate_resources_with_retry(
                 res,
                 non_zero,
-                common.CFG,
+                state.config,
                 required,
                 optional,
                 screen_utils_module=screen_utils,
@@ -354,9 +354,9 @@ def main(config_path: str | Path | None = None) -> None:
         logger.info("Starting mission '%s'.", module_name)
         logger.info("Attempting to complete scenario objectives for %s...", module_name)
         if accepts_info:
-            func(info)
+            func(info, state=state)
         else:
-            func()
+            func(state=state)
         logger.info("Mission '%s' completed.", module_name)
     finally:
         screen_utils.screen_capture.teardown_sct()

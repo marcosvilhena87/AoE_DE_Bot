@@ -10,7 +10,7 @@ from .. import common
 from ..template_utils import find_template
 
 ROOT = Path(__file__).resolve().parent.parent
-CFG = common.CFG
+CFG = common.STATE.config
 logger = logging.getLogger(__name__)
 
 RESOURCE_ICON_ORDER = [

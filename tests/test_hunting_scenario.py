@@ -60,7 +60,7 @@ os.environ.setdefault("TESSERACT_CMD", "/usr/bin/true")
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import script.common as common
-common.init_common()
+state = common.init_common()
 import script.config_utils as config_utils
 import script.resources as resources
 
@@ -98,9 +98,9 @@ class TestHuntingScenario(TestCase):
                 run_name="__main__",
             )
 
-            self.assertEqual(common.CURRENT_POP, info.starting_villagers)
-            self.assertEqual(common.POP_CAP, info.population_limit)
-            self.assertEqual(common.TARGET_POP, info.objective_villagers)
+            self.assertEqual(state.current_pop, info.starting_villagers)
+            self.assertEqual(state.pop_cap, info.population_limit)
+            self.assertEqual(state.target_pop, info.objective_villagers)
             self.assertEqual(
                 resources.reader.RESOURCE_CACHE.last_resource_values, gathered
             )

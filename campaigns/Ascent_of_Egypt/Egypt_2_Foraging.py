@@ -15,6 +15,7 @@ import time
 from pathlib import Path
 
 import script.common as common
+from script.common import BotState, STATE
 import script.hud as hud
 import script.resources.reader as resources
 from script.config_utils import parse_scenario_info
@@ -23,7 +24,7 @@ import script.input_utils as input_utils
 logger = logging.getLogger(__name__)
 
 
-def main(config_path: str | Path | None = None) -> None:
+def main(config_path: str | Path | None = None, state: BotState = STATE) -> None:
     """Run the automation routine for the *Foraging* mission.
 
     The function performs the following high level steps:
@@ -36,7 +37,7 @@ def main(config_path: str | Path | None = None) -> None:
         the rest of the automation knows the correct starting state.
     """
 
-    common.init_common(config_path)
+    common.init_common(config_path, state)
     logger.info(
         "Enter the campaign mission (Foraging). The script starts when the HUD is detected…"
     )
@@ -98,9 +99,9 @@ def main(config_path: str | Path | None = None) -> None:
     resources.RESOURCE_CACHE.last_resource_ts["idle_villager"] = now
 
     # Atualize população e limites
-    common.CURRENT_POP = cur_pop
-    common.POP_CAP = pop_cap
-    common.TARGET_POP = info.objective_villagers
+    state.current_pop = cur_pop
+    state.pop_cap = pop_cap
+    state.target_pop = info.objective_villagers
 
     logger.info("Setup complete.")
 

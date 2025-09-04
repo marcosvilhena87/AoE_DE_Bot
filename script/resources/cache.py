@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass, field
 
-from ..common import CFG
+from ..common import STATE
 
 
 @dataclass
@@ -35,6 +35,9 @@ _NARROW_ROIS: set[str] = set()
 _NARROW_ROI_DEFICITS: dict[str, int] = {}
 
 # Maximum age (in seconds) for cached resource values
+# Config shortcut for brevity
+CFG = STATE.config
+
 _RESOURCE_CACHE_TTL = CFG.get("resource_cache_ttl", 1.5)
 # Optional hard limit on cache age before rejection
 _RESOURCE_CACHE_MAX_AGE = CFG.get("resource_cache_max_age")
