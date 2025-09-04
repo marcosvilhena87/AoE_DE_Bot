@@ -43,6 +43,7 @@ def main() -> None:
     logger.info(
         "Enter the campaign mission (Hunting). The script starts when the HUD is detected…"
     )
+    input_utils.configure_pyautogui()
 
     try:
         anchor, asset = hud.wait_hud(timeout=90)

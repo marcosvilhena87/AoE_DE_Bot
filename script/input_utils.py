@@ -7,8 +7,22 @@ from . import screen_utils
 
 logger = logging.getLogger(__name__)
 
-pg.PAUSE = 0.05
-pg.FAILSAFE = True  # mouse no canto sup-esq aborta instantaneamente
+
+def configure_pyautogui(pause: float = 0.05, failsafe: bool = True) -> None:
+    """Configure global PyAutoGUI settings used by the bot.
+
+    Args:
+        pause (float): Delay applied after each PyAutoGUI call. Defaults to
+            ``0.05`` seconds.
+        failsafe (bool): Whether moving the cursor to the top-left corner
+            aborts automation. Defaults to ``True``.
+
+    Returns:
+        None
+    """
+
+    pg.PAUSE = pause
+    pg.FAILSAFE = failsafe  # mouse no canto sup-esq aborta instantaneamente
 
 
 def _screen_size() -> tuple[int, int]:

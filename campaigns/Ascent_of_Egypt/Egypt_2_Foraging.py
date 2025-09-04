@@ -18,6 +18,7 @@ import script.common as common
 import script.hud as hud
 import script.resources.reader as resources
 from script.config_utils import parse_scenario_info
+import script.input_utils as input_utils
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +39,7 @@ def main() -> None:
     logger.info(
         "Enter the campaign mission (Foraging). The script starts when the HUD is detected…"
     )
+    input_utils.configure_pyautogui()
 
     try:
         anchor, asset = hud.wait_hud(timeout=90)

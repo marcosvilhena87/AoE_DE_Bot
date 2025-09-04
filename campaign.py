@@ -12,6 +12,7 @@ import script.hud as hud
 import script.resources.reader as resources
 import script.screen_utils as screen_utils
 from script.config_utils import parse_scenario_info
+from script.input_utils import configure_pyautogui
 
 
 def _calculate_next_tolerance(tolerance: int, increment: int, max_tolerance: int) -> int:
@@ -265,6 +266,7 @@ def main() -> None:
         format="%(asctime)s - %(levelname)s - %(message)s",
     )
     logger = logging.getLogger("campaign_bot")
+    configure_pyautogui()
 
     screen_utils.init_sct()
     try:
