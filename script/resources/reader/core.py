@@ -456,10 +456,27 @@ def _handle_cache_and_fallback(
         if CFG.get(fallback_key, False) and name in cache_obj.last_resource_values:
             cached_val = cache_obj.last_resource_values[name]
             tol = CFG.get("resource_cache_tolerance", 100)
+            digits_int = int(digits) if digits is not None else None
+            logger.debug(
+                "Low-confidence OCR for %s: cached=%s digits=%s", name, cached_val, digits
+            )
+            if (
+                digits_int is not None
+                and not (
+                    name == "population_limit" and isinstance(cached_val, tuple)
+                )
+            ):
+                diff = abs(cached_val - digits_int)
+                if diff > tol:
+                    logger.debug(
+                        "Discrepancy %d exceeds tolerance %d; returning digits", diff, tol
+                    )
+                    cache_obj.last_resource_values[name] = digits_int
+                    cache_obj.last_resource_ts[name] = time.time()
+                    cache_obj.resource_failure_counts[name] = 0
+                    return digits_int, False, True, no_digit_flag
             reference = (
-                int(digits)
-                if digits is not None
-                else CFG.get("starting_resources", {}).get(name)
+                digits_int if digits_int is not None else CFG.get("starting_resources", {}).get(name)
             )
             if name == "population_limit" and isinstance(cached_val, tuple):
                 cached_cur, cached_cap = cached_val
