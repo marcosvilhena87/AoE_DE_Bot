@@ -42,7 +42,7 @@ class TestStoneROIConfig(TestCase):
         w, h = size
         frame = np.zeros((h, w, 3), dtype=np.uint8)
         with patch("script.resources.locate_resource_panel", return_value={}), \
-             patch("script.resources.input_utils._screen_size", return_value=(w, h)), \
+             patch("script.screen_utils.get_screen_size", return_value=(w, h)), \
              patch.object(common, "HUD_ANCHOR", None):
             regions = resources.detect_resource_regions(frame, ["stone_stockpile"])
         return regions["stone_stockpile"]

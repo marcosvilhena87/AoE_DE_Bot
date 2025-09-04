@@ -3,7 +3,8 @@ import logging
 from dataclasses import dataclass
 from typing import Iterable
 
-from .. import CFG, screen_utils, common, RESOURCE_ICON_ORDER, cache
+from .. import CFG, common, RESOURCE_ICON_ORDER, cache
+from ... import screen_utils
 
 logger = logging.getLogger(__name__)
 
@@ -163,9 +164,7 @@ def detect_resource_regions(
                 required_icons,
             )
         else:
-            from .. import input_utils
-
-            W, H = input_utils._screen_size()
+            W, H = screen_utils.get_screen_size()
             margin = int(0.01 * W)
             panel_w = int(568 / 1920 * W)
             panel_h = int(59 / 1080 * H)

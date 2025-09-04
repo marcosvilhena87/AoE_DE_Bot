@@ -25,22 +25,6 @@ def configure_pyautogui(pause: float = 0.05, failsafe: bool = True) -> None:
     pg.FAILSAFE = failsafe  # mouse no canto sup-esq aborta instantaneamente
 
 
-def _screen_size() -> tuple[int, int]:
-    """Return the current screen resolution.
-
-    Returns:
-        tuple[int, int]: Width and height of the active monitor in pixels.
-
-    Example:
-        >>> width, height = _screen_size()
-        >>> print(width, height)
-        1920 1080
-    """
-
-    monitor = screen_utils.get_monitor()
-    return monitor["width"], monitor["height"]
-
-
 def _to_px(nx: float, ny: float) -> tuple[int, int]:
     """Convert normalized coordinates to pixel values.
 
@@ -60,7 +44,7 @@ def _to_px(nx: float, ny: float) -> tuple[int, int]:
         (960, 540)
     """
 
-    W, H = _screen_size()
+    W, H = screen_utils.get_screen_size()
     return int(nx * W), int(ny * H)
 
 
@@ -75,7 +59,7 @@ def _move_cursor_safe() -> None:
         None
     """
 
-    W, H = _screen_size()
+    W, H = screen_utils.get_screen_size()
     failsafe_state = pg.FAILSAFE
     pg.FAILSAFE = False
     pg.moveTo(W // 2, H // 2)

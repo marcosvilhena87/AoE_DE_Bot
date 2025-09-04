@@ -94,6 +94,19 @@ def get_monitor():
     return screen_capture.get_monitor()
 
 
+def get_screen_size():
+    """Return the width and height of the active monitor.
+
+    Returns
+    -------
+    tuple[int, int]
+        ``(width, height)`` of the current monitor in pixels.
+    """
+
+    monitor = get_monitor()
+    return monitor["width"], monitor["height"]
+
+
 def grab_frame(bbox=None):
     return screen_capture.grab_frame(bbox)
 
@@ -134,6 +147,7 @@ __all__ = [
     "init_sct",
     "teardown_sct",
     "get_monitor",
+    "get_screen_size",
     "grab_frame",
     "load_icon_templates",
     "HUD_TEMPLATE",

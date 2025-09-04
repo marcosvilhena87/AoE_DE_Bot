@@ -1,7 +1,8 @@
 """Resource panel calibration utilities."""
 import logging
 
-from .. import CFG, screen_utils, common, RESOURCE_ICON_ORDER, cache, cv2, np
+from .. import CFG, common, RESOURCE_ICON_ORDER, cache, cv2, np
+from ... import screen_utils
 from .roi import compute_resource_rois
 from . import _get_resource_panel_cfg
 
@@ -101,12 +102,10 @@ def _auto_calibrate_from_icons(frame, cache_obj: cache.ResourceCache = cache.RES
 def _apply_custom_rois(frame, regions, names=None, include_idle=True):
     """Apply ROI overrides defined in the configuration."""
 
-    from .. import input_utils
-
     if include_idle and "idle_villager" not in regions:
         idle_cfg = CFG.get("idle_villager_roi")
         if idle_cfg:
-            W, H = input_utils._screen_size()
+            W, H = screen_utils.get_screen_size()
             left = int(idle_cfg.get("left_pct", 0) * W)
             top = int(idle_cfg.get("top_pct", 0) * H)
             width = int(idle_cfg.get("width_pct", 0) * W)
@@ -130,7 +129,7 @@ def _apply_custom_rois(frame, regions, names=None, include_idle=True):
             "population_limit",
         ]
 
-    W, H = input_utils._screen_size()
+    W, H = screen_utils.get_screen_size()
     for name in names:
         cfg = CFG.get(f"{name}_roi")
         if not cfg:

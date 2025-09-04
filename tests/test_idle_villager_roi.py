@@ -98,7 +98,7 @@ class TestIdleVillagerROI(TestCase):
         }
         expected = (100, 50, 40, 20)
         with patch("script.resources.locate_resource_panel", return_value={}), \
-            patch("script.resources.input_utils._screen_size", return_value=(200, 200)), \
+            patch("script.screen_utils.get_screen_size", return_value=(200, 200)), \
             patch.dict(resources.CFG, {"idle_villager_roi": cfg}, clear=False), \
             patch.object(common, "HUD_ANCHOR", None):
             regions = resources.detect_resource_regions(frame, ["idle_villager"])

@@ -22,7 +22,7 @@ class TestResourceCustomROIs(TestCase):
             "stone_stockpile",
             "population_limit",
         ]
-        with patch("script.resources.input_utils._screen_size", return_value=(200, 200)):
+        with patch("script.screen_utils.get_screen_size", return_value=(200, 200)):
             for name in names:
                 with self.subTest(name=name):
                     key = f"{name}_roi"
@@ -41,7 +41,7 @@ class TestIdleVillagerCustomROI(TestCase):
             "height_pct": 0.25,
         }
         expected = (40, 60, 50, 50)
-        with patch("script.resources.input_utils._screen_size", return_value=(200, 200)), patch.dict(
+        with patch("script.screen_utils.get_screen_size", return_value=(200, 200)), patch.dict(
             resources.CFG, {"idle_villager_roi": cfg}, clear=False
         ):
             regions = resources._apply_custom_rois(frame, {})

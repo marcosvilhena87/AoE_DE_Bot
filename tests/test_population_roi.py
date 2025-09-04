@@ -54,7 +54,7 @@ import script.resources as resources
 
 class TestPopulationROI(TestCase):
     def test_population_roi_outside_screen_raises_error(self):
-        with patch("script.input_utils._screen_size", return_value=(200, 200)), \
+        with patch("script.screen_utils.get_screen_size", return_value=(200, 200)), \
             patch.dict(common.CFG["areas"], {"pop_box": [2.0, 2.0, 0.1, 0.1]}), \
             patch.dict(common.CFG, {"population_limit_roi": None}, clear=False), \
             patch("script.resources.locate_resource_panel", return_value={}), \
@@ -81,7 +81,7 @@ class TestPopulationROI(TestCase):
 
         with patch("script.screen_utils.screen_capture.grab_frame", side_effect=fake_grab), \
             patch("script.resources.locate_resource_panel", return_value={}), \
-            patch("script.input_utils._screen_size", return_value=(200, 200)), \
+            patch("script.screen_utils.get_screen_size", return_value=(200, 200)), \
             patch.dict(common.CFG["areas"], {"pop_box": [0.1, 0.1, 0.5, 0.5]}), \
             patch.dict(common.CFG, {"population_limit_roi": None}, clear=False), \
             patch("script.resources.panel._auto_calibrate_from_icons", return_value={}), \
@@ -121,7 +121,7 @@ class TestPopulationROI(TestCase):
 
         with patch("script.screen_utils.screen_capture.grab_frame", side_effect=fake_grab), \
             patch("script.resources.locate_resource_panel", return_value={}), \
-            patch("script.input_utils._screen_size", return_value=(200, 200)), \
+            patch("script.screen_utils.get_screen_size", return_value=(200, 200)), \
             patch.dict(common.CFG["areas"], {"pop_box": pop_box}), \
             patch.dict(common.CFG, {"population_limit_roi": None}, clear=False), \
             patch("script.common.HUD_ANCHOR", {"left": 50, "top": 60, "width": 10, "height": 10}), \
@@ -159,7 +159,7 @@ class TestPopulationROI(TestCase):
         )
 
     def test_non_positive_population_roi_raises_before_ocr(self):
-        with patch("script.input_utils._screen_size", return_value=(200, 200)), \
+        with patch("script.screen_utils.get_screen_size", return_value=(200, 200)), \
             patch.dict(common.CFG["areas"], {"pop_box": [0.1, 0.1, -0.5, 0.2]}), \
             patch.dict(common.CFG, {"population_limit_roi": None}, clear=False), \
             patch("script.resources.locate_resource_panel", return_value={}), \
