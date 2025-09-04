@@ -104,7 +104,11 @@ def _ocr_digits_better(gray, color=None, resource=None, whitelist="0123456789"):
 
     kernel_size = CFG.get("ocr_kernel_size", 2)
     kernel = np.ones((kernel_size, kernel_size), np.uint8)
-    psms = list(dict.fromkeys(CFG.get("ocr_psm_list", []) + [6, 7, 8, 10, 13]))
+    psm_override = CFG.get(f"{resource}_ocr_psm_list") if resource else None
+    if psm_override is not None:
+        psms = list(dict.fromkeys(psm_override))
+    else:
+        psms = list(dict.fromkeys(CFG.get("ocr_psm_list", []) + [6, 7, 8, 10, 13]))
 
     debug = CFG.get("ocr_debug")
     debug_dir = ROOT / "debug" if debug else None
