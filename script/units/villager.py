@@ -213,3 +213,21 @@ def build_storage_pit(state: BotState = STATE):
     sx, sy = spot
     input_utils._click_norm(sx, sy)
     return True
+
+
+def build_dock(state: BotState = STATE):
+    """Posiciona um Dock no ponto configurado."""
+    input_utils._press_key_safe(state.config["keys"]["build_menu"], 0.05)
+    d_key = state.config["keys"].get("dock")
+    if not d_key:
+        logger.warning("Dock build key not configured.")
+        return False
+    areas = state.config.get("areas", {})
+    spot = areas.get("dock_spot")
+    if not spot:
+        logger.warning("Dock spot not configured.")
+        return False
+    input_utils._press_key_safe(d_key, 0.15)
+    dx, dy = spot
+    input_utils._click_norm(dx, dy)
+    return True

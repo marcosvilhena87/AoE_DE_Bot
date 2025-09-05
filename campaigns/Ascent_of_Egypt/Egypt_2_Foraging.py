@@ -20,6 +20,8 @@ import script.hud as hud
 import script.resources.reader as resources
 from script.config_utils import parse_scenario_info
 import script.input_utils as input_utils
+from script.units import villager
+from script.buildings.town_center import train_villagers
 
 logger = logging.getLogger(__name__)
 
@@ -104,6 +106,43 @@ def main(config_path: str | Path | None = None, state: BotState = STATE) -> None
     state.target_pop = info.objective_villagers
 
     logger.info("Setup complete.")
+
+    run_mission(info, state=state)
+
+
+def run_mission(info, state: BotState = STATE) -> None:
+    """Execute the mission objectives for the *Foraging* scenario."""
+
+    logger.info("Starting mission objectives")
+
+    food_spot = state.config.get("areas", {}).get("food_spot")
+    for idx in range(info.starting_idle_villagers):
+        if villager.select_idle_villager(state=state):
+            if food_spot:
+                input_utils._click_norm(*food_spot, button="right")
+            logger.info("Villager %d assigned to gather food", idx + 1)
+        else:
+            logger.info(
+                "No idle villager available when assigning villager %d", idx + 1
+            )
+
+    villager.build_granary(state=state)
+    villager.build_storage_pit(state=state)
+    villager.build_dock(state=state)
+
+    loops = 0
+    max_loops = state.config.get("max_mission_loops", 20)
+    while state.current_pop < state.target_pop and loops < max_loops:
+        loops += 1
+        train_villagers(state.current_pop + 1, state=state)
+        time.sleep(0.1)
+
+    logger.info(
+        "Mission loop ended after %s iterations. Population: %s/%s",
+        loops,
+        state.current_pop,
+        state.target_pop,
+    )
 
 
 if __name__ == "__main__":  # pragma: no cover - manual execution entry point
